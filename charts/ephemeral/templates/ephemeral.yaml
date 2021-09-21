@@ -1,0 +1,85 @@
+#
+# Copyright (c) 2021 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: {{ include "ephemeral.name" . }}-generic
+  namespace: {{ .Release.Namespace }}
+spec:
+  template:
+    metadata:
+      annotations:
+      {{- if .Values.ephemeral.service.annotations }}
+{{ .Values.ephemeral.service.annotations | toYaml | trim | indent 10 }}
+      {{- end}}
+        autoscaling.knative.dev/minScale: "{{ .Values.ephemeral.minScale }}"
+    spec:
+      {{- if .Values.ephemeral.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.ephemeral.image.pullSecrets }}
+        - name: {{ . }}
+        {{- end}}
+      {{- end}}
+      containers:
+        - name: "{{ .Chart.Name }}-ephemeral"
+          image: "{{ .Values.ephemeral.image.registry }}/{{ .Values.ephemeral.image.repository }}:{{ .Values.ephemeral.image.tag }}"
+          imagePullPolicy: {{ .Values.ephemeral.image.pullPolicy }}
+          ports:
+            - name: http1
+              containerPort: 8080
+            - name: tcp
+              containerPort: 5000
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+          {{- if or .Values.ephemeral.resources.requests.memory .Values.ephemeral.resources.requests.cpu .Values.ephemeral.resources.limits.memory .Values.ephemeral.resources.limits.cpu }}
+          resources:
+            {{- if or .Values.ephemeral.resources.requests.memory .Values.ephemeral.resources.requests.cpu }}
+            requests:
+              {{- if .Values.ephemeral.resources.requests.memory }}
+              memory: "{{ .Values.ephemeral.resources.requests.memory }}"
+              {{- end}}
+              {{- if .Values.ephemeral.resources.requests.cpu }}
+              cpu: "{{ .Values.ephemeral.resources.requests.cpu }}"
+              {{- end}}
+            {{- end}}
+            {{- if or .Values.ephemeral.resources.limits.memory .Values.ephemeral.resources.limits.cpu }}
+            limits:
+              {{- if .Values.ephemeral.resources.limits.memory }}
+              memory: "{{ .Values.ephemeral.resources.limits.memory }}"
+              {{- end}}
+              {{- if .Values.ephemeral.resources.limits.cpu }}
+              cpu: "{{ .Values.ephemeral.resources.limits.cpu }}"
+              {{- end}}
+            {{- end}}
+          {{- end}}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "ephemeral.fullname" . }}-config1
+      serviceAccountName: knative-serving
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ephemeral.fullname" . }}-config1
+data:
+  config.json: |-
+    {
+      "retrySleep": "50ms",
+      "retryTimeout": "1m",
+      "prime": "{{ .Values.ephemeral.spdz.prime }}",
+      "rInv": "{{ .Values.ephemeral.spdz.rInv }}",
+      "amphoraConfig": {
+        "host": "{{ .Values.ephemeral.amphora.host }}",
+        "scheme": "{{ .Values.ephemeral.amphora.scheme }}",
+        "path": "{{ .Values.ephemeral.amphora.path }}"
+      },
+      "frontendURL": "{{ .Values.ephemeral.frontendUrl }}",
+      "discoveryAddress": "{{ .Values.ephemeral.discoveryAddress }}",
+      "playerID": {{ .Values.ephemeral.playerId }}
+    }

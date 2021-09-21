@@ -1,0 +1,32 @@
+#
+# Copyright (c) 2021 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+repos:
+- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+  rev: v2.0.0
+  hooks:
+    - id: pretty-format-java
+      args: [--autofix]
+- repo: https://github.com/tekwizely/pre-commit-golang
+  rev: v0.8.3
+  hooks:
+    - id: go-fmt
+      args: [-w] # Update source files directly
+- repo: https://github.com/executablebooks/mdformat
+  rev: 0.7.7
+  hooks:
+    - id: mdformat
+      args:
+      - --wrap
+      - "80"
+      additional_dependencies:
+        - mdformat-gfm
+      exclude: ^vendor/.*|3RD-PARTY-LICENSES/.*$
+- repo: https://github.com/igorshubovych/markdownlint-cli
+  rev: v0.27.1
+  hooks:
+    - id: markdownlint
+      exclude: ^vendor/.*|charts/ephemeral/README.md|3RD-PARTY-LICENSES/.*$

@@ -1,0 +1,43 @@
+#
+# Copyright (c) 2021 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ephemeral.fullname" . }}-network-controller
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: {{ include "ephemeral.fullname" . }}-network-controller
+  template:
+    metadata:
+      labels:
+        name: {{ include "ephemeral.fullname" . }}-network-controller
+    spec:
+      serviceAccountName: network-controller
+      {{- if .Values.networkController.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.networkController.image.pullSecrets }}
+        - name: {{ . }}
+        {{- end}}
+      {{- end}}
+      containers:
+      - name: "{{ .Chart.Name }}-network-controller"
+        image: "{{ .Values.networkController.image.registry }}/{{ .Values.networkController.image.repository }}:{{ .Values.networkController.image.tag }}"
+        imagePullPolicy: {{ .Values.networkController.image.pullPolicy }}
+        env:
+          - name: WATCH_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: OPERATOR_NAME
+            value: "network-controller"

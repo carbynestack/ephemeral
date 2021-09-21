@@ -1,0 +1,109 @@
+#
+# Copyright (c) 2021 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ephemeral.fullname" . }}-discovery
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "ephemeral.fullname" . }}-discovery
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "ephemeral.fullname" . }}-discovery
+  template:
+    metadata:
+      labels:
+        app: {{ include "ephemeral.fullname" . }}-discovery
+    spec:
+      {{- if .Values.discovery.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.discovery.image.pullSecrets }}
+        - name: {{ . }}
+        {{- end}}
+      {{- end}}
+      containers:
+      - name: "{{ .Chart.Name }}-discovery"
+        image: "{{ .Values.discovery.image.registry }}/{{ .Values.discovery.image.repository }}:{{ .Values.discovery.image.tag }}"
+        resources:
+          limits:
+            memory: "200Mi"
+          requests:
+            memory: "100Mi"
+        imagePullPolicy: {{ .Values.discovery.image.pullPolicy }}
+        volumeMounts:
+          - name: config-volume
+            mountPath: /etc/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: discovery-config
+      serviceAccountName: discovery
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ include "ephemeral.fullname" . }}-discovery
+  namespace: {{ .Release.Namespace }}
+  {{- if .Values.ephemeral.service.annotations }}
+  annotations:
+{{ .Values.discovery.service.annotations | toYaml | trim | indent 4 }}
+  {{- end}}
+spec:
+  selector:
+    app: {{ include "ephemeral.fullname" . }}-discovery
+  ports:
+    - protocol: TCP
+      port: 8080
+      name: grpc-my
+      targetPort: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: discovery-config
+  namespace: {{ .Release.Namespace }}
+data:
+  config.json: |-
+    {
+      "frontendURL": "{{ .Values.discovery.frontendUrl }}",
+      "masterHost": "{{ .Values.discovery.master.host }}",
+      "masterPort": "{{ .Values.discovery.master.port }}",
+      "slave": {{ if .Values.discovery.isMaster }}false{{ else }}true{{ end }}
+    }
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: discovery-service
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+    - port:
+        number: 31400
+        name: grpc-my
+        protocol: GRPC
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: discovery-service
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - discovery-service
+  http:
+    - route:
+        - destination:
+            host: {{ include "ephemeral.fullname" . }}-discovery.default.svc.cluster.local
+            port:
+              number: 8080
