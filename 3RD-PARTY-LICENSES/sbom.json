@@ -1,0 +1,338 @@
+[
+  {
+    "project": "vendor/github.com/joho/godotenv",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/davecgh/go-spew",
+    "license": "0BSD"
+  },
+  {
+    "project": "vendor/github.com/operator-framework/operator-sdk",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/hpcloud/tail",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/hpcloud/tail/ratelimiter",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/appscode/jsonpatch",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/go-logr/logr",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/go-logr/zapr",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/onsi/ginkgo",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/onsi/gomega",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/matttproud/golang_protobuf_extensions",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/petar/GoLLRB",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/github.com/rogpeppe/go-internal",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/github.com/spf13/pflag",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/github.com/spf13/afero",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/pborman/uuid",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/github.com/emicklei/go-restful",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/peterbourgon/diskv",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/markbates/inflect",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/beorn7/perks",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/mailru/easyjson",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/coreos/prometheus-operator",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/knative/pkg",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/json-iterator/go",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/evanphx/json-patch",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/github.com/google/tcpproxy",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/google/gofuzz",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/google/btree",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/google/uuid",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/github.com/vardius/message-bus",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/gregjones/httpcache",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/imdario/mergo",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/github.com/golang/groupcache",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/golang/protobuf",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/github.com/golang/glog",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/prometheus/client_model",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/prometheus/client_model/ruby",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/prometheus/common",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/prometheus/procfs",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/prometheus/client_golang",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/modern-go/concurrent",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/modern-go/reflect2",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/asaskevich/govalidator",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/googleapis/gnostic",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/go-openapi/swag",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/go-openapi/jsonpointer",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/go-openapi/spec",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/go-openapi/jsonreference",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/github.com/gobuffalo/envy",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/github.com/hashicorp/golang-lru",
+    "license": "MPL-2.0"
+  },
+  {
+    "project": "vendor/github.com/PuerkitoBio/urlesc",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/github.com/PuerkitoBio/purell",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/go.uber.org/atomic",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/go.uber.org/multierr",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/go.uber.org/zap",
+    "license": "MIT"
+  },
+  {
+    "project": "vendor/sigs.k8s.io/controller-tools",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/sigs.k8s.io/controller-runtime",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/golang.org/x/net",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/golang.org/x/crypto",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/golang.org/x/oauth2",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/golang.org/x/sys",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/golang.org/x/tools",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/golang.org/x/tools/cmd/getgo",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/golang.org/x/time",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/golang.org/x/text",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/google.golang.org/grpc",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/google.golang.org/appengine",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/google.golang.org/genproto",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/k8s.io/code-generator",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/k8s.io/apiextensions-apiserver",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/k8s.io/api",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/k8s.io/gengo",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/k8s.io/kube-openapi",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/k8s.io/klog",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/k8s.io/apimachinery",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/k8s.io/client-go",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/cloud.google.com/go",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/gopkg.in/yaml.v2",
+    "license": "Apache-2.0"
+  },
+  {
+    "project": "vendor/gopkg.in/tomb.v1",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/gopkg.in/inf.v0",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/gopkg.in/fsnotify/fsnotify.v1",
+    "license": "BSD-3-Clause"
+  },
+  {
+    "project": "vendor/knative.dev/pkg",
+    "license": "Apache-2.0"
+  }
+]

@@ -1,0 +1,12 @@
+#
+# Copyright (c) 2021 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# defaultBaseImage: ghcr.io/carbynestack/ubuntu:20.04-20210827
+# baseImageOverrides:
+#   github.com/carbynestack/ephemeral/cmd/ephemeral: ghcr.io/carbynestack/ephemeral-spdz-base-image:cleared-20210827
+defaultBaseImage: ghcr.io/carbynestack/ubuntu:20.04-20210827-nonroot
+baseImageOverrides:
+  github.com/carbynestack/ephemeral/cmd/ephemeral: ghcr.io/carbynestack/spdz:20210827
