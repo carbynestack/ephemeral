@@ -7,3 +7,4 @@
 ---
 exclude_paths:
   - "vendor/**"
+  - "**/3RD-PARTY-LICENSES/**"
