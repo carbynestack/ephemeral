@@ -57,7 +57,7 @@
         <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
         <maven-surefire-plugin.version>3.0.0-M5</maven-surefire-plugin.version>
         <maven-jacoco-plugin.version>0.8.7</maven-jacoco-plugin.version>
-        <maven-attribution-plugin.version>0.9.8</maven-attribution-plugin.version>
+        <maven-license-plugin.version>2.0.0</maven-license-plugin.version>
 
         <!-- Carbyne Stack dependency versions -->
         <java-http-client.version>0.1-SNAPSHOT-1257534854-1-46815a7</java-http-client.version>
@@ -224,20 +224,24 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>com.github.jinnovations</groupId>
-                <artifactId>attribution-maven-plugin</artifactId>
-                <version>${maven-attribution-plugin.version}</version>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${maven-license-plugin.version}</version>
+                <configuration>
+                    <outputDirectory>${project.basedir}/3RD-PARTY-LICENSES</outputDirectory>
+                    <thirdPartyFilename>sbom.xml</thirdPartyFilename>
+                    <fileTemplate>${project.basedir}/../.github/templates/sbom.ftl</fileTemplate>
+                    <excludedScopes>test</excludedScopes>
+                    <sortArtifactByName>true</sortArtifactByName>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
-                            <goal>generate-attribution-file</goal>
+                            <goal>add-third-party</goal>
                         </goals>
                         <phase>generate-resources</phase>
                     </execution>
                 </executions>
-                <configuration>
-                    <outputFile>3RD-PARTY-LICENSES/sbom.xml</outputFile>
-                </configuration>
             </plugin>
         </plugins>
     </build>
