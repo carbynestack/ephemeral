@@ -136,7 +136,7 @@ jobs:
           sed -i 's/version: \(.*\)/version: \1-${{ env.VERSION }}/g' charts/ephemeral/Chart.yaml
           sed -i 's/tag: latest/tag: ${{ env.VERSION }}/g' charts/ephemeral/values.yaml
       - name: Push Helm Chart
-        uses: appany/helm-oci-chart-releaser@v0.2.0
+        uses: appany/helm-oci-chart-releaser@v0.3.0
         with:
           name: ephemeral
           repository: carbynestack
