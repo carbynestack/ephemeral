@@ -8,8 +8,8 @@ package io.carbynestack.ephemeral.client;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -27,15 +27,15 @@ import java.util.List;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.http.Header;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
-public class EphemeralClientTest {
+@ExtendWith(MockitoExtension.class)
+class EphemeralClientTest {
 
   private static final String APPLICATION = "app";
   private static final URI TEST_URI = Try.of(() -> new URI("http://localhost")).get();
@@ -44,20 +44,20 @@ public class EphemeralClientTest {
   @Mock private CsHttpClient<String> specsHttpClientMock;
   private EphemeralClient client;
 
-  @Before
+  @BeforeEach
   public void setUp() throws CsHttpClientException {
     client = new EphemeralClient(endpoint, specsHttpClientMock, Option.none());
   }
 
   @Test
-  public void givenServiceUrlIsNull_whenCreateClient_thenThrowException() {
+  void givenServiceUrlIsNull_whenCreateClient_thenThrowException() {
     CsHttpClientException sce =
         assertThrows(CsHttpClientException.class, () -> EphemeralClient.Builder().build());
     assertThat(sce.getMessage(), containsString("Endpoint must not be null."));
   }
 
   @Test
-  public void givenSuccessful_whenExecuteProgram_thenReturnResult() throws CsHttpClientException {
+  void givenSuccessful_whenExecuteProgram_thenReturnResult() throws CsHttpClientException {
     ActivationResult result = new ActivationResult(Collections.singletonList(UUID.randomUUID()));
     Activation activation = Activation.builder().build();
     when(specsHttpClientMock.postForEntity(
@@ -72,7 +72,7 @@ public class EphemeralClientTest {
   }
 
   @Test
-  public void givenServiceRespondsUnsuccessful_whenExecuteProgram_thenReturnFailureCode()
+  void givenServiceRespondsUnsuccessful_whenExecuteProgram_thenReturnFailureCode()
       throws CsHttpClientException {
     int httpFailureCode = 404;
     String errMessage = "some failure";
@@ -91,7 +91,7 @@ public class EphemeralClientTest {
   }
 
   @Test
-  public void
+  void
       givenBearerTokenConfigured_whenExecuteProgram_thenSpecsClientIsInvokedWithAuthorizationHeader()
           throws CsHttpClientException {
     String token = RandomStringUtils.randomAlphanumeric(20);

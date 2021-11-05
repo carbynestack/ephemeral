@@ -20,13 +20,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hamcrest.CoreMatchers;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
-public class EphemeralMultiClientBuilderTest {
+@ExtendWith(MockitoExtension.class)
+class EphemeralMultiClientBuilderTest {
 
   private static final List<EphemeralEndpoint> ENDPOINTS =
       Stream.of("https://testUri:80", "https://testUri:180")
@@ -41,7 +41,7 @@ public class EphemeralMultiClientBuilderTest {
   @Mock private EphemeralClient.EphemeralClientBuilder ephemeralClientBuilder;
 
   @Test
-  public void givenEndpointList_whenBuilding_createsClientWithCorrectEndpoints()
+  void givenEndpointList_whenBuilding_createsClientWithCorrectEndpoints()
       throws CsHttpClientException {
     EphemeralMultiClient client =
         new EphemeralMultiClient.Builder().withEndpoints(ENDPOINTS).build();
@@ -51,7 +51,7 @@ public class EphemeralMultiClientBuilderTest {
   }
 
   @Test
-  public void givenEndpointIndividualEndpoints_whenBuilding_createsClientWithCorrectEndpoints()
+  void givenEndpointIndividualEndpoints_whenBuilding_createsClientWithCorrectEndpoints()
       throws CsHttpClientException {
     EphemeralMultiClient.Builder builder = new EphemeralMultiClient.Builder();
     ENDPOINTS.forEach(builder::withEndpoint);
@@ -62,7 +62,7 @@ public class EphemeralMultiClientBuilderTest {
   }
 
   @Test
-  public void
+  void
       givenSslCertificateValidationDisabledOnBuilder_whenBuilding_createsUnderlyingClientsWithSslCertificateValidationDisabled()
           throws CsHttpClientException {
     when(ephemeralClientBuilder.withEndpoint(any())).thenReturn(ephemeralClientBuilder);
@@ -78,7 +78,7 @@ public class EphemeralMultiClientBuilderTest {
   }
 
   @Test
-  public void
+  void
       givenTrustedCertificateProvidedToBuilder_whenBuilding_createsUnderlyingClientsWithCertificatesAdded()
           throws IOException {
     File cert = File.createTempFile("test", ".pem");

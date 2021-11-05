@@ -9,11 +9,9 @@ package io.carbynestack.ephemeral.client;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.powermock.api.mockito.PowerMockito.verifyNew;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
 
 import io.vavr.concurrent.Future;
 import io.vavr.control.Either;
@@ -24,17 +22,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.MockedConstruction;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(EphemeralClient.class)
-public class EphemeralMultiClientTest {
+@ExtendWith(MockitoExtension.class)
+class EphemeralMultiClientTest {
 
   private static final String APPLICATION = "app";
   private static final String CODE = "a = sint(1)";
@@ -52,13 +49,13 @@ public class EphemeralMultiClientTest {
 
   private EphemeralMultiClient client;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     client = new EphemeralMultiClient(Arrays.asList(client1Mock, client2Mock));
   }
 
   @Test
-  public void givenServiceUrlsIsNull_whenCreateClient_thenThrowException() {
+  void givenServiceUrlsIsNull_whenCreateClient_thenThrowException() {
     @SuppressWarnings("ConstantConditions")
     NullPointerException npe =
         assertThrows(
@@ -68,7 +65,7 @@ public class EphemeralMultiClientTest {
   }
 
   @Test
-  public void givenSuccessful_whenExecuteProgram_thenReturnResult() {
+  void givenSuccessful_whenExecuteProgram_thenReturnResult() {
     ActivationResult result = new ActivationResult(Collections.singletonList(UUID.randomUUID()));
     when(client1Mock.execute(any(Activation.class)))
         .thenReturn(Future.successful(Either.right(result)));
@@ -87,7 +84,7 @@ public class EphemeralMultiClientTest {
   }
 
   @Test
-  public void givenServiceRespondsUnsuccessful_whenExecuteProgram_thenReturnFailureCode() {
+  void givenServiceRespondsUnsuccessful_whenExecuteProgram_thenReturnFailureCode() {
     int httpFailureCode = 404;
     String errMessage = "an unexpected error";
     ActivationError activationError =
@@ -106,7 +103,7 @@ public class EphemeralMultiClientTest {
   }
 
   @Test
-  public void givenServiceCommunicationFails_whenExecuteProgram_thenFutureFails() {
+  void givenServiceCommunicationFails_whenExecuteProgram_thenFutureFails() {
     Exception failure = new Exception("an unexpected error");
     when(client1Mock.execute(any(Activation.class))).thenReturn(Future.failed(failure));
     when(client2Mock.execute(any(Activation.class))).thenReturn(Future.failed(failure));
@@ -119,16 +116,20 @@ public class EphemeralMultiClientTest {
   }
 
   @Test
-  public void givenBearerTokenProvider_whenCreateClient_thenCorrectBearerTokensAreUsed()
-      throws Exception {
+  void givenBearerTokenProvider_whenCreateClient_thenCorrectBearerTokensAreUsed() throws Exception {
     String token = RandomStringUtils.randomAlphanumeric(20);
     EphemeralEndpoint endpoint = new EphemeralEndpoint(new URI("https://example.com"), APPLICATION);
-    whenNew(EphemeralClient.class).withArguments(any(), any(), any()).thenReturn(client1Mock);
-    new EphemeralMultiClient.Builder()
-        .withEndpoints(Arrays.asList(endpoint, endpoint))
-        .withBearerTokenProvider(e -> token)
-        .build();
-    verifyNew(EphemeralClient.class, times(2))
-        .withArguments(any(), any(), any(), eq(Option.some(token)), any());
+    try (MockedConstruction<EphemeralClient> mc =
+        mockConstruction(
+            EphemeralClient.class,
+            (mock, context) -> {
+              assertEquals(Option.some(token), context.arguments().get(3));
+            })) {
+      new EphemeralMultiClient.Builder()
+          .withEndpoints(Arrays.asList(endpoint, endpoint))
+          .withBearerTokenProvider(e -> token)
+          .build();
+      assertEquals(2, mc.constructed().size());
+    }
   }
 }
