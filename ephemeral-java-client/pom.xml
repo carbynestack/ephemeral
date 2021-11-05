@@ -63,9 +63,9 @@
         <java-http-client.version>0.1-SNAPSHOT-1257534854-1-46815a7</java-http-client.version>
 
         <!-- External dependency versions -->
+        <assertj.version>3.21.0</assertj.version>
         <lombok.version>1.18.20</lombok.version>
         <vavr.version>0.10.3</vavr.version>
-        <hamcrest.version>2.2</hamcrest.version>
         <slf4j.version>1.7.30</slf4j.version>
         <log4j.version>2.14.1</log4j.version>
         <httpclient.version>4.5.13</httpclient.version>
@@ -132,9 +132,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest</artifactId>
-            <version>${hamcrest.version}</version>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

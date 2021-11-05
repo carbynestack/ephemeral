@@ -6,10 +6,8 @@
  */
 package io.carbynestack.ephemeral.client;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -51,9 +49,9 @@ class EphemeralClientTest {
 
   @Test
   void givenServiceUrlIsNull_whenCreateClient_thenThrowException() {
-    CsHttpClientException sce =
-        assertThrows(CsHttpClientException.class, () -> EphemeralClient.Builder().build());
-    assertThat(sce.getMessage(), containsString("Endpoint must not be null."));
+    assertThatThrownBy(() -> EphemeralClient.Builder().build())
+        .isExactlyInstanceOf(CsHttpClientException.class)
+        .hasMessageContaining("Endpoint must not be null.");
   }
 
   @Test
@@ -68,7 +66,7 @@ class EphemeralClientTest {
         .thenReturn(CsResponseEntity.success(200, result));
     Future<Either<ActivationError, ActivationResult>> eitherFuture = client.execute(activation);
     eitherFuture.await();
-    assertThat(eitherFuture.get().get(), equalTo(result));
+    assertThat(eitherFuture.get().get()).isEqualTo(result);
   }
 
   @Test
@@ -86,8 +84,8 @@ class EphemeralClientTest {
     Future<Either<ActivationError, ActivationResult>> eitherFuture =
         client.execute(Activation.builder().build());
     eitherFuture.await();
-    assertThat(eitherFuture.get().getLeft().responseCode, equalTo(httpFailureCode));
-    assertThat(eitherFuture.get().getLeft().message, equalTo(errMessage));
+    assertThat(eitherFuture.get().getLeft().responseCode).isEqualTo(httpFailureCode);
+    assertThat(eitherFuture.get().getLeft().message).isEqualTo(errMessage);
   }
 
   @Test
@@ -106,10 +104,10 @@ class EphemeralClientTest {
         clientWithToken.execute(activation);
     eitherFuture.await();
     List<Header> headers = headersCaptor.getValue();
-    assertThat("No header has been supplied", headers.size(), is(1));
+    assertThat(headers.size()).as("No header has been supplied").isEqualTo(1);
     Header header = headers.get(0);
     Header expected = BearerTokenUtils.createBearerToken(token);
-    assertEquals(expected.getName(), header.getName());
-    assertEquals(expected.getValue(), header.getValue());
+    assertThat(header.getName()).isEqualTo(expected.getName());
+    assertThat(header.getValue()).isEqualTo(expected.getValue());
   }
 }

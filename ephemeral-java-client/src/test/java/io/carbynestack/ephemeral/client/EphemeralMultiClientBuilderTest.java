@@ -6,7 +6,7 @@
  */
 package io.carbynestack.ephemeral.client;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.*;
@@ -19,7 +19,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -45,9 +44,7 @@ class EphemeralMultiClientBuilderTest {
       throws CsHttpClientException {
     EphemeralMultiClient client =
         new EphemeralMultiClient.Builder().withEndpoints(ENDPOINTS).build();
-    assertThat(
-        client.getEphemeralEndpoints(),
-        CoreMatchers.hasItems(ENDPOINTS.toArray(new EphemeralEndpoint[0])));
+    assertThat(client.getEphemeralEndpoints()).containsAll(ENDPOINTS);
   }
 
   @Test
@@ -56,9 +53,7 @@ class EphemeralMultiClientBuilderTest {
     EphemeralMultiClient.Builder builder = new EphemeralMultiClient.Builder();
     ENDPOINTS.forEach(builder::withEndpoint);
     EphemeralMultiClient client = builder.build();
-    assertThat(
-        client.getEphemeralEndpoints(),
-        CoreMatchers.hasItems(ENDPOINTS.toArray(new EphemeralEndpoint[0])));
+    assertThat(client.getEphemeralEndpoints()).containsAll(ENDPOINTS);
   }
 
   @Test
