@@ -43,7 +43,7 @@ var _ = Describe("Main", func() {
 					path = fmt.Sprintf("/tmp/test-%d", random)
 				})
 				AfterEach(func() {
-					_, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
+					_, _, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
 					Expect(err).NotTo(HaveOccurred())
 				})
 				Context("when it succeeds", func() {

@@ -51,7 +51,8 @@ var _ = Describe("DiscoveryNG", func() {
 		}
 		frontendAddress = "192.168.0.1"
 		conf := &FakeDClient{}
-		s = NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, conf)
+		playerCount := 2
+		s = NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, conf, playerCount)
 		g = &GamesWithBus{
 			Games: s.games,
 			Bus:   bus,

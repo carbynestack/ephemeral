@@ -108,6 +108,7 @@ func getDiscovery(port string, logger *zap.SugaredLogger, bus mb.MessageBus, fro
 		Context:    context.TODO(),
 	}
 	cl, _ := c.NewClient(clientConf)
-	s := d.NewServiceNG(bus, pb, stateTimeout, tr, n, frontend, logger, mode, cl)
+	playerCount := 2
+	s := d.NewServiceNG(bus, pb, stateTimeout, tr, n, frontend, logger, mode, cl, playerCount)
 	return s
 }

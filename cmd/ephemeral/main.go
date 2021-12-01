@@ -62,6 +62,11 @@ func GetHandlerChain(conf *SPDZEngineConfig, logger *zap.SugaredLogger) (http.Ha
 	spdzClient := NewSPDZEngine(logger, utils.NewCommander(), typedConfig)
 	server := NewServer(spdzClient.Compile, spdzClient.Activate, logger, typedConfig)
 	activationHandler := http.HandlerFunc(server.ActivationHandler)
+	// Apply in Order:
+	// 1) MethodFilter: Check that only POST Requests can go through
+	// 2) BodyFilter: Check that Request Body is set properly and Sets the CtxConfig to the request
+	// 3) CompilationHandler: Compiles the script if ?compile=true
+	// 4) ActivationHandler: Runs the script
 	filterChain := server.MethodFilter(server.BodyFilter(server.CompilationHandler(activationHandler)))
 	return filterChain, nil
 }
@@ -118,6 +123,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		RInv:             rInv,
 		AmphoraClient:    client,
 		PlayerID:         conf.PlayerID,
+		PlayerCount:      conf.PlayerCount,
 		FrontendURL:      conf.FrontendURL,
 		MaxBulkSize:      conf.MaxBulkSize,
 		DiscoveryAddress: conf.DiscoveryAddress,

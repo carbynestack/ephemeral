@@ -21,13 +21,12 @@ import (
 )
 
 const (
-	// ExpectedPlayers is a maximum number of computation parties currently supported.
-	ExpectedPlayers = 2
 	mpcPodNameLabel = "mpc.podName"
 )
 
 var (
-	basePort        = int32(5000)
+	// BasePort is the base for the port number that is used by the proxy.
+	BasePort        = int32(5000)
 	baseNetworkName = "player-network"
 	ctx             = context.TODO()
 )
@@ -42,7 +41,7 @@ type Event struct {
 type PlayerID int32
 
 // NewServiceNG returns a new instance of discovery service.
-func NewServiceNG(bus mb.MessageBus, pub *Publisher, timeout time.Duration, tr t.Transport, n Networker, frontendAddress string, logger *zap.SugaredLogger, mode string, client DiscoveryClient) *ServiceNG {
+func NewServiceNG(bus mb.MessageBus, pub *Publisher, timeout time.Duration, tr t.Transport, n Networker, frontendAddress string, logger *zap.SugaredLogger, mode string, client DiscoveryClient, playerCount int) *ServiceNG {
 	games := map[string]*Game{}
 	players := map[string]map[PlayerID]*pb.Player{}
 	pods := map[string]int32{}
@@ -56,6 +55,7 @@ func NewServiceNG(bus mb.MessageBus, pub *Publisher, timeout time.Duration, tr t
 		timeout:             timeout,
 		transport:           tr,
 		players:             players,
+		playerCount:         playerCount,
 		pods:                pods,
 		networks:            networks,
 		networker:           n,
@@ -73,6 +73,7 @@ type ServiceNG struct {
 	pb                  *Publisher
 	games               map[string]*Game
 	players             map[string]map[PlayerID]*pb.Player
+	playerCount         int
 	pods                map[string]int32
 	networks            map[string]int32
 	mux                 sync.Mutex
@@ -249,8 +250,8 @@ func (s *ServiceNG) processIn(e interface{}) {
 	name := ev.Name
 	s.registerPlayer(player, ev.GameID)
 	g, ok := s.games[ev.GameID]
-	if !ok {
-		g, err := NewGame(ctx, ev.GameID, s.bus, s.timeout, s.logger)
+	if !ok { // If game does not exist, create it
+		g, err := NewGame(ctx, ev.GameID, s.bus, s.timeout, s.logger, s.playerCount)
 		if err != nil {
 			s.errCh <- err
 		}

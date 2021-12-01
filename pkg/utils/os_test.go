@@ -33,7 +33,7 @@ var _ = Describe("OS utils", func() {
 				Command: "bash",
 				Options: []string{"-c"},
 			}
-			resp, err := cmder.Run("echo 1")
+			resp, _, err := cmder.Run("echo 1")
 			Expect(err).To(BeNil())
 			Expect(string(resp)).To(Equal("1\n"))
 		})
@@ -47,7 +47,7 @@ var _ = Describe("OS utils", func() {
 				}
 				rand.Seed(time.Now().UnixNano())
 				random := rand.Int31()
-				resp, err := cmder.Run(fmt.Sprintf("cat /tmp/non-existing-file-%d", random))
+				resp, _, err := cmder.Run(fmt.Sprintf("cat /tmp/non-existing-file-%d", random))
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).To(Equal("exit status 1"))
 				Expect(resp).NotTo(BeNil())
@@ -59,7 +59,7 @@ var _ = Describe("OS utils", func() {
 					Command: "non-existing-command",
 					Options: []string{"-c"},
 				}
-				resp, err := cmder.Run("some command")
+				resp, _, err := cmder.Run("some command")
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).To(Equal("exec: \"non-existing-command\": executable file not found in $PATH"))
 				Expect(len(resp)).To(Equal(0))

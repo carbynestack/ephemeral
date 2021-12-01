@@ -57,7 +57,8 @@ var _ = Describe("Ephemeral integration test", func() {
 				FreePorts: []int32{30000, 30001, 30002},
 			}
 			cl := &discovery.FakeDClient{}
-			s := discovery.NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, cl)
+			playerCount := 2
+			s := discovery.NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, cl, playerCount)
 			go s.Start()
 			s.WaitUntilReady(5 * time.Second)
 

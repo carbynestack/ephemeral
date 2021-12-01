@@ -31,10 +31,12 @@ var _ = Describe("Proxy", func() {
 				Act: &Activation{
 					GameID: "a",
 				},
-				Proxy: &ProxyConfig{
-					Host:      "localhost",
-					Port:      "5001",
-					LocalPort: "5000",
+				ProxyEntries: []*ProxyConfig{
+					{
+						Host:      "localhost",
+						Port:      "5001",
+						LocalPort: "5000", //ToDo: Switch to ports that are NOT used by everyone else
+					},
 				},
 				Spdz: spdzConfig,
 			}

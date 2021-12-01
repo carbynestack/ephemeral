@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	. "github.com/carbynestack/ephemeral/pkg/types"
@@ -54,23 +55,19 @@ type Proxy struct {
 func (p *Proxy) Run(ctx *CtxConfig, errCh chan error) error {
 	p.proxy = &tcpproxy.Proxy{}
 	p.ctx = ctx
-	// Start the TCP proxy to forward the requests from the base partner address to the target one.
-	p.logger.Infow(fmt.Sprintf("Starting TCP Proxy with the following parameters: %s", p.ctx.Proxy), GameID, p.ctx.Act.GameID)
-	address := p.ctx.Proxy.Host + ":" + p.ctx.Proxy.Port
-	dialProxy := tcpproxy.DialProxy{Addr: address, DialTimeout: timeout}
-	pat := &PingAwareTarget{
-		Next:   &dialProxy,
-		Logger: p.logger,
+
+	var pats []*PingAwareTarget
+	for _, proxyEntry := range ctx.ProxyEntries {
+		pat := p.addProxyEntry(proxyEntry)
+		pats = append(pats, pat)
 	}
-	p.proxy.AddRoute(":"+p.ctx.Proxy.LocalPort, pat)
-	// As long as the number of players equals 2, the first one is the master who does the TCP check.
-	if p.ctx.Spdz.PlayerID == int32(0) {
-		err := p.tcpChecker.Verify(p.ctx.Proxy.Host, p.ctx.Proxy.Port)
-		if err != nil {
-			return fmt.Errorf("error checking connection to the slave: %s", err)
-		}
-		p.logger.Info("TCP check is OK")
+
+	err := p.checkConnectionToPeers()
+	if err != nil {
+		return err
 	}
+
+	p.logger.Info("Starting TCP Proxy")
 	go func() {
 		err := p.proxy.Run()
 		errCh <- err
@@ -78,10 +75,76 @@ func (p *Proxy) Run(ctx *CtxConfig, errCh chan error) error {
 	dialer := RetryingDialer(p.retrySleep, p.retryTimeout, func() {
 		p.logger.Debugw(fmt.Sprintf("retrying to ping after %s", p.retrySleep), GameID, p.ctx.Act.GameID)
 	})
-	_, err := pat.WaitUntilStarted("", p.ctx.Proxy.LocalPort, timeout, dialer)
-	if err != nil {
-		return err
+
+	for i, pat := range pats {
+		localPort := p.ctx.ProxyEntries[i].LocalPort
+
+		p.logger.Info(fmt.Sprintf("Waiting until proxyEntry is started for local Port %s", localPort))
+		_, err := pat.WaitUntilStarted("", localPort, timeout, dialer)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
+}
+
+//checkConnectionToPeers verifies that all peers can communicate with each other.
+// Since the connectivity check requires some Proxy's to be already running, each connection between two parties is only checked one way!
+//
+// This implementation assumes that Proxy.ctx is set.
+// This implementation assumes that Proxy.ctx.ProxyEntries is ordered by playerId
+func (p *Proxy) checkConnectionToPeers() error {
+	var waitGroup sync.WaitGroup
+	var errorsCheckingConnection []error
+
+	//Check fully connected Graph, each edge checked once
+	//Player i connects to all in [i+1, N]
+	//Assumes that ctx.ProxyEntries is sorted by PlayerId
+	for _, proxyEntry := range p.ctx.ProxyEntries[p.ctx.Spdz.PlayerID:] {
+		proxyEntry := proxyEntry
+		waitGroup.Add(1)
+		go func() {
+			err := p.checkTCPConnectionToPeer(proxyEntry)
+			defer waitGroup.Done()
+			if err != nil {
+				errorsCheckingConnection = append(errorsCheckingConnection, err)
+			}
+		}()
+	}
+
+	//Wait for all proxy connections to be completed
+	waitGroup.Wait()
+
+	if len(errorsCheckingConnection) > 0 {
+		message := fmt.Sprintf("could not connect to %d proxies", len(errorsCheckingConnection))
+		p.logger.Errorw(message, "errors", errorsCheckingConnection)
+		return errors.New(message)
+	}
+
+	return nil
+}
+
+func (p *Proxy) addProxyEntry(config *ProxyConfig) *PingAwareTarget {
+	// Start the TCP proxy to forward the requests from the base partner address to the target one.
+	address := config.Host + ":" + config.Port
+	p.logger.Infow(fmt.Sprintf("Adding TCP Proxy Entry for 'localhost:%s' -> '%s'", config.LocalPort, address), GameID, p.ctx.Act.GameID)
+	dialProxy := tcpproxy.DialProxy{Addr: address, DialTimeout: timeout}
+	pat := &PingAwareTarget{
+		Next:   &dialProxy,
+		Logger: p.logger,
+	}
+	p.proxy.AddRoute(":"+config.LocalPort, pat)
+	return pat
+}
+
+func (p *Proxy) checkTCPConnectionToPeer(config *ProxyConfig) error {
+	p.logger.Info(fmt.Sprintf("Checking if connection to peer works for config: %s", config))
+	err := p.tcpChecker.Verify(config.Host, config.Port)
+	if err != nil {
+		return fmt.Errorf("error checking connection to the peer '%s:%s': %s", config.Host, config.Port, err)
+	}
+	p.logger.Info(fmt.Sprintf("TCP check to '%s:%s' is OK", config.Host, config.Port))
 	return nil
 }
 

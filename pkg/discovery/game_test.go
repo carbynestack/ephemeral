@@ -23,20 +23,22 @@ var _ = Describe("Game", func() {
 		done chan struct{}
 		bus  mb.MessageBus
 
-		timeout time.Duration
-		gameID  string
-		game    *Game
-		pb      Publisher
-		errCh   chan error
-		logger  = zap.NewNop().Sugar()
-		ctx     = context.TODO()
+		timeout     time.Duration
+		gameID      string
+		game        *Game
+		playerCount int
+		pb          Publisher
+		errCh       chan error
+		logger      = zap.NewNop().Sugar()
+		ctx         = context.TODO()
 	)
 	BeforeEach(func() {
 		done = make(chan struct{})
 		bus = mb.New(10000)
 		timeout = 10 * time.Second
 		gameID = "0"
-		game, _ = NewGame(ctx, gameID, bus, timeout, logger)
+		playerCount = 2
+		game, _ = NewGame(ctx, gameID, bus, timeout, logger, playerCount)
 		pb = Publisher{
 			Bus: bus,
 			Fsm: game.fsm,
@@ -130,7 +132,7 @@ var _ = Describe("Game", func() {
 	Context("state timeout occurs", func() {
 		It("transitions to the GameError state", func() {
 			timeout := 10 * time.Millisecond
-			game, _ := NewGame(ctx, gameID, bus, timeout, logger)
+			game, _ := NewGame(ctx, gameID, bus, timeout, logger, playerCount)
 			// No player publishes an event, simulate a state timeout.
 			Assert(GameDone, game, done, func(states []string) {
 				Expect(states[0]).To(Equal(Init))

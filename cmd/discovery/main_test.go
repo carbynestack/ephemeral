@@ -30,6 +30,7 @@ var _ = Describe("Main", func() {
 			FrontendURL: "abc",
 			MasterHost:  "abc",
 			MasterPort:  "8080",
+			PlayerCount: 2,
 		}
 		logger := zap.NewNop().Sugar()
 		errCh := make(chan error)
@@ -57,12 +58,12 @@ var _ = Describe("Main", func() {
 		})
 		Context("all required parameters are specified", func() {
 			AfterEach(func() {
-				_, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
+				_, _, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
 				data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
-		"masterPort": "31400","slave": false}`)
+		"masterPort": "31400","slave": false, "playerCount": 2}`)
 				err := ioutil.WriteFile(path, data, 0644)
 				Expect(err).NotTo(HaveOccurred())
 				conf, err := ParseConfig(path)
@@ -76,35 +77,41 @@ var _ = Describe("Main", func() {
 		Context("one of the required parameters is missing", func() {
 			Context("when no frontendURL is defined", func() {
 				AfterEach(func() {
-					_, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
+					_, _, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
 					Expect(err).NotTo(HaveOccurred())
 				})
 				It("returns an error", func() {
 					path := fmt.Sprintf("/tmp/test-%d", random)
 					noFrontendURLConfig := []byte(`{"masterHost": "apollo.test.specs.cloud",
-			"masterPort": "31400","slave": false}`)
+			"masterPort": "31400","slave": false, "playerCount": 2}`)
 					err := ioutil.WriteFile(path, noFrontendURLConfig, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					_, err = ParseConfig(path)
 					Expect(err).To(HaveOccurred())
 
 					noMasterHostConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud",
-					"masterPort": "31400","slave": true}`)
+					"masterPort": "31400","slave": true, "playerCount": 2}`)
 					err = ioutil.WriteFile(path, noMasterHostConfigSlave, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					_, err = ParseConfig(path)
 					Expect(err).To(HaveOccurred())
 
 					noMasterHostConfigMaster := []byte(`{"frontendURL": "apollo.test.specs.cloud",
-					"masterPort": "31400","slave": false}`)
+					"masterPort": "31400","slave": false, "playerCount": 2}`)
 					err = ioutil.WriteFile(path, noMasterHostConfigMaster, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					conf, err := ParseConfig(path)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(conf).NotTo(BeNil())
 
-					noMasterPortConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false}`)
+					noMasterPortConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "playerCount": 2}`)
 					err = ioutil.WriteFile(path, noMasterPortConfigSlave, 0644)
+					Expect(err).NotTo(HaveOccurred())
+					_, err = ParseConfig(path)
+					Expect(err).To(HaveOccurred())
+
+					noPlayerCountConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400"}`)
+					err = ioutil.WriteFile(path, noPlayerCountConfig, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					_, err = ParseConfig(path)
 					Expect(err).To(HaveOccurred())

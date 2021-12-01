@@ -17,7 +17,8 @@ import (
 
 // Executor is an interface for calling a command and process its output.
 type Executor interface {
-	CallCMD(cmd []string, dir string) ([]byte, error)
+	// CallCMD executes the command and returns the output's STDOUT, STDERR streams as well as any errors
+	CallCMD(cmd []string, dir string) ([]byte, []byte, error)
 }
 
 var (
@@ -43,16 +44,16 @@ type Commander struct {
 }
 
 // Run is a facade command that runs a single command from the current directory.
-func (c *Commander) Run(cmd string) ([]byte, error) {
+func (c *Commander) Run(cmd string) ([]byte, []byte, error) {
 	return c.CallCMD([]string{cmd}, "./")
 }
 
-// CallCMD calls a specified command in sh and returns its stdout as a byte slice and potentially an error.
+// CallCMD calls a specified command in sh and returns its stdout and stderr as a byte slice and potentially an error.
 // As per os/exec doc:
 // ```
 // If the command fails to run or doesn't complete successfully, the error is of type *ExitError. Other error types may be returned for I/O problems.
 // ```
-func (c *Commander) CallCMD(cmd []string, dir string) ([]byte, error) {
+func (c *Commander) CallCMD(cmd []string, dir string) ([]byte, []byte, error) {
 	baseCmd := c.Options
 	baseCmd = append(baseCmd, cmd...)
 	command := exec.Command(c.Command, baseCmd...)
@@ -65,20 +66,19 @@ func (c *Commander) CallCMD(cmd []string, dir string) ([]byte, error) {
 	command.Dir = dir
 	err := command.Start()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// Check if the command finished successfully.
 	err = command.Wait()
 	if err != nil {
 		switch err.(type) {
 		case *exec.ExitError:
-			bytes := stderrBuffer.Bytes()
-			return bytes, err
+			return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), err
 		default:
-			return []byte{}, errors.New("error executing a command")
+			return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), errors.New("error executing a command")
 		}
 	}
-	return stdoutBuffer.Bytes(), nil
+	return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), nil
 }
 
 // ReadFile reads file content for a given file location.

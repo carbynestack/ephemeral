@@ -54,6 +54,7 @@ var _ = Describe("Spdz", func() {
 				s := &SPDZEngine{
 					cmder:          &FakeExecutor{},
 					sourceCodePath: fileName,
+					logger:         zap.NewNop().Sugar(),
 				}
 				conf := &CtxConfig{
 					Act: &Activation{
@@ -62,7 +63,7 @@ var _ = Describe("Spdz", func() {
 				}
 				err := s.Compile(conf)
 				Expect(err).NotTo(HaveOccurred())
-				out, err := cmder.CallCMD([]string{fmt.Sprintf("cat %s", s.sourceCodePath)}, "./")
+				out, _, err := cmder.CallCMD([]string{fmt.Sprintf("cat %s", s.sourceCodePath)}, "./")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(out)).To(Equal("a"))
 			})
@@ -87,6 +88,7 @@ var _ = Describe("Spdz", func() {
 				s := &SPDZEngine{
 					cmder:          &BrokenFakeExecutor{},
 					sourceCodePath: fileName,
+					logger:         zap.NewNop().Sugar(),
 				}
 				conf := &CtxConfig{
 					Act: &Activation{
@@ -125,6 +127,9 @@ var _ = Describe("Spdz", func() {
 					GameID: "0",
 				},
 				Context: context.TODO(),
+				Spdz: &SPDZEngineTypedConfig{
+					PlayerCount: 2,
+				},
 			}
 		})
 		AfterEach(func() {
@@ -203,7 +208,7 @@ var _ = Describe("Spdz", func() {
 				respCh: respCh,
 				logger: zap.NewNop().Sugar(),
 				ctx: &CtxConfig{
-					Proxy: &ProxyConfig{},
+					ProxyEntries: []*ProxyConfig{{}},
 					Spdz: &SPDZEngineTypedConfig{
 						PlayerID: 0,
 					},
@@ -243,7 +248,7 @@ var _ = Describe("Spdz", func() {
 				}
 				err := w.Execute(event)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("player with ID 0 not found"))
+				Expect(err.Error()).To(Equal("you must provide at least two players"))
 			})
 		})
 		Context("when activation fails", func() {

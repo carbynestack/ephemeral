@@ -24,7 +24,6 @@ import (
 
 	"github.com/google/uuid"
 
-	d "github.com/carbynestack/ephemeral/pkg/discovery"
 	c "github.com/carbynestack/ephemeral/pkg/discovery/transport/client"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 
@@ -38,7 +37,7 @@ type contextConf string
 const paramsMsg = "either secret params or amphora secret share UUIDs must be specified, %s"
 
 var (
-	// The number of paralell games that could run per container.
+	// The number of parallel games that could run per container.
 	parallelGames   = 1
 	retryInterval   = 100 * time.Millisecond
 	fsmStateTimeout = 20 * time.Second
@@ -96,6 +95,7 @@ func (s *Server) MethodFilter(next http.Handler) http.Handler {
 }
 
 // BodyFilter verifies all necessary parameters are set in the request body.
+// Also sets the CtxConfig to the request
 func (s *Server) BodyFilter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 		var act Activation
@@ -150,11 +150,11 @@ func (s *Server) BodyFilter(next http.Handler) http.Handler {
 				}
 			}
 		}
+
 		con := context.Background()
 		ctx := &CtxConfig{
-			Act:   &act,
-			Spdz:  s.config,
-			Proxy: &ProxyConfig{},
+			Act:  &act,
+			Spdz: s.config,
 		}
 		con = context.WithValue(con, ctxConf, ctx)
 		r := req.Clone(con)
@@ -280,7 +280,7 @@ func NewPlayerWithIO(ctx *CtxConfig, conf *io.Config, pod string, spdz MPCEngine
 	params := &PlayerParams{
 		// probuf3 will omit playerID=0.
 		PlayerID: ctx.Spdz.PlayerID + 100,
-		Players:  d.ExpectedPlayers,
+		Players:  ctx.Spdz.PlayerCount,
 		Pod:      pod,
 		IP:       ctx.Spdz.FrontendURL,
 		GameID:   ctx.Act.GameID,
@@ -340,7 +340,10 @@ func (p *PlayerWithIO) Start() {
 func (s *Server) getPodName() (string, error) {
 	// TODO: this is brittle, read the pod name from more reliable place.
 	cmder := s.executor
-	name, err := cmder.CallCMD([]string{"hostname"}, "/")
+
+	//use something like os.Getenv("HOST_NAME")?
+
+	name, _, err := cmder.CallCMD([]string{"hostname"}, "/")
 	if err != nil {
 		return "", err
 	}
