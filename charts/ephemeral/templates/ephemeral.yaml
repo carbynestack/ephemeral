@@ -24,6 +24,7 @@ spec:
         - name: {{ . }}
         {{- end}}
       {{- end}}
+      containerConcurrency: 1
       containers:
         - name: "{{ .Chart.Name }}-ephemeral"
           image: "{{ .Values.ephemeral.image.registry }}/{{ .Values.ephemeral.image.repository }}:{{ .Values.ephemeral.image.tag }}"
