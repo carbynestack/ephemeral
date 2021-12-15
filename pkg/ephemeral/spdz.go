@@ -7,6 +7,7 @@
 package ephemeral
 
 import (
+	"context"
 	d "github.com/carbynestack/ephemeral/pkg/discovery"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral/io"
@@ -209,8 +210,9 @@ func (s *SPDZEngine) Compile(ctx *CtxConfig) error {
 	}
 	var stdoutSlice []byte
 	var stderrSlice []byte
-	command := fmt.Sprintf("./compile.py %s", appName)
-	stdoutSlice, stderrSlice, err = s.cmder.CallCMD([]string{command}, s.baseDir)
+	command := fmt.Sprintf("./compile.py -M %s", appName)
+	// TODO: ctx.context is nil at this time.
+	stdoutSlice, stderrSlice, err = s.cmder.CallCMD(context.TODO(), []string{command}, s.baseDir)
 	stdOut := string(stdoutSlice)
 	stdErr := string(stderrSlice)
 	s.logger.Debugw("Compiled Successfully", "Command", command, "StdOut", stdOut, "StdErr", stdErr)
@@ -228,7 +230,7 @@ func (s *SPDZEngine) getFeedPort() string {
 func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
 	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID, "command", command)
-	stdout, stderr, err := s.cmder.CallCMD(command, s.baseDir)
+	stdout, stderr, err := s.cmder.CallCMD(ctx.Context, command, s.baseDir)
 	if err != nil {
 		err := fmt.Errorf("error while executing the user code: %v", err)
 		ctx.ErrCh <- err

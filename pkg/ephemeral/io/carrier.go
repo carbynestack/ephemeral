@@ -8,8 +8,11 @@ package io
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
+	"io"
 	"io/ioutil"
 	"net"
 )
@@ -21,7 +24,7 @@ type Result struct {
 
 // AbstractCarrier is the carriers interface.
 type AbstractCarrier interface {
-	Connect(context.Context, string, string) error
+	Connect(int32, context.Context, string, string) error
 	Close() error
 	Send([]amphora.SecretShare) error
 	Read(ResponseConverter, bool) (*Result, error)
@@ -29,10 +32,11 @@ type AbstractCarrier interface {
 
 // Carrier is a TCP client for TCP sockets.
 type Carrier struct {
-	Dialer    func(ctx context.Context, addr, port string) (net.Conn, error)
-	Conn      net.Conn
-	Packer    Packer
-	connected bool
+	Dialer       func(ctx context.Context, addr, port string) (net.Conn, error)
+	TlsConnector func(conn net.Conn, playerID int32) (net.Conn, error)
+	Conn         net.Conn
+	Packer       Packer
+	connected    bool
 }
 
 // Config contains TCP connection properties of Carrier.
@@ -42,13 +46,52 @@ type Config struct {
 }
 
 // Connect establishes a TCP connection to a socket on a given host and port.
-func (c *Carrier) Connect(ctx context.Context, host, port string) error {
+func (c *Carrier) Connect(playerID int32, ctx context.Context, host string, port string) error {
 	conn, err := c.Dialer(ctx, host, port)
 	if err != nil {
 		return err
 	}
-	c.Conn = conn
+
+	_, err = conn.Write(c.buildHeader(playerID))
+	if err != nil {
+		return err
+	}
+
+	c.Conn, err = c.TlsConnector(conn, playerID)
+	if err != nil {
+		return err
+	}
+
+	if playerID == 0 {
+		err = c.readSpec()
+		if err != nil {
+			return err
+		}
+	}
+
 	c.connected = true
+	return nil
+}
+
+func (c Carrier) readSpec() error {
+	const size = 4
+
+	readBytes := make([]byte, size)
+	_, err := io.LimitReader(c.Conn, size).Read(readBytes)
+	if err != nil {
+		return err
+	}
+
+	sizeOfHeader := binary.LittleEndian.Uint32(readBytes)
+
+	readBytes = make([]byte, sizeOfHeader)
+	_, err = io.LimitReader(c.Conn, int64(sizeOfHeader)).Read(readBytes)
+	if err != nil {
+		return err
+	}
+
+	//ToDo, compare read PRIME with prime number from config?
+
 	return nil
 }
 
@@ -68,14 +111,29 @@ func (c *Carrier) Send(secret []amphora.SecretShare) error {
 		shares = append(shares, secret[i].Data)
 	}
 	err := c.Packer.Marshal(shares, &input)
+
 	if err != nil {
 		return err
 	}
 	_, err = c.Conn.Write(input)
+
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// Returns a new Slice with the header appended
+// The header consists of the clientId as string:
+// - 1 Long (4 Byte) that contains the length of the string in bytes
+// - Then come X Bytes for the String
+func (c *Carrier) buildHeader(playerId int32) []byte {
+	playerIdString := []byte(fmt.Sprintf("%d", playerId))
+
+	lengthOfString := make([]byte, 4)
+	binary.LittleEndian.PutUint32(lengthOfString, uint32(len(playerIdString)))
+
+	return append(lengthOfString, playerIdString...)
 }
 
 // Read reads the response from the TCP connection and unmarshals it.

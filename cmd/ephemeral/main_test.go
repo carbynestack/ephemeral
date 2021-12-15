@@ -7,6 +7,7 @@
 package main_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -43,7 +44,7 @@ var _ = Describe("Main", func() {
 					path = fmt.Sprintf("/tmp/test-%d", random)
 				})
 				AfterEach(func() {
-					_, _, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
+					_, _, err := cmder.CallCMD(context.TODO(), []string{fmt.Sprintf("rm %s", path)}, "./")
 					Expect(err).NotTo(HaveOccurred())
 				})
 				Context("when it succeeds", func() {

@@ -8,17 +8,20 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 )
 
 // Executor is an interface for calling a command and process its output.
 type Executor interface {
 	// CallCMD executes the command and returns the output's STDOUT, STDERR streams as well as any errors
-	CallCMD(cmd []string, dir string) ([]byte, []byte, error)
+	CallCMD(theContext context.Context, cmd []string, dir string) ([]byte, []byte, error)
 }
 
 var (
@@ -45,7 +48,7 @@ type Commander struct {
 
 // Run is a facade command that runs a single command from the current directory.
 func (c *Commander) Run(cmd string) ([]byte, []byte, error) {
-	return c.CallCMD([]string{cmd}, "./")
+	return c.CallCMD(context.TODO(), []string{cmd}, "./")
 }
 
 // CallCMD calls a specified command in sh and returns its stdout and stderr as a byte slice and potentially an error.
@@ -53,10 +56,10 @@ func (c *Commander) Run(cmd string) ([]byte, []byte, error) {
 // ```
 // If the command fails to run or doesn't complete successfully, the error is of type *ExitError. Other error types may be returned for I/O problems.
 // ```
-func (c *Commander) CallCMD(cmd []string, dir string) ([]byte, []byte, error) {
+func (c *Commander) CallCMD(theContext context.Context, cmd []string, dir string) ([]byte, []byte, error) {
 	baseCmd := c.Options
 	baseCmd = append(baseCmd, cmd...)
-	command := exec.Command(c.Command, baseCmd...)
+	command := exec.CommandContext(theContext, c.Command, baseCmd...)
 
 	stderrBuffer := bytes.NewBuffer([]byte{})
 	stdoutBuffer := bytes.NewBuffer([]byte{})
@@ -68,8 +71,23 @@ func (c *Commander) CallCMD(cmd []string, dir string) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	// Check if the command finished successfully.
-	err = command.Wait()
+
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(1)
+	go func() {
+		// Check if the command finished successfully.
+		err = command.Wait()
+		defer waitGroup.Done()
+
+		if err != nil {
+			println(fmt.Sprintf("Error occured!"))
+			println(fmt.Sprintf("StdOut: %s", stdoutBuffer.Bytes()))
+			println(fmt.Sprintf("StdErr: %s", stderrBuffer.Bytes()))
+		}
+	}()
+
+	waitGroup.Wait()
+
 	if err != nil {
 		switch err.(type) {
 		case *exec.ExitError:
