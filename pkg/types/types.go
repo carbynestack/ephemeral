@@ -45,11 +45,13 @@ type DiscoveryConfig struct {
 
 // Activation is an object that is received as an input from the Ephemeral client.
 type Activation struct {
-	AmphoraParams []string     `json:"amphoraParams"`
-	SecretParams  []string     `json:"secretParams"`
-	GameID        string       `json:"gameID"`
-	Code          string       `json:"code"`
-	Output        OutputConfig `json:"output"`
+	AmphoraParams []string `json:"amphoraParams"`
+	SecretParams  []string `json:"secretParams"`
+	// for sake of simplicity all TagFilterParams are AND chained
+	TagFilterParams []string     `json:"tagFilterParams"`
+	GameID          string       `json:"gameID"`
+	Code            string       `json:"code"`
+	Output          OutputConfig `json:"output"`
 }
 
 // ProxyConfig is the configuration used by the proxy when the connection between players is established.

@@ -194,6 +194,9 @@ func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
 	if len(act.SecretParams) > 0 {
 		return s.feeder.LoadFromRequestAndFeed(act, feedPort, ctx)
 	}
+	if len(act.TagFilterParams) > 0 {
+		return s.feeder.LoadByTagsAndSecretStoreAndFeed(act, feedPort, ctx)
+	}
 	// The line below should be never reached, since we check activations parameters in the request handlers. However, leaving it here for completeness.
 	return nil, errors.New("no MPC parameters specified")
 }

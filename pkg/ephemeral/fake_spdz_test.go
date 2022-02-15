@@ -128,6 +128,10 @@ func (f *BrokenFakeProxy) Stop() {
 type FakeFeeder struct {
 }
 
+func (f *FakeFeeder) LoadByTagsAndSecretStoreAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error) {
+	return make([]byte, 0), nil
+}
+
 func (f *FakeFeeder) LoadFromSecretStoreAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error) {
 	return []byte(ctx.Act.AmphoraParams[0]), nil
 }

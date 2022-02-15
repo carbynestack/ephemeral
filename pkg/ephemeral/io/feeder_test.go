@@ -28,8 +28,9 @@ var _ = Describe("Feeder", func() {
 	BeforeEach(func() {
 		carrier = &FakeCarrier{}
 		act = &Activation{
-			AmphoraParams: []string{"a"},
-			GameID:        "abc",
+			AmphoraParams:   []string{"a"},
+			TagFilterParams: []string{"key:value"},
+			GameID:          "abc",
 			Output: OutputConfig{
 				Type: PlainText,
 			},
@@ -44,7 +45,10 @@ var _ = Describe("Feeder", func() {
 		conf = &CtxConfig{
 			Act:     act,
 			Context: context.TODO(),
-			Spdz:    &SPDZEngineTypedConfig{PlayerCount: 2},
+			Spdz: &SPDZEngineTypedConfig{
+				PlayerID:    0,
+				PlayerCount: 2,
+			},
 		}
 	})
 
@@ -164,6 +168,67 @@ var _ = Describe("Feeder", func() {
 				})
 			})
 		})
+		Context("when reading objects from amphora via tagFilter", func() {
+			Context("when output type is plaintext", func() {
+				It("responds with the result", func() {
+					res, err := f.LoadByTagsAndSecretStoreAndFeed(act, "", conf)
+					Expect(err).NotTo(HaveOccurred())
+					var response Result
+					json.Unmarshal(res, &response)
+					Expect(response.Response[0]).To(Equal("yay"))
+					Expect(carrier.isBulk).To(BeFalse())
+				})
+			})
+			Context("when output type is secret share", func() {
+				It("responds with the result", func() {
+					act.Output.Type = SecretShare
+					res, err := f.LoadByTagsAndSecretStoreAndFeed(act, "", conf)
+					Expect(err).NotTo(HaveOccurred())
+					var response Result
+					json.Unmarshal(res, &response)
+					Expect(response.Response[0]).To(Equal("yay"))
+					Expect(carrier.isBulk).To(BeFalse())
+				})
+			})
+			Context("when output type is amphora secret", func() {
+				It("responds with the secretID=gameID", func() {
+					act.Output.Type = AmphoraSecret
+					res, err := f.LoadByTagsAndSecretStoreAndFeed(act, "", conf)
+					Expect(err).NotTo(HaveOccurred())
+					var response Result
+					json.Unmarshal(res, &response)
+					Expect(response.Response[0]).To(Equal("abc"))
+					Expect(carrier.isBulk).To(BeTrue())
+				})
+			})
+			Context("when no output type is given", func() {
+				It("returns an error", func() {
+					act.Output.Type = ""
+					res, err := f.LoadByTagsAndSecretStoreAndFeed(act, "", conf)
+					Expect(err).To(HaveOccurred())
+					Expect(res).To(BeNil())
+				})
+			})
+			Context("when getting an object fails", func() {
+				It("returns an error", func() {
+					f.conf.AmphoraClient = &BrokenReadFakeAmphoraClient{}
+					res, err := f.LoadByTagsAndSecretStoreAndFeed(act, "", conf)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal("amphora GetObjectList() error"))
+					Expect(res).To(BeNil())
+				})
+			})
+			Context("when writing an object fails", func() {
+				It("returns an error", func() {
+					f.conf.AmphoraClient = &BrokenWriteFakeAmphoraClient{}
+					act.Output.Type = AmphoraSecret
+					res, err := f.LoadByTagsAndSecretStoreAndFeed(act, "", conf)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal("amphora create error"))
+					Expect(res).To(BeNil())
+				})
+			})
+		})
 	})
 
 	Context("when creating a new instance of feeder", func() {
@@ -181,6 +246,9 @@ var _ = Describe("Feeder", func() {
 type FakeAmphoraClient struct {
 }
 
+func (f *FakeAmphoraClient) GetObjectList(objectListRequestParams *amphora.ObjectListRequestParams) (amphora.MetadataPage, error) {
+	return amphora.MetadataPage{}, nil
+}
 func (f *FakeAmphoraClient) GetSecretShare(string) (amphora.SecretShare, error) {
 	return amphora.SecretShare{}, nil
 }
@@ -191,6 +259,10 @@ func (f *FakeAmphoraClient) CreateSecretShare(*amphora.SecretShare) error {
 type BrokenReadFakeAmphoraClient struct {
 }
 
+func (f *BrokenReadFakeAmphoraClient) GetObjectList(objectListRequestParams *amphora.ObjectListRequestParams) (amphora.MetadataPage, error) {
+	return amphora.MetadataPage{}, errors.New("amphora GetObjectList() error")
+}
+
 func (f *BrokenReadFakeAmphoraClient) GetSecretShare(string) (amphora.SecretShare, error) {
 	return amphora.SecretShare{}, errors.New("amphora read error")
 }
@@ -199,6 +271,10 @@ func (f *BrokenReadFakeAmphoraClient) CreateSecretShare(*amphora.SecretShare) er
 }
 
 type BrokenWriteFakeAmphoraClient struct {
+}
+
+func (f *BrokenWriteFakeAmphoraClient) GetObjectList(objectListRequestParams *amphora.ObjectListRequestParams) (amphora.MetadataPage, error) {
+	return amphora.MetadataPage{}, nil
 }
 
 func (f *BrokenWriteFakeAmphoraClient) GetSecretShare(string) (amphora.SecretShare, error) {

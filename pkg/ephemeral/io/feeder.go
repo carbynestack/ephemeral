@@ -19,6 +19,7 @@ import (
 
 // Feeder is an interface.
 type Feeder interface {
+	LoadByTagsAndSecretStoreAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error)
 	LoadFromSecretStoreAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error)
 	LoadFromRequestAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error)
 	Close() error
@@ -50,8 +51,63 @@ type AmphoraFeeder struct {
 	carrier AbstractCarrier
 }
 
-// LoadFromSecretStoreAndFeed loads input parameters from Amphora.
+// LoadByTagsAndSecretStoreAndFeed loads input parameters from Amphora based on tag filter.
+func (f *AmphoraFeeder) LoadByTagsAndSecretStoreAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error) {
+
+	f.logger.Debug("Called LoadByTagsAndSecretStoreAndFeed()")
+
+	var secretShareIds []string
+	client := f.conf.AmphoraClient
+
+	// TODO implement pagination
+	params := &amphora.ObjectListRequestParams{
+		Filter:        strings.Join(act.TagFilterParams, ","),
+		PageNumber:    0,
+		PageSize:      0,
+		SortProperty:  "",
+		SortDirection: "",
+	}
+
+	f.logger.Debugw("Resolving tags to secretIds", "params", params, GameID, ctx.Act.GameID)
+	metadataPage, err := client.GetObjectList(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, metadata := range metadataPage.Content {
+		secretShareIds = append(secretShareIds, metadata.SecretID)
+	}
+
+	// TODO below here it's duplicated code from LoadFromSecretStoreAndFeed()
+	// using secretShareIds instead act.AmphoraParams
+	f.logger.Debugw(fmt.Sprintf("Fetching secret shares for secretIds=%s", secretShareIds), GameID, ctx.Act.GameID)
+	var data []string
+	for i := range secretShareIds {
+		osh, err := client.GetSecretShare(secretShareIds[i])
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, osh.Data)
+	}
+	resp, err := f.feedAndRead(data, feedPort, ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Write to amphora if required and return amphora secret ids.
+	if act.Output.Type == AmphoraSecret {
+		ids, err := f.writeToAmphora(act, *resp)
+		if err != nil {
+			return nil, err
+		}
+		resp.Response = ids
+	}
+	return json.Marshal(&resp)
+}
+
 func (f *AmphoraFeeder) LoadFromSecretStoreAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error) {
+
+	f.logger.Debug("Called LoadFromSecretStoreAndFeed()")
+
 	var data []string
 	client := f.conf.AmphoraClient
 	for i := range act.AmphoraParams {

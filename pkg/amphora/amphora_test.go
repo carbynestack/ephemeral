@@ -8,11 +8,10 @@ package amphora_test
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/url"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"net/http"
+	"net/url"
 
 	. "github.com/carbynestack/ephemeral/pkg/amphora"
 )
@@ -22,11 +21,30 @@ var _ = Describe("Amphora", func() {
 	var (
 		share SecretShare
 		js    []byte
+
+		metadataPage     MetadataPage
+		metadataPageJson []byte
 	)
 
 	BeforeEach(func() {
 		share = SecretShare{SecretID: "xyz"}
 		js, _ = json.Marshal(&share)
+
+		metadataPage = MetadataPage{
+			Content: []Metadata{
+				{
+					SecretID: "ef956404-b172-440e-9944-88ac87ce71bf",
+					Tags: []Tag{
+						{Key: "key", Value: "value", ValueType: "STRING"},
+					},
+				},
+			},
+			Number:        0,
+			Size:          1,
+			TotalElements: 1,
+			TotalPages:    1,
+		}
+		metadataPageJson, _ = json.Marshal(&metadataPage)
 	})
 	Context("when retrieving a shared secret", func() {
 		It("returns a shared object when it exists in amphora", func() {
@@ -64,6 +82,26 @@ var _ = Describe("Amphora", func() {
 
 			err := client.CreateSecretShare(&share)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Context("when retrieving a metadata page", func() {
+		It("returns a metadata page object when it exists in amphora", func() {
+			rt := MockedRoundTripper{ExpectedPath: "/secret-shares", ReturnJson: metadataPageJson, ExpectedResponseCode: http.StatusOK}
+			HTTPClient := http.Client{Transport: &rt}
+			client := Client{HTTPClient: HTTPClient, URL: url.URL{Host: "test", Scheme: "http"}}
+
+			params := &ObjectListRequestParams{
+				Filter:        "key:value",
+				PageNumber:    0,
+				PageSize:      0,
+				SortProperty:  "",
+				SortDirection: "",
+			}
+
+			result, err := client.GetObjectList(params)
+			Expect(result).To(Equal(metadataPage))
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

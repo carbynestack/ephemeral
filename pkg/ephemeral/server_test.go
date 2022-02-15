@@ -92,6 +92,78 @@ var _ = Describe("Server", func() {
 					Expect(respBody).To(Equal("request body is nil"))
 				})
 			})
+			Context("when body has empty params", func() {
+				It("returns a 400 response code", func() {
+					act = &Activation{
+						GameID:          "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
+						SecretParams:    []string{},
+						AmphoraParams:   []string{},
+						TagFilterParams: []string{},
+					}
+
+					body, _ := json.Marshal(&act)
+					req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
+					s.BodyFilter(handler200).ServeHTTP(rr, req)
+					respCode := rr.Code
+					respBody := rr.Body.String()
+					Expect(respCode).To(Equal(http.StatusBadRequest))
+					Expect(respBody).To(Equal("either secret params or amphora secret share UUIDs or tag params must be specified, none of them given"))
+				})
+			})
+			Context("when body has SecretParams and AmphoraParams", func() {
+				It("returns a 400 response code", func() {
+					act = &Activation{
+						GameID:          "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
+						SecretParams:    []string{"71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"},
+						AmphoraParams:   []string{"yolo"},
+						TagFilterParams: []string{},
+					}
+
+					body, _ := json.Marshal(&act)
+					req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
+					s.BodyFilter(handler200).ServeHTTP(rr, req)
+					respCode := rr.Code
+					respBody := rr.Body.String()
+					Expect(respCode).To(Equal(http.StatusBadRequest))
+					Expect(respBody).To(Equal("either secret params or amphora secret share UUIDs or tag params must be specified, not all of them"))
+				})
+			})
+			Context("when body has AmphoraParams and TagFilterParams", func() {
+				It("returns a 400 response code", func() {
+					act = &Activation{
+						GameID:          "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
+						SecretParams:    []string{},
+						AmphoraParams:   []string{"yolo"},
+						TagFilterParams: []string{"key:value"},
+					}
+
+					body, _ := json.Marshal(&act)
+					req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
+					s.BodyFilter(handler200).ServeHTTP(rr, req)
+					respCode := rr.Code
+					respBody := rr.Body.String()
+					Expect(respCode).To(Equal(http.StatusBadRequest))
+					Expect(respBody).To(Equal("either secret params or amphora secret share UUIDs or tag params must be specified, not all of them"))
+				})
+			})
+			Context("when body has SecretParams and TagFilterParams", func() {
+				It("returns a 400 response code", func() {
+					act = &Activation{
+						GameID:          "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
+						SecretParams:    []string{"71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"},
+						AmphoraParams:   []string{},
+						TagFilterParams: []string{"key:value"},
+					}
+
+					body, _ := json.Marshal(&act)
+					req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
+					s.BodyFilter(handler200).ServeHTTP(rr, req)
+					respCode := rr.Code
+					respBody := rr.Body.String()
+					Expect(respCode).To(Equal(http.StatusBadRequest))
+					Expect(respBody).To(Equal("either secret params or amphora secret share UUIDs or tag params must be specified, not all of them"))
+				})
+			})
 			Context("when a not-valid JSON is provided in the body", func() {
 				It("returns a 400 response code", func() {
 					body := []byte("a")

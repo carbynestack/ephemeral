@@ -11,12 +11,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/asaskevich/govalidator"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-
-	"github.com/asaskevich/govalidator"
 )
 
 // SecretShare is a secret shared value stored in Amphora.
@@ -33,8 +32,30 @@ type Tag struct {
 	Value     string `json:"value"`
 }
 
+type Metadata struct {
+	SecretID string `json:"secretId"`
+	Tags     []Tag  `json:"tags"`
+}
+
+type MetadataPage struct {
+	Content       []Metadata `json:"content"`
+	Number        int32      `json:"number"`
+	Size          int32      `json:"size"`
+	TotalElements int64      `json:"totalElements"`
+	TotalPages    int32      `json:"totalPages"`
+}
+
+type ObjectListRequestParams struct {
+	Filter        string
+	PageNumber    int32
+	PageSize      int32
+	SortProperty  string
+	SortDirection string
+}
+
 // AbstractClient is an interface for object storage client.
 type AbstractClient interface {
+	GetObjectList(objectListRequestParams *ObjectListRequestParams) (MetadataPage, error)
 	GetSecretShare(string) (SecretShare, error)
 	CreateSecretShare(*SecretShare) error
 }
@@ -55,12 +76,47 @@ type Client struct {
 	HTTPClient http.Client
 }
 
-const secretShareURI = "/intra-vcp/secret-shares"
+const secretShareURI = "/secret-shares"
+
+//GetObjectList query secretIds based on the filter argument (tags)
+func (c *Client) GetObjectList(objectListRequestParams *ObjectListRequestParams) (MetadataPage, error) {
+	var result MetadataPage
+
+	urlParams := url.Values{}
+	urlParams.Add("filter", objectListRequestParams.Filter)
+	urlParams.Add("pageNumber", fmt.Sprintf("%v", objectListRequestParams.PageNumber))
+	urlParams.Add("pageSize", fmt.Sprintf("%v", objectListRequestParams.PageSize))
+	urlParams.Add("sortProperty", objectListRequestParams.SortProperty)
+	urlParams.Add("sortDirection", objectListRequestParams.SortDirection)
+
+	getObjectListUrl := c.URL
+	getObjectListUrl.Path += secretShareURI
+	getObjectListUrl.RawQuery = urlParams.Encode()
+	req, err := http.NewRequest(http.MethodGet, getObjectListUrl.String(), nil)
+
+	if err != nil {
+		return result, err
+	}
+
+	body, err := c.doRequest(req, http.StatusOK)
+	if err != nil {
+		return result, err
+	}
+
+	json.NewDecoder(body).Decode(&result)
+
+	if err != nil {
+		return result, fmt.Errorf("amphora returned an invalid response body: %s", err)
+	}
+	return result, nil
+}
+
+const intraVcpSecretShareURI = "/intra-vcp/secret-shares"
 
 // GetSecretShare creates a new secret share by sending a POST request against Amphora.
 func (c *Client) GetSecretShare(id string) (SecretShare, error) {
 	var os SecretShare
-	req, err := http.NewRequest(http.MethodGet, c.URL.String()+fmt.Sprintf("%s/%s", secretShareURI, id), nil)
+	req, err := http.NewRequest(http.MethodGet, c.URL.String()+fmt.Sprintf("%s/%s", intraVcpSecretShareURI, id), nil)
 	if err != nil {
 		return os, err
 	}
@@ -81,7 +137,7 @@ func (c *Client) CreateSecretShare(os *SecretShare) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPost, c.URL.String()+fmt.Sprintf("%s", secretShareURI), bytes.NewBuffer(jsonMarshalled))
+	req, err := http.NewRequest(http.MethodPost, c.URL.String()+fmt.Sprintf("%s", intraVcpSecretShareURI), bytes.NewBuffer(jsonMarshalled))
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		return err
