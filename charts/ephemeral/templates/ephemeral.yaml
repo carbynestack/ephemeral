@@ -29,6 +29,13 @@ spec:
         - name: "{{ .Chart.Name }}-ephemeral"
           image: "{{ .Values.ephemeral.image.registry }}/{{ .Values.ephemeral.image.repository }}:{{ .Values.ephemeral.image.tag }}"
           imagePullPolicy: {{ .Values.ephemeral.image.pullPolicy }}
+          {{- if .Values.ephemeral.env }}
+          env:
+          {{- range .Values.ephemeral.env }}
+          - name: {{ .name }}
+            value: {{ .value | quote}}
+          {{- end }}
+          {{- end }}
           ports:
             - name: http1
               containerPort: 8080
