@@ -6,6 +6,24 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+#
+# check that required tools are installed
+#
+if ! command -v jq &> /dev/null
+then
+    echo "jq could not be found! See https://stedolan.github.io/jq/download/"
+    exit 1
+fi
+if ! command -v license-detector &> /dev/null
+then
+    echo "license-detector could not be found! See https://github.com/go-enry/go-license-detector"
+    exit 1
+fi
+if ! command -v sponge &> /dev/null
+then
+    echo "sponge could not be found! See https://command-not-found.com/sponge"
+    exit 1
+fi
 # Traverses the vendor folder and collects license information in the 3RD-PARTY-LICENSES/sbom.json file. License and
 # notice files are copied to the respective subfolder in the 3RD-PARTY-LICENSES folder.
 SBOM_FILE="3RD-PARTY-LICENSES/sbom.json"
