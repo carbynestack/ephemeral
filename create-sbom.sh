@@ -24,6 +24,10 @@ then
     echo "sponge could not be found! See https://command-not-found.com/sponge"
     exit 1
 fi
+
+# download go dependencies into vendor directory - so we have all required license files
+go mod vendor
+
 # Traverses the vendor folder and collects license information in the 3RD-PARTY-LICENSES/sbom.json file. License and
 # notice files are copied to the respective subfolder in the 3RD-PARTY-LICENSES folder.
 SBOM_FILE="3RD-PARTY-LICENSES/sbom.json"
