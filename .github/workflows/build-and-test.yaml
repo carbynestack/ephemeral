@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       GOPATH: ${{ github.workspace }}
-      GO111MODULE: off
+      GO111MODULE: on
       REGISTRY: ghcr.io
     defaults:
       run:
@@ -75,6 +75,9 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Perform Build
+        run: |
+          go build ./...
       - name: Perform Tests
         run: |
           go test ./... -coverprofile coverage.txt.tmp && cat coverage.txt.tmp | grep -Ev "fake|helper" > coverage.txt

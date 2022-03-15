@@ -99,7 +99,7 @@ jobs:
     needs: [prepare,draft-release]
     env:
       GOPATH: ${{ github.workspace }}
-      GO111MODULE: off
+      GO111MODULE: on
       REGISTRY: ghcr.io
       VERSION: "${{ needs.prepare.outputs.VERSION }}"
     defaults:
