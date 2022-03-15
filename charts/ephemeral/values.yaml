@@ -20,6 +20,8 @@ discovery:
   master:
     host:
     port:
+  # make sure using same value for ephemeral!
+  playerCount: 2
 
 ephemeral:
   service:
@@ -44,9 +46,12 @@ ephemeral:
   frontendUrl:
   discoveryAddress: discovery.default.svc.cluster.local
   playerId:
+  # make sure using same value for discovery!
+  playerCount: 2
   spdz:
     prime:
     rInv:
+  env: []
 
 networkController:
   image:
