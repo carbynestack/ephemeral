@@ -61,18 +61,42 @@ var _ = Describe("Main", func() {
 				_, _, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
 				Expect(err).NotTo(HaveOccurred())
 			})
-			It("succeeds", func() {
-				data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
+			Context("parameters are plausible", func() {
+				It("succeeds", func() {
+					data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
 		"masterPort": "31400","slave": false, "playerCount": 2}`)
-				err := ioutil.WriteFile(path, data, 0644)
-				Expect(err).NotTo(HaveOccurred())
-				conf, err := ParseConfig(path)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(conf.FrontendURL).To(Equal("apollo.test.specs.cloud"))
-				Expect(conf.MasterHost).To(Equal("apollo.test.specs.cloud"))
-				Expect(conf.MasterPort).To(Equal("31400"))
-				Expect(conf.Slave).To(BeFalse())
+					err := ioutil.WriteFile(path, data, 0644)
+					Expect(err).NotTo(HaveOccurred())
+					conf, err := ParseConfig(path)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(conf.FrontendURL).To(Equal("apollo.test.specs.cloud"))
+					Expect(conf.MasterHost).To(Equal("apollo.test.specs.cloud"))
+					Expect(conf.MasterPort).To(Equal("31400"))
+					Expect(conf.Slave).To(BeFalse())
+				})
 			})
+
+			Context("parameters are invalid", func() {
+				Context("playerCount is invalid", func() {
+					It("returns an error on PlayerCount == 1", func() {
+						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
+		"masterPort": "31400","slave": false, "playerCount": 1}`)
+						err := ioutil.WriteFile(path, data, 0644)
+						Expect(err).NotTo(HaveOccurred())
+						_, err = ParseConfig(path)
+						Expect(err).To(HaveOccurred())
+					})
+					It("returns an error on negative PlayerCount", func() {
+						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
+		"masterPort": "31400","slave": false, "playerCount": -2}`)
+						err := ioutil.WriteFile(path, data, 0644)
+						Expect(err).NotTo(HaveOccurred())
+						_, err = ParseConfig(path)
+						Expect(err).To(HaveOccurred())
+					})
+				})
+			})
+
 		})
 		Context("one of the required parameters is missing", func() {
 			Context("when no frontendURL is defined", func() {

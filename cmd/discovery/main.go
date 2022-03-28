@@ -170,6 +170,9 @@ func ParseConfig(path string) (*DiscoveryConfig, error) {
 	if conf.PlayerCount == 0 {
 		return nil, errors.New("missing config error, PlayerCount must be defined")
 	}
+	if conf.PlayerCount < 2 {
+		return nil, errors.New("invalid config error, PlayerCount must be 2 or higher")
+	}
 	return &conf, nil
 }
 
