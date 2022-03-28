@@ -67,9 +67,7 @@ func (s *SPDZWrapper) Execute(event *pb.Event) error {
 	if err != nil {
 		return err
 	}
-
 	s.ctx.ProxyEntries = entries
-
 	s.ctx.ErrCh = s.errCh
 	s.logger.Debug("Starting MPC execution")
 	res, err := s.activate(s.ctx)
@@ -83,19 +81,15 @@ func (s *SPDZWrapper) Execute(event *pb.Event) error {
 }
 
 func (s *SPDZWrapper) getProxyEntries(pls []*pb.Player) ([]*ProxyConfig, error) {
-
 	if len(pls) == 1 {
 		return nil, errors.New("you must provide at least two players")
 	}
-
 	// Copy to new Slice so that we don't modify the original Slice (just in case)
 	players := make([]*pb.Player, len(pls))
 	copy(players, pls)
-
 	sort.Slice(players, func(left, right int) bool {
 		return players[left].Id < players[right].Id
 	})
-
 	var proxyEntries []*ProxyConfig
 	for _, player := range players {
 		// TODO: remove this 100 hack, it is a temp workaround for protobuf3.
@@ -108,13 +102,10 @@ func (s *SPDZWrapper) getProxyEntries(pls []*pb.Player) ([]*ProxyConfig, error) 
 			})
 		}
 	}
-
 	s.logger.Infow("Created ProxyEntries", "ProxyEntries", proxyEntries, "Players", players)
-
 	if len(proxyEntries) != len(players)-1 {
 		return nil, errors.New("could not get all ProxyEntries")
 	}
-
 	return proxyEntries, nil
 }
 
@@ -217,17 +208,13 @@ func (s *SPDZEngine) Compile(ctx *CtxConfig) error {
 	if err != nil {
 		return err
 	}
-
 	var stdoutSlice []byte
 	var stderrSlice []byte
-
 	command := fmt.Sprintf("./compile.py %s", appName)
 	stdoutSlice, stderrSlice, err = s.cmder.CallCMD([]string{command}, s.baseDir)
-
 	stdOut := string(stdoutSlice)
 	stdErr := string(stderrSlice)
 	s.logger.Debugw("Compiled Successfully", "Command", command, "StdOut", stdOut, "StdErr", stdErr)
-
 	if err != nil {
 		return err
 	}
@@ -248,7 +235,6 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 		ctx.ErrCh <- err
 		s.logger.Errorw(err.Error(), GameID, ctx.Act.GameID)
 	}
-
 	s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
 }
 
@@ -258,8 +244,6 @@ func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error 
 		addrs = addrs + fmt.Sprintf("%s\n", addr)
 	}
 	data := []byte(addrs)
-
 	s.logger.Infow("Writing to IPFile: ", "path", path, "content", addrs, "proxy address", addr, "parties", parties)
-
 	return ioutil.WriteFile(path, data, 0644)
 }

@@ -150,7 +150,6 @@ func (s *Server) BodyFilter(next http.Handler) http.Handler {
 				}
 			}
 		}
-
 		con := context.Background()
 		ctx := &CtxConfig{
 			Act:  &act,

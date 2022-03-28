@@ -78,14 +78,12 @@ func (p *Proxy) Run(ctx *CtxConfig, errCh chan error) error {
 
 	for i, pat := range pats {
 		localPort := p.ctx.ProxyEntries[i].LocalPort
-
 		p.logger.Info(fmt.Sprintf("Waiting until proxyEntry is started for local Port %s", localPort))
 		_, err := pat.WaitUntilStarted("", localPort, timeout, dialer)
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -121,7 +119,6 @@ func (p *Proxy) checkConnectionToPeers() error {
 		p.logger.Errorw(message, "errors", errorsCheckingConnection)
 		return errors.New(message)
 	}
-
 	return nil
 }
 
