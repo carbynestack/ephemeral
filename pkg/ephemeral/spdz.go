@@ -63,9 +63,9 @@ type SPDZWrapper struct {
 
 // Execute runs the MPC computation.
 func (s *SPDZWrapper) Execute(event *pb.Event) error {
-	entries, err2 := s.getProxyEntries(event.Players)
-	if err2 != nil {
-		return err2
+	entries, err := s.getProxyEntries(event.Players)
+	if err != nil {
+		return err
 	}
 
 	s.ctx.ProxyEntries = entries
@@ -118,19 +118,7 @@ func (s *SPDZWrapper) getProxyEntries(pls []*pb.Player) ([]*ProxyConfig, error) 
 	return proxyEntries, nil
 }
 
-func (s *SPDZWrapper) getPlayerIPsAndPorts(pls []*pb.Player) (string, string, error) {
-	for _, player := range pls {
-		// The port always includes the second player, change it if the number of players > 2.
-		// ToDo: 2+ Players
-		if player.Id-100 == 1 {
-			return player.Ip, strconv.Itoa(int(player.Port)), nil
-		}
-	}
-	return "", "", fmt.Errorf("player with ID %d not found", s.ctx.Spdz.PlayerID)
-}
-
-// getLocalPortForPlayer returns back the port that is set by the proxy.
-// Note, it only works until the ExpectedPlayers is equal to 2.
+// getLocalPortForPlayer returns the port that is set by the proxy.
 func (s *SPDZWrapper) getLocalPortForPlayer(id int32) string {
 	//TODO will this always work?
 	return strconv.Itoa(int(d.BasePort + id))
@@ -260,8 +248,6 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 		ctx.ErrCh <- err
 		s.logger.Errorw(err.Error(), GameID, ctx.Act.GameID)
 	}
-	//s.logger.Infow(fmt.Sprintf("===== Begin of stdout from the user container =====\n%s", string(stdout)), GameID, ctx.Act.GameID)
-	//s.logger.Infow("===== End of stdout from the user container =====", GameID, ctx.Act.GameID)
 
 	s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
 }
