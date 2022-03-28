@@ -339,10 +339,8 @@ func (p *PlayerWithIO) Start() {
 
 func (s *Server) getPodName() (string, error) {
 	// TODO: this is brittle, read the pod name from more reliable place.
+	//       use something like os.Getenv("HOST_NAME")?
 	cmder := s.executor
-
-	//use something like os.Getenv("HOST_NAME")?
-
 	name, _, err := cmder.CallCMD([]string{"hostname"}, "/")
 	if err != nil {
 		return "", err

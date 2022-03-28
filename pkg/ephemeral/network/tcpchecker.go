@@ -50,8 +50,6 @@ type TCPChecker struct {
 }
 
 // Verify checks network connectivity between the players and communicates its results to discovery and players FSM.
-// Note: since we only support 2 players for now, the check is done only on the first player.
-// ToDo: 2+ Players
 func (t *TCPChecker) Verify(host, port string) error {
 	done := time.After(t.conf.RetryTimeout)
 	for {

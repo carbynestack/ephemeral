@@ -95,7 +95,7 @@ func NewClient(config *types.DiscoveryConfig, stateTimeout time.Duration, logger
 	mode := ModeMaster
 	client := &cl.Client{}
 	var err error
-	if config.Slave { //If Starbuck -> Open GRPc Connection to Master (Apollo)
+	if config.Slave { // If Follower/Slave -> Open GRPc Connection to Master (Apollo)
 		inCh := make(chan *proto.Event)
 		outCh := make(chan *proto.Event)
 		grpcClientConf := &c.TransportClientConfig{

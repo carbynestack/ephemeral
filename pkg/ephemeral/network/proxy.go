@@ -89,7 +89,7 @@ func (p *Proxy) Run(ctx *CtxConfig, errCh chan error) error {
 	return nil
 }
 
-//checkConnectionToPeers verifies that all peers can communicate with each other.
+// checkConnectionToPeers verifies that all peers can communicate with each other.
 // Since the connectivity check requires some Proxy's to be already running, each connection between two parties is only checked one way!
 //
 // This implementation assumes that Proxy.ctx is set.
@@ -98,9 +98,9 @@ func (p *Proxy) checkConnectionToPeers() error {
 	var waitGroup sync.WaitGroup
 	var errorsCheckingConnection []error
 
-	//Check fully connected Graph, each edge checked once
-	//Player i connects to all in [i+1, N]
-	//Assumes that ctx.ProxyEntries is sorted by PlayerId
+	// Check fully connected Graph, each edge checked once
+	// Player i connects to all in [i+1, N]
+	// Assumes that ctx.ProxyEntries is sorted by PlayerId
 	for _, proxyEntry := range p.ctx.ProxyEntries[p.ctx.Spdz.PlayerID:] {
 		proxyEntry := proxyEntry
 		waitGroup.Add(1)
@@ -113,7 +113,7 @@ func (p *Proxy) checkConnectionToPeers() error {
 		}()
 	}
 
-	//Wait for all proxy connections to be completed
+	// Wait for all proxy connections to be completed
 	waitGroup.Wait()
 
 	if len(errorsCheckingConnection) > 0 {

@@ -35,7 +35,7 @@ var _ = Describe("Proxy", func() {
 					{
 						Host:      "localhost",
 						Port:      "5001",
-						LocalPort: "5000", //ToDo: Switch to ports that are NOT used by everyone else
+						LocalPort: "5000",
 					},
 				},
 				Spdz: spdzConfig,
