@@ -67,7 +67,7 @@ func (p *Proxy) Run(ctx *CtxConfig, errCh chan error) error {
 		return err
 	}
 
-	p.logger.Info("Starting TCP Proxy")
+	p.logger.Infow("Starting TCP Proxy", GameID, ctx.Act.GameID)
 	go func() {
 		err := p.proxy.Run()
 		errCh <- err
