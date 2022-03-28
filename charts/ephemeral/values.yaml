@@ -5,6 +5,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+playerCount: 2
+
 # This file defines the default values for all variables used in the Ephemeral Helm Chart.
 discovery:
   service:
@@ -20,8 +22,6 @@ discovery:
   master:
     host:
     port:
-  # make sure using same value for ephemeral!
-  playerCount: 2
 
 ephemeral:
   service:
@@ -46,8 +46,6 @@ ephemeral:
   frontendUrl:
   discoveryAddress: discovery.default.svc.cluster.local
   playerId:
-  # make sure using same value for discovery!
-  playerCount: 2
   spdz:
     prime:
     rInv:

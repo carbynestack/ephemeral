@@ -77,6 +77,12 @@ provided while installing the chart. For example,
 helm install --name my-release -f values.yaml ephemeral
 ```
 
+### Global Parameters
+
+| Parameter     | Description       | Default |
+| ------------- | ----------------- | ------- |
+| `playerCount` | Number of players | `2`     |
+
 ### Discovery Service
 
 | Parameter                       | Description                                                  | Default                            |
@@ -88,7 +94,6 @@ helm install --name my-release -f values.yaml ephemeral
 | `discovery.service.annotations` | Annotations that should be attached to the Discovery service | `[]`                               |
 | `discovery.frontendUrl`         | The external base URL of the VCP                             | \`\`                               |
 | `discovery.master.port`         | The port of the master discovery service instance            | \`\`                               |
-| `discovery.playerCount`         | Number of players                                            | `2`                                |
 
 ### Network Controller
 
@@ -118,4 +123,3 @@ helm install --name my-release -f values.yaml ephemeral
 | `ephemeral.frontendUrl`               | The external base URL of the VCP                             | \`\`                               |
 | `ephemeral.spdz.prime`                | The prime used by SPDZ                                       | \`\`                               |
 | `ephemeral.playerId`                  | Id of this player                                            | \`\`                               |
-| `ephemeral.playerCount`               | Number of players                                            | `2`                                |
