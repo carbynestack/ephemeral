@@ -11,7 +11,6 @@ import (
 	"time"
 
 	. "github.com/carbynestack/ephemeral/pkg/types"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	mb "github.com/vardius/message-bus"
@@ -37,7 +36,7 @@ var _ = Describe("Game", func() {
 		bus = mb.New(10000)
 		timeout = 10 * time.Second
 		gameID = "0"
-		playerCount = 5
+		playerCount = 2
 		game, _ = NewGame(ctx, gameID, bus, timeout, logger, playerCount)
 		pb = Publisher{
 			Bus: bus,
@@ -50,29 +49,35 @@ var _ = Describe("Game", func() {
 			game.Init(errCh)
 			// Emulate messages from real players.
 			Assert(PlayersReady, game, done, func(states []string) {})
-			pb.Publish(PlayerReady, gameID)
-			pb.Publish(PlayerReady, gameID)
+			for i := 0; i < playerCount; i++ {
+				pb.Publish(PlayerReady, gameID)
+			}
 			WaitDoneOrTimeout(done)
 			Assert(TCPCheckSuccessAll, game, done, func(states []string) {})
-			pb.Publish(TCPCheckSuccess, gameID)
-			pb.Publish(TCPCheckSuccess, gameID)
+			for i := 0; i < playerCount; i++ {
+				pb.Publish(TCPCheckSuccess, gameID)
+			}
 			WaitDoneOrTimeout(done)
 			Assert(GameDone, game, done, func(states []string) {
-				Expect(states[0]).To(Equal(Init))
-				Expect(states[1]).To(Equal(WaitPlayersReady))
-				Expect(states[2]).To(Equal(WaitPlayersReady))
-				// the states are repeated 3 times because of one initial entrance
-				// and 2 times due to the stay in the state.
-				Expect(states[3]).To(Equal(WaitTCPCheck))
-				Expect(states[4]).To(Equal(WaitTCPCheck))
-				Expect(states[5]).To(Equal(WaitTCPCheck))
-				Expect(states[6]).To(Equal(Playing))
-				Expect(states[7]).To(Equal(Playing))
-				Expect(states[8]).To(Equal(Playing))
-				Expect(states[9]).To(Equal(GameDone))
+				statesAsserter := &StatesAsserter{states: states}
+
+				statesAsserter.ExpectNext().To(Equal(Init))
+				for i := 0; i < playerCount; i++ {
+					statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
+				}
+				statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+				for i := 0; i < playerCount; i++ {
+					statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+				}
+				statesAsserter.ExpectNext().To(Equal(Playing))
+				for i := 0; i < playerCount; i++ {
+					statesAsserter.ExpectNext().To(Equal(Playing))
+				}
+				statesAsserter.ExpectNext().To(Equal(GameDone))
 			}, ServiceEventsTopic)
-			pb.Publish(GameFinishedWithSuccess, gameID)
-			pb.Publish(GameFinishedWithSuccess, gameID)
+			for i := 0; i < playerCount; i++ {
+				pb.Publish(GameFinishedWithSuccess, gameID)
+			}
 			WaitDoneOrTimeout(done)
 		})
 	})
