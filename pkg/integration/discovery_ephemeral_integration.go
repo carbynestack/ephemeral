@@ -8,6 +8,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	discovery "github.com/carbynestack/ephemeral/pkg/discovery"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	"github.com/carbynestack/ephemeral/pkg/discovery/transport/server"
@@ -54,10 +55,10 @@ var _ = Describe("Ephemeral integration test", func() {
 			pb := discovery.NewPublisher(bus)
 			stateTimeout := 10 * time.Second
 			n := &discovery.FakeNetworker{
-				FreePorts: []int32{30000, 30001, 30002},
+				FreePorts: []int32{30000, 30001, 30002, 30003, 30004, 30005},
 			}
 			cl := &discovery.FakeDClient{}
-			playerCount := 2
+			playerCount := 5
 			s := discovery.NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, cl, playerCount)
 			go s.Start()
 			s.WaitUntilReady(5 * time.Second)
@@ -65,30 +66,31 @@ var _ = Describe("Ephemeral integration test", func() {
 			act := &Activation{
 				GameID: "0",
 			}
-			ctxConf1 := &CtxConfig{
-				Act: act,
-				Spdz: &SPDZEngineTypedConfig{
-					FrontendURL: frontendAddress,
-					PlayerID:    int32(0),
-				},
-				Context: context.TODO(),
+
+			players := make([]*p.PlayerWithIO, playerCount)
+			for i := 0; i < playerCount; i++ {
+				ctxConf := &CtxConfig{
+					Act: act,
+					Spdz: &SPDZEngineTypedConfig{
+						FrontendURL: frontendAddress,
+						PlayerID:    int32(i),
+					},
+					Context: context.TODO(),
+				}
+
+				pod := fmt.Sprintf("abc%d", i)
+				player, err := p.NewPlayerWithIO(ctxConf, conf, pod, spdz, errCh, logger)
+				Expect(err).NotTo(HaveOccurred())
+				players[i] = player
 			}
-			ctxConf2 := &CtxConfig{
-				Act: act,
-				Spdz: &SPDZEngineTypedConfig{
-					FrontendURL: frontendAddress,
-					PlayerID:    int32(1),
-				},
-				Context: context.TODO(),
+
+			for _, player := range players {
+				player.Start()
 			}
-			pl1, err := p.NewPlayerWithIO(ctxConf1, conf, "abc0", spdz, errCh, logger)
-			Expect(err).NotTo(HaveOccurred())
-			pl2, err := p.NewPlayerWithIO(ctxConf2, conf, "abc1", spdz, errCh, logger)
-			Expect(err).NotTo(HaveOccurred())
-			pl1.Start()
-			pl2.Start()
-			<-doneCh
-			<-doneCh
+
+			for range players {
+				<-doneCh
+			}
 		})
 	})
 })
