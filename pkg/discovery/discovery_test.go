@@ -23,6 +23,11 @@ import (
 )
 
 var _ = Describe("DiscoveryNG", func() {
+	generateDiscoveryNGTestsWithPlayerCount(2)
+	generateDiscoveryNGTestsWithPlayerCount(5)
+})
+
+func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 
 	var (
 		bus             mb.MessageBus
@@ -36,7 +41,6 @@ var _ = Describe("DiscoveryNG", func() {
 		n               *FakeNetworker
 		frontendAddress string
 		logger          = zap.NewNop().Sugar()
-		playerCount     int
 	)
 
 	BeforeEach(func() {
@@ -53,7 +57,6 @@ var _ = Describe("DiscoveryNG", func() {
 		}
 		frontendAddress = "192.168.0.1"
 		conf := &FakeDClient{}
-		playerCount = 5
 		s = NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, conf, playerCount)
 		g = &GamesWithBus{
 			Games: s.games,
@@ -377,7 +380,7 @@ var _ = Describe("DiscoveryNG", func() {
 			WaitDoneOrTimeout(done)
 		})
 	})
-})
+}
 
 func createPlayersAndPlayerReadyEvents(playerCount int, frontendAddress string) ([]*proto.Player, []*proto.Event) {
 	allPlayers := make([]*proto.Player, playerCount)

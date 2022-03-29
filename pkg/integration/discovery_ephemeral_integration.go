@@ -26,7 +26,11 @@ import (
 const frontendAddress = "23.97.246.132"
 
 var _ = Describe("Ephemeral integration test", func() {
+	generateEphemeralIntegrationTestsWithPlayerCount(2)
+	generateEphemeralIntegrationTestsWithPlayerCount(5)
+})
 
+func generateEphemeralIntegrationTestsWithPlayerCount(playerCount int) {
 	// Please note, this test doesn't require a real k8s cluster with ephemeral, it runs locally.
 	Context("when connecting ephemeral to discovery", func() {
 		It("finishes the game successfully", func() {
@@ -58,8 +62,8 @@ var _ = Describe("Ephemeral integration test", func() {
 				FreePorts: []int32{30000, 30001, 30002, 30003, 30004, 30005},
 			}
 			cl := &discovery.FakeDClient{}
-			playerCount := 5
 			s := discovery.NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, cl, playerCount)
+			defer s.Stop()
 			go s.Start()
 			s.WaitUntilReady(5 * time.Second)
 
@@ -87,13 +91,12 @@ var _ = Describe("Ephemeral integration test", func() {
 			for _, player := range players {
 				player.Start()
 			}
-
 			for range players {
 				<-doneCh
 			}
 		})
 	})
-})
+}
 
 type FakeSPDZEngine struct {
 	doneCh chan struct{}

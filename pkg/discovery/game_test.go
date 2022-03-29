@@ -18,25 +18,28 @@ import (
 )
 
 var _ = Describe("Game", func() {
+	generateTestsWithPlayerCount(2)
+	generateTestsWithPlayerCount(5)
+})
+
+func generateTestsWithPlayerCount(playerCount int) {
 	var (
 		done chan struct{}
 		bus  mb.MessageBus
 
-		timeout     time.Duration
-		gameID      string
-		game        *Game
-		playerCount int
-		pb          Publisher
-		errCh       chan error
-		logger      = zap.NewNop().Sugar()
-		ctx         = context.TODO()
+		timeout time.Duration
+		gameID  string
+		game    *Game
+		pb      Publisher
+		errCh   chan error
+		logger  = zap.NewNop().Sugar()
+		ctx     = context.TODO()
 	)
 	BeforeEach(func() {
 		done = make(chan struct{})
 		bus = mb.New(10000)
 		timeout = 10 * time.Second
 		gameID = "0"
-		playerCount = 2
 		game, _ = NewGame(ctx, gameID, bus, timeout, logger, playerCount)
 		pb = Publisher{
 			Bus: bus,
@@ -164,4 +167,4 @@ var _ = Describe("Game", func() {
 			WaitDoneOrTimeout(done)
 		})
 	})
-})
+}
