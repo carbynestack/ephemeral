@@ -7,6 +7,7 @@
 package discovery
 
 import (
+	"fmt"
 	"github.com/carbynestack/ephemeral/pkg/discovery/fsm"
 	proto "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	t "github.com/carbynestack/ephemeral/pkg/discovery/transport/server"
@@ -35,6 +36,7 @@ var _ = Describe("DiscoveryNG", func() {
 		n               *FakeNetworker
 		frontendAddress string
 		logger          = zap.NewNop().Sugar()
+		playerCount     int
 	)
 
 	BeforeEach(func() {
@@ -47,11 +49,11 @@ var _ = Describe("DiscoveryNG", func() {
 		stateTimeout = 10 * time.Second
 		tr = &FakeTransport{}
 		n = &FakeNetworker{
-			FreePorts: []int32{30000, 30001, 30002},
+			FreePorts: []int32{30000, 30001, 30002, 30003, 30004, 30005},
 		}
 		frontendAddress = "192.168.0.1"
 		conf := &FakeDClient{}
-		playerCount := 2
+		playerCount = 5
 		s = NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, conf, playerCount)
 		g = &GamesWithBus{
 			Games: s.games,
@@ -72,78 +74,63 @@ var _ = Describe("DiscoveryNG", func() {
 				assertExternalEvent(ready, ClientOutgoingEventsTopic, g, done, func(states []string) {})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-				pb.PublishExternalEvent(ev, ClientIncomingEventsTopic)
-				pb.PublishExternalEvent(ev, ClientIncomingEventsTopic)
+				for i := 0; i < playerCount; i++ {
+					pb.PublishExternalEvent(ev, ClientIncomingEventsTopic)
+				}
+
 				WaitDoneOrTimeout(done)
 			})
 			It("receives addresses of the players that joined the game", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
-				playerOneIsReady := GenerateEvents(PlayerReady, "0")[0]
-				playerTwoIsReady := GenerateEvents(PlayerReady, "0")[0]
 
-				player1 := proto.Player{
-					Ip:  frontendAddress,
-					Id:  0,
-					Pod: "pod1",
-				}
-				player2 := proto.Player{
-					Ip:  frontendAddress,
-					Id:  1,
-					Pod: "pod2",
-				}
-
-				playerOneIsReady.Players[0] = &player1
-				playerTwoIsReady.Players[0] = &player2
+				_, allPlayerReadyEvents := createPlayersAndPlayerReadyEvents(playerCount, frontendAddress)
 
 				assertExternalEventBody(playersReady, ClientOutgoingEventsTopic, g, done, func(event *proto.Event) {
-					Expect(len(event.Players)).To(Equal(2))
-					Expect(event.Players[0].Ip).To(Equal(frontendAddress))
-					Expect(event.Players[0].Port).NotTo(BeZero())
-					Expect(event.Players[1].Ip).To(Equal(frontendAddress))
-					Expect(event.Players[1].Port).NotTo(BeZero())
-					Expect(len(s.pods)).To(Equal(2))
-					Expect(s.pods["pod1"]).To(Equal(int32(0)))
-					Expect(s.pods["pod2"]).To(Equal(int32(1)))
+					Expect(len(event.Players)).To(Equal(playerCount))
+					for i := 0; i < playerCount; i++ {
+						Expect(event.Players[i].Ip).To(Equal(frontendAddress))
+						Expect(event.Players[i].Port).NotTo(BeZero())
+					}
+
+					Expect(len(s.pods)).To(Equal(playerCount))
+
+					for i := 0; i < playerCount; i++ {
+						podName := fmt.Sprintf("pod%d", i+1)
+						Expect(s.pods[podName]).To(Equal(int32(i)))
+					}
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-				pb.PublishExternalEvent(playerOneIsReady, ClientIncomingEventsTopic)
-				pb.PublishExternalEvent(playerTwoIsReady, ClientIncomingEventsTopic)
+
+				for _, playerReadyEvent := range allPlayerReadyEvents {
+					pb.PublishExternalEvent(playerReadyEvent, ClientIncomingEventsTopic)
+				}
 				WaitDoneOrTimeout(done)
 			})
 
 			It("doesn't create the player twice", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
-				playerOneIsReady := GenerateEvents(PlayerReady, "0")[0]
-				playerTwoIsReady := GenerateEvents(PlayerReady, "0")[0]
+
+				allPlayers, allPlayerReadyEvents := createPlayersAndPlayerReadyEvents(playerCount, frontendAddress)
+
 				playerOneTCPCheckSuccess := GenerateEvents(TCPCheckSuccess, "0")[0]
 
-				player1 := proto.Player{
-					Ip: frontendAddress,
-					Id: 0,
-				}
-				player2 := proto.Player{
-					Ip: frontendAddress,
-					Id: 1,
-				}
-
-				playerOneIsReady.Players[0] = &player1
-				playerTwoIsReady.Players[0] = &player2
-				playerOneTCPCheckSuccess.Players[0] = &player1
+				playerOneTCPCheckSuccess.Players[0] = allPlayers[0]
 
 				assertExternalEventBody(playersReady, ClientOutgoingEventsTopic, g, done, func(event *proto.Event) {
-					Expect(len(event.Players)).To(Equal(2))
+					Expect(len(event.Players)).To(Equal(playerCount))
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-				pb.PublishExternalEvent(playerOneIsReady, ClientIncomingEventsTopic)
-				pb.PublishExternalEvent(playerTwoIsReady, ClientIncomingEventsTopic)
+				for _, playerReadyEvent := range allPlayerReadyEvents {
+					pb.PublishExternalEvent(playerReadyEvent, ClientIncomingEventsTopic)
+				}
 				pb.PublishExternalEvent(playerOneTCPCheckSuccess, ClientIncomingEventsTopic)
 				WaitDoneOrTimeout(done)
 			})
 		})
-		Context("a single player sends 2 messages in a row", func() {
-			It("doens't create the second network", func() {
+		Context("a single player sends multiple messages in a row", func() {
+			It("doesn't create the second network", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
 				playerOneIsReady := GenerateEvents(PlayerReady, "0")[0]
 
@@ -157,83 +144,74 @@ var _ = Describe("DiscoveryNG", func() {
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-				pb.PublishExternalEvent(playerOneIsReady, ClientIncomingEventsTopic)
-				pb.PublishExternalEvent(playerOneIsReady, ClientIncomingEventsTopic)
+
+				for i := 0; i < playerCount; i++ {
+					// ToDo: Isn't it an error if the same player sends its ReadyMessage multiple times?
+					//    Or rather, should we in such a case really go to PlayersReady?
+					pb.PublishExternalEvent(playerOneIsReady, ClientIncomingEventsTopic)
+				}
 				WaitDoneOrTimeout(done)
 			})
 		})
 		Context("an event from a foreign cluster is received", func() {
 			It("doesn't create a network for it", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
-				playerOneIsReady := GenerateEvents(PlayerReady, "0")[0]
-				playerTwoIsReady := GenerateEvents(PlayerReady, "0")[0]
+
 				foreignFrontendAddress := "192.168.0.2"
-				player1 := proto.Player{
-					Ip: frontendAddress,
-					Id: 0,
-				}
-				player2 := proto.Player{
-					Ip: foreignFrontendAddress,
-					Id: 1,
-				}
-				playerOneIsReady.Players[0] = &player1
-				playerTwoIsReady.Players[0] = &player2
+				allPlayers, allPlayerReadyEvents := createPlayersAndPlayerReadyEvents(playerCount, foreignFrontendAddress)
+
+				allPlayers[0].Ip = frontendAddress
 
 				assertExternalEventBody(playersReady, ClientOutgoingEventsTopic, g, done, func(event *proto.Event) {
-					// Only a single port was used, 2 are still free.
-					Expect(len(n.FreePorts)).To(Equal(2))
+					// Only a single of the 6 ports was used, 5 are still free.
+					// ToDo: These Numbers are still hardcoded, adding more ports above breaks the test!
+					Expect(len(n.FreePorts)).To(Equal(6 - 1))
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-				pb.PublishExternalEvent(playerOneIsReady, ClientIncomingEventsTopic)
-				pb.PublishExternalEvent(playerTwoIsReady, ClientIncomingEventsTopic)
+
+				for _, playerReadyEvent := range allPlayerReadyEvents {
+					pb.PublishExternalEvent(playerReadyEvent, ClientIncomingEventsTopic)
+				}
 				WaitDoneOrTimeout(done)
 			})
 		})
 		Context("an event from the same pod but with different game id comes", func() {
 			It("it uses the existing network configuration", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
-				playerOneIsReady := GenerateEvents(PlayerReady, "0")[0]
-				playerTwoIsReady := GenerateEvents(PlayerReady, "0")[0]
 				playersReady1 := GenerateEvents(PlayersReady, "1")[0]
-				playerOneIsReady1 := GenerateEvents(PlayerReady, "1")[0]
-				playerTwoIsReady1 := GenerateEvents(PlayerReady, "1")[0]
-				player1 := proto.Player{
-					Ip:  frontendAddress,
-					Id:  0,
-					Pod: "a",
+
+				allPlayers, allPlayerReadyEventsInGame0 := createPlayersAndPlayerReadyEvents(playerCount, frontendAddress)
+				allPlayerReadyEventsInGame1 := make([]*proto.Event, playerCount)
+
+				for i := 0; i < playerCount; i++ {
+					allPlayerReadyEventsInGame1[i] = GenerateEvents(PlayerReady, "1")[0]
+					allPlayerReadyEventsInGame1[i].Players[0] = allPlayers[i]
 				}
-				player2 := proto.Player{
-					Ip:  frontendAddress,
-					Id:  1,
-					Pod: "b",
-				}
-				playerOneIsReady.Players[0] = &player1
-				playerTwoIsReady.Players[0] = &player2
-				playerOneIsReady1.Players[0] = &player1
-				playerTwoIsReady1.Players[0] = &player2
 
 				assertExternalEventBody(playersReady, ClientOutgoingEventsTopic, g, done, func(event *proto.Event) {
 					pp, _ := s.players["0"]
-					p1 := pp[PlayerID(int32(0))]
-					p2 := pp[PlayerID(int32(1))]
-					Expect(p1.Port).To(Equal(int32(30000)))
-					Expect(p2.Port).To(Equal(int32(30001)))
+					for i := 0; i < playerCount; i++ {
+						p := pp[PlayerID(int32(i))]
+						Expect(p.Port).To(Equal(int32(30000 + i)))
+					}
 				})
 				assertExternalEventBody(playersReady1, ClientOutgoingEventsTopic, g, done, func(event *proto.Event) {
 					pp, _ := s.players["1"]
-					p1 := pp[PlayerID(int32(0))]
-					p2 := pp[PlayerID(int32(1))]
-					Expect(p1.Port).To(Equal(int32(30000)))
-					Expect(p2.Port).To(Equal(int32(30001)))
+					for i := 0; i < playerCount; i++ {
+						p := pp[PlayerID(int32(i))]
+						Expect(p.Port).To(Equal(int32(30000 + i)))
+					}
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-				pb.PublishExternalEvent(playerOneIsReady, ClientIncomingEventsTopic)
-				pb.PublishExternalEvent(playerTwoIsReady, ClientIncomingEventsTopic)
+				for _, playerReadyEventInGame0 := range allPlayerReadyEventsInGame0 {
+					pb.PublishExternalEvent(playerReadyEventInGame0, ClientIncomingEventsTopic)
+				}
 				time.Sleep(100 * time.Millisecond)
-				pb.PublishExternalEvent(playerOneIsReady1, ClientIncomingEventsTopic)
-				pb.PublishExternalEvent(playerTwoIsReady1, ClientIncomingEventsTopic)
+				for _, playerReadyEventInGame1 := range allPlayerReadyEventsInGame1 {
+					pb.PublishExternalEvent(playerReadyEventInGame1, ClientIncomingEventsTopic)
+				}
 				WaitDoneOrTimeout(done)
 				WaitDoneOrTimeout(done)
 			})
@@ -258,18 +236,28 @@ var _ = Describe("DiscoveryNG", func() {
 			It("all of them register their players and move to the next state", func() {
 				ev := GenerateEvents(PlayersReady, "0", "1")
 				assertExternalEvent(ev[0], ClientOutgoingEventsTopic, g, done, func(states []string) {
-					Expect(states[0]).To(Equal(Init))
-					Expect(states[1]).To(Equal(WaitPlayersReady))
-					Expect(states[2]).To(Equal(WaitPlayersReady))
+					statesAsserter := NewStatesAsserter(states)
+					statesAsserter.ExpectNext().To(Equal(Init))
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
+					}
 				})
 				assertExternalEvent(ev[1], ClientOutgoingEventsTopic, g, done, func(states []string) {
-					Expect(states[0]).To(Equal(Init))
-					Expect(states[1]).To(Equal(WaitPlayersReady))
-					Expect(states[2]).To(Equal(WaitPlayersReady))
+					statesAsserter := NewStatesAsserter(states)
+					statesAsserter.ExpectNext().To(Equal(Init))
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
+					}
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-				events := GenerateEvents(PlayerReady, "0", "0", "1", "1")
+
+				gameIds := make([]string, 2*playerCount)
+				for i := 0; i < playerCount; i++ {
+					gameIds[i] = "0"
+					gameIds[i+playerCount] = "1"
+				}
+				events := GenerateEvents(PlayerReady, gameIds...)
 				for _, e := range events {
 					pb.PublishExternalEvent(e, ClientIncomingEventsTopic)
 				}
@@ -307,15 +295,17 @@ var _ = Describe("DiscoveryNG", func() {
 			go s.Start()
 			s.WaitUntilReady(timeout)
 
-			pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
-			pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
+			for i := 0; i < playerCount; i++ {
+				pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
+			}
 			time.Sleep(50 * time.Millisecond)
-			pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
-			pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
+			for i := 0; i < playerCount; i++ {
+				pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
+			}
 			time.Sleep(50 * time.Millisecond)
-			pb.PublishExternalEvent(gameFinishedWithSuccess, ClientIncomingEventsTopic)
-			pb.PublishExternalEvent(gameFinishedWithSuccess, ClientIncomingEventsTopic)
-
+			for i := 0; i < playerCount; i++ {
+				pb.PublishExternalEvent(gameFinishedWithSuccess, ClientIncomingEventsTopic)
+			}
 			WaitDoneOrTimeout(done)
 			WaitDoneOrTimeout(done)
 		})
@@ -334,14 +324,17 @@ var _ = Describe("DiscoveryNG", func() {
 			go s.Start()
 			s.WaitUntilReady(timeout)
 
-			pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
-			pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
+			for i := 0; i < playerCount; i++ {
+				pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
+			}
 			time.Sleep(50 * time.Millisecond)
-			pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
-			pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
+			for i := 0; i < playerCount; i++ {
+				pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
+			}
 			time.Sleep(50 * time.Millisecond)
-			pb.PublishExternalEvent(gameFinishedWithSuccess, ClientIncomingEventsTopic)
-			pb.PublishExternalEvent(gameFinishedWithSuccess, ClientIncomingEventsTopic)
+			for i := 0; i < playerCount; i++ {
+				pb.PublishExternalEvent(gameFinishedWithSuccess, ClientIncomingEventsTopic)
+			}
 
 			WaitDoneOrTimeout(done)
 
@@ -385,3 +378,20 @@ var _ = Describe("DiscoveryNG", func() {
 		})
 	})
 })
+
+func createPlayersAndPlayerReadyEvents(playerCount int, frontendAddress string) ([]*proto.Player, []*proto.Event) {
+	allPlayers := make([]*proto.Player, playerCount)
+	allPlayerReadyEvents := make([]*proto.Event, playerCount)
+
+	for i := 0; i < playerCount; i++ {
+		allPlayers[i] = &proto.Player{
+			Ip:  frontendAddress,
+			Id:  int32(i),
+			Pod: fmt.Sprintf("pod%d", i+1),
+		}
+
+		allPlayerReadyEvents[i] = GenerateEvents(PlayerReady, "0")[0]
+		allPlayerReadyEvents[i].Players[0] = allPlayers[i]
+	}
+	return allPlayers, allPlayerReadyEvents
+}

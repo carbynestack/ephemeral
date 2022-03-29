@@ -59,7 +59,7 @@ var _ = Describe("Game", func() {
 			}
 			WaitDoneOrTimeout(done)
 			Assert(GameDone, game, done, func(states []string) {
-				statesAsserter := &StatesAsserter{states: states}
+				statesAsserter := NewStatesAsserter(states)
 
 				statesAsserter.ExpectNext().To(Equal(Init))
 				for i := 0; i < playerCount; i++ {
@@ -97,7 +97,7 @@ var _ = Describe("Game", func() {
 				WaitDoneOrTimeout(done)
 				Assert(GameError, game, done, func(states []string) {})
 				Assert(GameDone, game, done, func(states []string) {
-					statesAsserter := &StatesAsserter{states: states}
+					statesAsserter := NewStatesAsserter(states)
 
 					statesAsserter.ExpectNext().To(Equal(Init))
 					for i := 0; i < playerCount; i++ {
@@ -133,7 +133,7 @@ var _ = Describe("Game", func() {
 				}
 				WaitDoneOrTimeout(done)
 				Assert(GameDone, game, done, func(states []string) {
-					statesAsserter := &StatesAsserter{states: states}
+					statesAsserter := NewStatesAsserter(states)
 					statesAsserter.ExpectNext().To(Equal(Init))
 					for i := 0; i < playerCount; i++ {
 						statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
@@ -165,14 +165,3 @@ var _ = Describe("Game", func() {
 		})
 	})
 })
-
-type StatesAsserter struct {
-	states       []string
-	currentIndex int
-}
-
-func (s *StatesAsserter) ExpectNext() Assertion {
-	state := s.states[s.currentIndex]
-	s.currentIndex++
-	return Expect(state)
-}
