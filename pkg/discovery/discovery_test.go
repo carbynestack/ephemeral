@@ -132,7 +132,7 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 				WaitDoneOrTimeout(done)
 			})
 		})
-		Context("a single player sends multiple messages in a row", func() {
+		Context("a single player sends 2 messages in a row", func() {
 			It("doesn't create the second network", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
 				playerOneIsReady := GenerateEvents(PlayerReady, "0")[0]

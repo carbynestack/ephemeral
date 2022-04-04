@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-package main_test
+package main
 
 import (
 	"errors"
@@ -17,7 +17,6 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
 
-	. "github.com/carbynestack/ephemeral/cmd/discovery"
 	"github.com/carbynestack/ephemeral/pkg/discovery"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	"github.com/carbynestack/ephemeral/pkg/utils"
@@ -177,6 +176,40 @@ var _ = Describe("Main", func() {
 					RunDeletion(doneCh, errCh, logger, s)
 				}
 				runDeletion()
+			})
+		})
+	})
+
+	Context("when getting the stateTimeout", func() {
+		Context("no stateTimeout was provided in the config", func() {
+			It("will use the defaultStateTimeout", func() {
+				var config = &DiscoveryConfig{}
+				timeout, err := getStateTimeout(config)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(timeout).To(Equal(defaultStateTimeout))
+			})
+		})
+		Context("an empty stateTimeout was provided in the config", func() {
+			It("will use the defaultStateTimeout", func() {
+				var config = &DiscoveryConfig{StateTimeout: ""}
+				timeout, err := getStateTimeout(config)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(timeout).To(Equal(defaultStateTimeout))
+			})
+		})
+		Context("a valid stateTimeout was provided in the config", func() {
+			It("will use the provided stateTimeout", func() {
+				var config = &DiscoveryConfig{StateTimeout: "5m"}
+				timeout, err := getStateTimeout(config)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(timeout).To(Equal(5 * time.Minute))
+			})
+		})
+		Context("an invalid stateTimeout was provided in the config", func() {
+			It("will return an error", func() {
+				var config = &DiscoveryConfig{StateTimeout: "invalid"}
+				_, err := getStateTimeout(config)
+				Expect(err).To(HaveOccurred())
 			})
 		})
 	})
