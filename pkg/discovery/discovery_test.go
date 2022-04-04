@@ -80,23 +80,18 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 				for i := 0; i < playerCount; i++ {
 					pb.PublishExternalEvent(ev, ClientIncomingEventsTopic)
 				}
-
 				WaitDoneOrTimeout(done)
 			})
 			It("receives addresses of the players that joined the game", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
-
 				_, allPlayerReadyEvents := createPlayersAndPlayerReadyEvents(playerCount, frontendAddress)
-
 				assertExternalEventBody(playersReady, ClientOutgoingEventsTopic, g, done, func(event *proto.Event) {
 					Expect(len(event.Players)).To(Equal(playerCount))
 					for i := 0; i < playerCount; i++ {
 						Expect(event.Players[i].Ip).To(Equal(frontendAddress))
 						Expect(event.Players[i].Port).NotTo(BeZero())
 					}
-
 					Expect(len(s.pods)).To(Equal(playerCount))
-
 					for i := 0; i < playerCount; i++ {
 						podName := fmt.Sprintf("pod%d", i+1)
 						Expect(s.pods[podName]).To(Equal(int32(i)))
@@ -104,7 +99,6 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-
 				for _, playerReadyEvent := range allPlayerReadyEvents {
 					pb.PublishExternalEvent(playerReadyEvent, ClientIncomingEventsTopic)
 				}
@@ -113,13 +107,9 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 
 			It("doesn't create the player twice", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
-
 				allPlayers, allPlayerReadyEvents := createPlayersAndPlayerReadyEvents(playerCount, frontendAddress)
-
 				playerOneTCPCheckSuccess := GenerateEvents(TCPCheckSuccess, "0")[0]
-
 				playerOneTCPCheckSuccess.Players[0] = allPlayers[0]
-
 				assertExternalEventBody(playersReady, ClientOutgoingEventsTopic, g, done, func(event *proto.Event) {
 					Expect(len(event.Players)).To(Equal(playerCount))
 				})
@@ -136,7 +126,6 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 			It("doesn't create the second network", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
 				playerOneIsReady := GenerateEvents(PlayerReady, "0")[0]
-
 				player1 := proto.Player{
 					Ip: frontendAddress,
 					Id: 0,
@@ -147,7 +136,6 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-
 				for i := 0; i < playerCount; i++ {
 					// ToDo: Isn't it an error if the same player sends its ReadyMessage multiple times?
 					//    Or rather, should we in such a case really go to PlayersReady?
@@ -183,15 +171,12 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 			It("it uses the existing network configuration", func() {
 				playersReady := GenerateEvents(PlayersReady, "0")[0]
 				playersReady1 := GenerateEvents(PlayersReady, "1")[0]
-
 				allPlayers, allPlayerReadyEventsInGame0 := createPlayersAndPlayerReadyEvents(playerCount, frontendAddress)
 				allPlayerReadyEventsInGame1 := make([]*proto.Event, playerCount)
-
 				for i := 0; i < playerCount; i++ {
 					allPlayerReadyEventsInGame1[i] = GenerateEvents(PlayerReady, "1")[0]
 					allPlayerReadyEventsInGame1[i].Players[0] = allPlayers[i]
 				}
-
 				assertExternalEventBody(playersReady, ClientOutgoingEventsTopic, g, done, func(event *proto.Event) {
 					pp, _ := s.players["0"]
 					for i := 0; i < playerCount; i++ {
@@ -254,7 +239,6 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
-
 				gameIds := make([]string, 2*playerCount)
 				for i := 0; i < playerCount; i++ {
 					gameIds[i] = "0"
@@ -284,7 +268,6 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 			ready = GenerateEvents(PlayerReady, "0")[0]
 			tcpCheckSuccess = GenerateEvents(TCPCheckSuccess, "0")[0]
 			gameFinishedWithSuccess = GenerateEvents(GameFinishedWithSuccess, "0")[0]
-
 			playersReady = GenerateEvents(PlayersReady, "0")[0]
 			tcpCheckSuccessAll = GenerateEvents(TCPCheckSuccessAll, "0")[0]
 			gameProtocolError = GenerateEvents(GameProtocolError, "0")[0]
@@ -297,7 +280,6 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 
 			go s.Start()
 			s.WaitUntilReady(timeout)
-
 			for i := 0; i < playerCount; i++ {
 				pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
 			}
@@ -326,7 +308,6 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 
 			go s.Start()
 			s.WaitUntilReady(timeout)
-
 			for i := 0; i < playerCount; i++ {
 				pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
 			}
@@ -338,14 +319,12 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 			for i := 0; i < playerCount; i++ {
 				pb.PublishExternalEvent(gameFinishedWithSuccess, ClientIncomingEventsTopic)
 			}
-
 			WaitDoneOrTimeout(done)
 
 			// Try to play the game with the same id again and see that it returns an error.
 			assertExternalEvent(gameProtocolError, ClientOutgoingEventsTopic, g, done, func(states []string) {
 			})
 			pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
-
 			WaitDoneOrTimeout(done)
 		})
 	})
@@ -385,14 +364,12 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 func createPlayersAndPlayerReadyEvents(playerCount int, frontendAddress string) ([]*proto.Player, []*proto.Event) {
 	allPlayers := make([]*proto.Player, playerCount)
 	allPlayerReadyEvents := make([]*proto.Event, playerCount)
-
 	for i := 0; i < playerCount; i++ {
 		allPlayers[i] = &proto.Player{
 			Ip:  frontendAddress,
 			Id:  int32(i),
 			Pod: fmt.Sprintf("pod%d", i+1),
 		}
-
 		allPlayerReadyEvents[i] = GenerateEvents(PlayerReady, "0")[0]
 		allPlayerReadyEvents[i].Players[0] = allPlayers[i]
 	}

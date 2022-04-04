@@ -66,11 +66,9 @@ func generateEphemeralIntegrationTestsWithPlayerCount(playerCount int) {
 			defer s.Stop()
 			go s.Start()
 			s.WaitUntilReady(5 * time.Second)
-
 			act := &Activation{
 				GameID: "0",
 			}
-
 			players := make([]*p.PlayerWithIO, playerCount)
 			for i := 0; i < playerCount; i++ {
 				ctxConf := &CtxConfig{
@@ -81,13 +79,11 @@ func generateEphemeralIntegrationTestsWithPlayerCount(playerCount int) {
 					},
 					Context: context.TODO(),
 				}
-
 				pod := fmt.Sprintf("abc%d", i)
 				player, err := p.NewPlayerWithIO(ctxConf, conf, pod, spdz, errCh, logger)
 				Expect(err).NotTo(HaveOccurred())
 				players[i] = player
 			}
-
 			for _, player := range players {
 				player.Start()
 			}

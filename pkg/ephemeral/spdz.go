@@ -94,7 +94,7 @@ func (s *SPDZWrapper) getProxyEntries(pls []*pb.Player) ([]*ProxyConfig, error) 
 	for _, player := range players {
 		// TODO: remove this 100 hack, it is a temp workaround for protobuf3.
 		// Create proxy entries for all OTHER players
-		if player.Id-100 != s.ctx.Spdz.PlayerID {
+		if (player.Id - 100) != s.ctx.Spdz.PlayerID {
 			proxyEntries = append(proxyEntries, &ProxyConfig{
 				Host:      player.Ip,
 				Port:      strconv.Itoa(int(player.Port)),
