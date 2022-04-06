@@ -111,7 +111,6 @@ func (s *SPDZWrapper) getProxyEntries(pls []*pb.Player) ([]*ProxyConfig, error) 
 
 // getLocalPortForPlayer returns the port that is set by the proxy.
 func (s *SPDZWrapper) getLocalPortForPlayer(id int32) string {
-	//TODO will this always work?
 	return strconv.Itoa(int(d.BasePort + id))
 }
 

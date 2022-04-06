@@ -53,8 +53,12 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 		stateTimeout = 10 * time.Second
 		tr = &FakeTransport{}
 		n = &FakeNetworker{
-			FreePorts: []int32{30000, 30001, 30002, 30003, 30004, 30005},
+			FreePorts: make([]int32, playerCount),
 		}
+		for i := range n.FreePorts {
+			n.FreePorts[i] = int32(30000 + i)
+		}
+
 		frontendAddress = "192.168.0.1"
 		conf := &FakeDClient{}
 		s = NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, conf, playerCount)
@@ -154,9 +158,8 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 				allPlayers[0].Ip = frontendAddress
 
 				assertExternalEventBody(playersReady, ClientOutgoingEventsTopic, g, done, func(event *proto.Event) {
-					// Only a single of the 6 ports was used, 5 are still free.
-					// ToDo: These Numbers are still hardcoded, adding more ports above breaks the test!
-					Expect(len(n.FreePorts)).To(Equal(6 - 1))
+					// Only a single of the ports was used, all others are still free.
+					Expect(len(n.FreePorts)).To(Equal(playerCount - 1))
 				})
 				go s.Start()
 				s.WaitUntilReady(timeout)
