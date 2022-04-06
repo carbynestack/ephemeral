@@ -51,31 +51,26 @@ func (c *Carrier) Connect(playerID int32, ctx context.Context, host string, port
 	if err != nil {
 		return err
 	}
-
 	_, err = conn.Write(c.buildHeader(playerID))
 	if err != nil {
 		return err
 	}
-
 	c.Conn, err = c.TlsConnector(conn, playerID)
 	if err != nil {
 		return err
 	}
-
 	if playerID == 0 {
 		err = c.readSpec()
 		if err != nil {
 			return err
 		}
 	}
-
 	c.connected = true
 	return nil
 }
 
 func (c Carrier) readSpec() error {
 	const size = 4
-
 	readBytes := make([]byte, size)
 	_, err := io.LimitReader(c.Conn, size).Read(readBytes)
 	if err != nil {
@@ -83,15 +78,12 @@ func (c Carrier) readSpec() error {
 	}
 
 	sizeOfHeader := binary.LittleEndian.Uint32(readBytes)
-
 	readBytes = make([]byte, sizeOfHeader)
 	_, err = io.LimitReader(c.Conn, int64(sizeOfHeader)).Read(readBytes)
 	if err != nil {
 		return err
 	}
-
 	//ToDo, compare read PRIME with prime number from config?
-
 	return nil
 }
 
@@ -111,12 +103,10 @@ func (c *Carrier) Send(secret []amphora.SecretShare) error {
 		shares = append(shares, secret[i].Data)
 	}
 	err := c.Packer.Marshal(shares, &input)
-
 	if err != nil {
 		return err
 	}
 	_, err = c.Conn.Write(input)
-
 	if err != nil {
 		return err
 	}
@@ -129,10 +119,8 @@ func (c *Carrier) Send(secret []amphora.SecretShare) error {
 // - Then come X Bytes for the String
 func (c *Carrier) buildHeader(playerId int32) []byte {
 	playerIdString := []byte(fmt.Sprintf("%d", playerId))
-
 	lengthOfString := make([]byte, 4)
 	binary.LittleEndian.PutUint32(lengthOfString, uint32(len(playerIdString)))
-
 	return append(lengthOfString, playerIdString...)
 }
 

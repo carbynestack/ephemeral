@@ -11,7 +11,6 @@ func NewTlsConnector() func(conn net.Conn, playerID int32) (net.Conn, error) {
 }
 
 func NewTlsConnectorWithPath(folderPath string) func(conn net.Conn, playerID int32) (net.Conn, error) {
-
 	return func(conn net.Conn, playerID int32) (net.Conn, error) {
 		tlsConfig, err := getTlsConfig(playerID, folderPath)
 		if err != nil {
@@ -29,7 +28,6 @@ func NewTlsConnectorWithPath(folderPath string) func(conn net.Conn, playerID int
 }
 
 func getTlsConfig(playerID int32, folder string) (*tls.Config, error) {
-
 	certFile := fmt.Sprintf("%s/C%d.pem", folder, playerID)
 	keyFile := fmt.Sprintf("%s/C%d.key", folder, playerID)
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
@@ -41,6 +39,5 @@ func getTlsConfig(playerID int32, folder string) (*tls.Config, error) {
 		Certificates:       []tls.Certificate{cert},
 		InsecureSkipVerify: true,
 	}
-
 	return tlsConfig, nil
 }

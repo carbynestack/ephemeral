@@ -152,7 +152,6 @@ var _ = Describe("TlsConnector", func() {
 	})
 
 	Context("when trying to upgrade to a TLS connection", func() {
-
 		var (
 			tlsConnector   func(conn net.Conn, playerID int32) (net.Conn, error)
 			client, server net.Conn
@@ -168,21 +167,17 @@ var _ = Describe("TlsConnector", func() {
 			serverPemFileLocation := fmt.Sprintf("%s/P%d.pem", certificateFolder, playerID)
 			serverKeyFileLocation := fmt.Sprintf("%s/P%d.key", certificateFolder, playerID)
 			serverCertificate, err := tls.LoadX509KeyPair(serverPemFileLocation, serverKeyFileLocation)
-
 			if err != nil {
 				panic(err)
 			}
-
 			serverConfig := &tls.Config{
 				Certificates: []tls.Certificate{serverCertificate},
 			}
-
 			serverTlsConnection := tls.Server(server, serverConfig)
 			go serverTlsConnection.Handshake()
 
 			// Act
 			tlsConnection, err := tlsConnector(client, playerID)
-
 			contentToSend := []byte{byte(1)}
 			go tlsConnection.Write(contentToSend)
 
@@ -202,6 +197,7 @@ var _ = Describe("TlsConnector", func() {
 				// Act
 				tlsConnection, err := tlsConnector(client, playerID)
 
+				// Assert
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("C1.pem"))
 				Expect(tlsConnection).To(BeNil())
@@ -216,13 +212,13 @@ var _ = Describe("TlsConnector", func() {
 					//No Server Certificates -> Client certificate won't match
 					Certificates: []tls.Certificate{},
 				}
-
 				serverTlsConnection := tls.Server(server, serverConfig)
 				go serverTlsConnection.Handshake()
 
 				// Act
 				tlsConnection, err := tlsConnector(client, playerID)
 
+				// Assert
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("remote error: tls: unrecognized name"))
 				Expect(tlsConnection).To(BeNil())

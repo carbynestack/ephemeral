@@ -207,10 +207,8 @@ var _ = Describe("Carrier", func() {
 				Packer:       packer,
 				TlsConnector: fakeTlsConnector,
 			}
-
 			waitGroup := sync.WaitGroup{}
 			waitGroup.Add(1)
-
 			go server.Read(connectionOutput)
 
 			// Act

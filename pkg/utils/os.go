@@ -60,12 +60,10 @@ func (c *Commander) CallCMD(theContext context.Context, cmd []string, dir string
 	baseCmd := c.Options
 	baseCmd = append(baseCmd, cmd...)
 	command := exec.CommandContext(theContext, c.Command, baseCmd...)
-
 	stderrBuffer := bytes.NewBuffer([]byte{})
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	command.Stderr = stderrBuffer
 	command.Stdout = stdoutBuffer
-
 	command.Dir = dir
 	err := command.Start()
 	if err != nil {
@@ -78,14 +76,12 @@ func (c *Commander) CallCMD(theContext context.Context, cmd []string, dir string
 		// Check if the command finished successfully.
 		err = command.Wait()
 		defer waitGroup.Done()
-
 		if err != nil {
 			println(fmt.Sprintf("Error occured!"))
 			println(fmt.Sprintf("StdOut: %s", stdoutBuffer.Bytes()))
 			println(fmt.Sprintf("StdErr: %s", stderrBuffer.Bytes()))
 		}
 	}()
-
 	waitGroup.Wait()
 
 	if err != nil {
