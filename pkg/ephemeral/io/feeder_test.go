@@ -44,6 +44,7 @@ var _ = Describe("Feeder", func() {
 		conf = &CtxConfig{
 			Act:     act,
 			Context: context.TODO(),
+			Spdz:    &SPDZEngineTypedConfig{PlayerCount: 2},
 		}
 	})
 

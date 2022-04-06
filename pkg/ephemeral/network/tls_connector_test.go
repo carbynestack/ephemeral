@@ -117,8 +117,8 @@ var _ = Describe("TlsConnector", func() {
 	BeforeEach(func() {
 		var err error
 		testDataFolder, err = ioutil.TempDir("", "testData")
-		certificateFolder = testDataFolder + "Player-Data"
-		err = os.Mkdir(certificateFolder, os.ModeDir)
+		certificateFolder = testDataFolder + "/Player-Data"
+		err = os.Mkdir(certificateFolder, os.ModeDir|os.ModePerm)
 		if err != nil {
 			panic(err)
 		}
