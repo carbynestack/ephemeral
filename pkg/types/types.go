@@ -40,6 +40,7 @@ type DiscoveryConfig struct {
 	Port         string `json:"port"`
 	BusSize      int    `json:"busSize"`
 	PortRange    string `json:"portRange"`
+	PlayerCount  int    `json:"playerCount"`
 }
 
 // Activation is an object that is received as an input from the Ephemeral client.
@@ -60,11 +61,11 @@ type ProxyConfig struct {
 
 // CtxConfig contains both execution and platform specific parameters.
 type CtxConfig struct {
-	Act     *Activation
-	Spdz    *SPDZEngineTypedConfig
-	Proxy   *ProxyConfig
-	ErrCh   chan error
-	Context context.Context
+	Act          *Activation
+	Spdz         *SPDZEngineTypedConfig
+	ProxyEntries []*ProxyConfig
+	ErrCh        chan error
+	Context      context.Context
 }
 
 // SPDZEngineConfig is the VPC specific configuration.
@@ -76,6 +77,7 @@ type SPDZEngineConfig struct {
 	AmphoraConfig    AmphoraConfig `json:"amphoraConfig"`
 	FrontendURL      string        `json:"frontendURL"`
 	PlayerID         int32         `json:"playerID"`
+	PlayerCount      int32         `json:"playerCount"`
 	MaxBulkSize      int32         `json:"maxBulkSize"`
 	DiscoveryAddress string        `json:"discoveryAddress"`
 }
@@ -101,6 +103,7 @@ type SPDZEngineTypedConfig struct {
 	RInv             big.Int
 	AmphoraClient    amphora.AbstractClient
 	PlayerID         int32
+	PlayerCount      int32
 	FrontendURL      string
 	MaxBulkSize      int32
 	DiscoveryAddress string

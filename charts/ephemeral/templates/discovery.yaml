@@ -74,7 +74,8 @@ data:
       "frontendURL": "{{ .Values.discovery.frontendUrl }}",
       "masterHost": "{{ .Values.discovery.master.host }}",
       "masterPort": "{{ .Values.discovery.master.port }}",
-      "slave": {{ if .Values.discovery.isMaster }}false{{ else }}true{{ end }}
+      "slave": {{ if .Values.discovery.isMaster }}false{{ else }}true{{ end }},
+      "playerCount": {{ .Values.playerCount }}
     }
 ---
 apiVersion: networking.istio.io/v1alpha3

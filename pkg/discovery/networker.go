@@ -133,7 +133,7 @@ func (i *IstioNetworker) CreateNetwork(pl *pb.Player) (int32, error) {
 			Labels:    lb,
 		},
 		// TODO: remove this 100 hack, it is a temp workaround for protobuf3.
-		Spec: v1alpha1.NetworkSpec{TargetPort: basePort + pl.Id - 100, Port: port},
+		Spec: v1alpha1.NetworkSpec{TargetPort: BasePort + pl.Id - 100, Port: port},
 	}
 	_, err = i.networkingClient.MpcV1alpha1().Networks(defaultNamespace).Create(&network)
 	if err != nil {

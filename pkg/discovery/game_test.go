@@ -11,7 +11,6 @@ import (
 	"time"
 
 	. "github.com/carbynestack/ephemeral/pkg/types"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	mb "github.com/vardius/message-bus"
@@ -19,6 +18,11 @@ import (
 )
 
 var _ = Describe("Game", func() {
+	generateTestsWithPlayerCount(2)
+	generateTestsWithPlayerCount(5)
+})
+
+func generateTestsWithPlayerCount(playerCount int) {
 	var (
 		done chan struct{}
 		bus  mb.MessageBus
@@ -36,7 +40,7 @@ var _ = Describe("Game", func() {
 		bus = mb.New(10000)
 		timeout = 10 * time.Second
 		gameID = "0"
-		game, _ = NewGame(ctx, gameID, bus, timeout, logger)
+		game, _ = NewGame(ctx, gameID, bus, timeout, logger, playerCount)
 		pb = Publisher{
 			Bus: bus,
 			Fsm: game.fsm,
@@ -48,29 +52,35 @@ var _ = Describe("Game", func() {
 			game.Init(errCh)
 			// Emulate messages from real players.
 			Assert(PlayersReady, game, done, func(states []string) {})
-			pb.Publish(PlayerReady, gameID)
-			pb.Publish(PlayerReady, gameID)
+			for i := 0; i < playerCount; i++ {
+				pb.Publish(PlayerReady, gameID)
+			}
 			WaitDoneOrTimeout(done)
 			Assert(TCPCheckSuccessAll, game, done, func(states []string) {})
-			pb.Publish(TCPCheckSuccess, gameID)
-			pb.Publish(TCPCheckSuccess, gameID)
+			for i := 0; i < playerCount; i++ {
+				pb.Publish(TCPCheckSuccess, gameID)
+			}
 			WaitDoneOrTimeout(done)
 			Assert(GameDone, game, done, func(states []string) {
-				Expect(states[0]).To(Equal(Init))
-				Expect(states[1]).To(Equal(WaitPlayersReady))
-				Expect(states[2]).To(Equal(WaitPlayersReady))
-				// the states are repeated 3 times because of one initial entrance
-				// and 2 times due to the stay in the state.
-				Expect(states[3]).To(Equal(WaitTCPCheck))
-				Expect(states[4]).To(Equal(WaitTCPCheck))
-				Expect(states[5]).To(Equal(WaitTCPCheck))
-				Expect(states[6]).To(Equal(Playing))
-				Expect(states[7]).To(Equal(Playing))
-				Expect(states[8]).To(Equal(Playing))
-				Expect(states[9]).To(Equal(GameDone))
+				statesAsserter := NewStatesAsserter(states)
+
+				statesAsserter.ExpectNext().To(Equal(Init))
+				for i := 0; i < playerCount; i++ {
+					statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
+				}
+				statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+				for i := 0; i < playerCount; i++ {
+					statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+				}
+				statesAsserter.ExpectNext().To(Equal(Playing))
+				for i := 0; i < playerCount; i++ {
+					statesAsserter.ExpectNext().To(Equal(Playing))
+				}
+				statesAsserter.ExpectNext().To(Equal(GameDone))
 			}, ServiceEventsTopic)
-			pb.Publish(GameFinishedWithSuccess, gameID)
-			pb.Publish(GameFinishedWithSuccess, gameID)
+			for i := 0; i < playerCount; i++ {
+				pb.Publish(GameFinishedWithSuccess, gameID)
+			}
 			WaitDoneOrTimeout(done)
 		})
 	})
@@ -79,28 +89,39 @@ var _ = Describe("Game", func() {
 			It("transitions to the GameError state", func() {
 				game.Init(errCh)
 				Assert(PlayersReady, game, done, func(states []string) {})
-				pb.Publish(PlayerReady, gameID)
-				pb.Publish(PlayerReady, gameID)
+				for i := 0; i < playerCount; i++ {
+					pb.Publish(PlayerReady, gameID)
+				}
 				WaitDoneOrTimeout(done)
 				Assert(TCPCheckSuccessAll, game, done, func(states []string) {})
-				pb.Publish(TCPCheckSuccess, gameID)
-				pb.Publish(TCPCheckSuccess, gameID)
+				for i := 0; i < playerCount; i++ {
+					pb.Publish(TCPCheckSuccess, gameID)
+				}
 				WaitDoneOrTimeout(done)
 				Assert(GameError, game, done, func(states []string) {})
 				Assert(GameDone, game, done, func(states []string) {
-					Expect(states[0]).To(Equal(Init))
-					Expect(states[1]).To(Equal(WaitPlayersReady))
-					Expect(states[2]).To(Equal(WaitPlayersReady))
-					Expect(states[3]).To(Equal(WaitTCPCheck))
-					Expect(states[4]).To(Equal(WaitTCPCheck))
-					Expect(states[5]).To(Equal(WaitTCPCheck))
-					Expect(states[6]).To(Equal(Playing))
-					Expect(states[7]).To(Equal(Playing))
-					Expect(states[8]).To(Equal(GameError))
-					Expect(states[9]).To(Equal(GameDone))
-					Expect(len(states)).To(Equal(10))
+					statesAsserter := NewStatesAsserter(states)
+
+					statesAsserter.ExpectNext().To(Equal(Init))
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
+					}
+					statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+					}
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(Playing))
+					}
+					statesAsserter.ExpectNext().To(Equal(GameError))
+					statesAsserter.ExpectNext().To(Equal(GameDone))
+
+					Expect(len(states)).To(Equal(3*playerCount + 4))
 				}, ServiceEventsTopic)
-				pb.Publish(GameFinishedWithSuccess, gameID)
+
+				for i := 0; i < playerCount-1; i++ {
+					pb.Publish(GameFinishedWithSuccess, gameID)
+				}
 				pb.Publish(GameFinishedWithError, gameID)
 				WaitDoneOrTimeout(done)
 				WaitDoneOrTimeout(done)
@@ -110,18 +131,24 @@ var _ = Describe("Game", func() {
 			It("transitions to the GameError state", func() {
 				game.Init(errCh)
 				Assert(PlayersReady, game, done, func(states []string) {})
-				pb.Publish(PlayerReady, gameID)
-				pb.Publish(PlayerReady, gameID)
+				for i := 0; i < playerCount; i++ {
+					pb.Publish(PlayerReady, gameID)
+				}
 				WaitDoneOrTimeout(done)
 				Assert(GameDone, game, done, func(states []string) {
-					Expect(states[0]).To(Equal(Init))
-					Expect(states[1]).To(Equal(WaitPlayersReady))
-					Expect(states[2]).To(Equal(WaitPlayersReady))
-					Expect(states[3]).To(Equal(WaitTCPCheck))
-					Expect(states[4]).To(Equal(WaitTCPCheck))
-					Expect(states[5]).To(Equal(GameError))
+					statesAsserter := NewStatesAsserter(states)
+					statesAsserter.ExpectNext().To(Equal(Init))
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
+					}
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+					}
+					statesAsserter.ExpectNext().To(Equal(GameError))
 				}, ServiceEventsTopic)
-				pb.Publish(TCPCheckSuccess, gameID)
+				for i := 0; i < playerCount-1; i++ {
+					pb.Publish(TCPCheckSuccess, gameID)
+				}
 				pb.Publish(TCPCheckFailure, gameID)
 				WaitDoneOrTimeout(done)
 			})
@@ -130,7 +157,7 @@ var _ = Describe("Game", func() {
 	Context("state timeout occurs", func() {
 		It("transitions to the GameError state", func() {
 			timeout := 10 * time.Millisecond
-			game, _ := NewGame(ctx, gameID, bus, timeout, logger)
+			game, _ := NewGame(ctx, gameID, bus, timeout, logger, playerCount)
 			// No player publishes an event, simulate a state timeout.
 			Assert(GameDone, game, done, func(states []string) {
 				Expect(states[0]).To(Equal(Init))
@@ -140,4 +167,4 @@ var _ = Describe("Game", func() {
 			WaitDoneOrTimeout(done)
 		})
 	})
-})
+}

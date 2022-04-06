@@ -51,9 +51,7 @@ func (g *Game) Bus() mb.MessageBus {
 }
 
 // NewGame returns an instance of Game.
-func NewGame(ctx context.Context, id string, bus mb.MessageBus, timeout time.Duration, logger *zap.SugaredLogger) (*Game, error) {
-	// TODO: read this parameter from the Game.
-	players := 2
+func NewGame(ctx context.Context, id string, bus mb.MessageBus, timeout time.Duration, logger *zap.SugaredLogger, playerCount int) (*Game, error) {
 	publisher := &Publisher{
 		Bus: bus,
 	}
@@ -63,9 +61,9 @@ func NewGame(ctx context.Context, id string, bus mb.MessageBus, timeout time.Dur
 	}
 	cb := []*fsm.Callback{
 		fsm.AfterEnter(WaitPlayersReady).Do(callbacker.sendRegistered()),
-		fsm.AfterEnter(WaitPlayersReady).Do(callbacker.checkSomethingReady(players, PlayerReady, PlayersReady)),
-		fsm.AfterEnter(WaitTCPCheck).Do(callbacker.checkSomethingReady(players, TCPCheckSuccess, TCPCheckSuccessAll)),
-		fsm.AfterEnter(Playing).Do(callbacker.checkSomethingReady(players, GameFinishedWithSuccess, GameSuccess)),
+		fsm.AfterEnter(WaitPlayersReady).Do(callbacker.checkSomethingReady(playerCount, PlayerReady, PlayersReady)),
+		fsm.AfterEnter(WaitTCPCheck).Do(callbacker.checkSomethingReady(playerCount, TCPCheckSuccess, TCPCheckSuccessAll)),
+		fsm.AfterEnter(Playing).Do(callbacker.checkSomethingReady(playerCount, GameFinishedWithSuccess, GameSuccess)),
 		fsm.AfterEnter(GameDone).Do(callbacker.gameDone()),
 		fsm.AfterEnter(GameError).Do(callbacker.gameError()),
 		fsm.WhenStateTimeout().Do(callbacker.stateTimeout()),

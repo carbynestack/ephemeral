@@ -13,6 +13,7 @@ import (
 	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	. "github.com/carbynestack/ephemeral/pkg/utils"
+	"sort"
 
 	"errors"
 	"fmt"
@@ -62,13 +63,11 @@ type SPDZWrapper struct {
 
 // Execute runs the MPC computation.
 func (s *SPDZWrapper) Execute(event *pb.Event) error {
-	ip, port, err := s.getPlayerIPAndPort(event.Players)
+	entries, err := s.getProxyEntries(event.Players)
 	if err != nil {
 		return err
 	}
-	s.ctx.Proxy.Host = ip
-	s.ctx.Proxy.Port = port
-	s.ctx.Proxy.LocalPort = s.getPort(s.ctx.Spdz.PlayerID)
+	s.ctx.ProxyEntries = entries
 	s.ctx.ErrCh = s.errCh
 	s.logger.Debug("Starting MPC execution")
 	res, err := s.activate(s.ctx)
@@ -81,23 +80,38 @@ func (s *SPDZWrapper) Execute(event *pb.Event) error {
 	return err
 }
 
-func (s *SPDZWrapper) getPlayerIPAndPort(pls []*pb.Player) (string, string, error) {
-	for _, player := range pls {
-		// The port always includes the second player, change it if the number of players > 2.
-		if player.Id-100 == 1 {
-			return player.Ip, strconv.Itoa(int(player.Port)), nil
+func (s *SPDZWrapper) getProxyEntries(pls []*pb.Player) ([]*ProxyConfig, error) {
+	if len(pls) == 1 {
+		return nil, errors.New("you must provide at least two players")
+	}
+	// Copy to new Slice so that we don't modify the original Slice (just in case)
+	players := make([]*pb.Player, len(pls))
+	copy(players, pls)
+	sort.Slice(players, func(left, right int) bool {
+		return players[left].Id < players[right].Id
+	})
+	var proxyEntries []*ProxyConfig
+	for _, player := range players {
+		// TODO: remove this 100 hack, it is a temp workaround for protobuf3.
+		// Create proxy entries for all OTHER players
+		if (player.Id - 100) != s.ctx.Spdz.PlayerID {
+			proxyEntries = append(proxyEntries, &ProxyConfig{
+				Host:      player.Ip,
+				Port:      strconv.Itoa(int(player.Port)),
+				LocalPort: s.getLocalPortForPlayer(player.Id - 100),
+			})
 		}
 	}
-	return "", "", fmt.Errorf("player with ID %d not found", s.ctx.Spdz.PlayerID)
+	s.logger.Infow("Created ProxyEntries", "ProxyEntries", proxyEntries, "Players", players)
+	if len(proxyEntries) != len(players)-1 {
+		return nil, errors.New("could not get all ProxyEntries")
+	}
+	return proxyEntries, nil
 }
 
-// getPort returns back the port that is set by the proxy.
-// Note, it only works until the ExpectedPlayers is equal to 2.
-func (s *SPDZWrapper) getPort(id int32) string {
-	if id == 0 {
-		return "5001"
-	}
-	return "5000"
+// getLocalPortForPlayer returns the port that is set by the proxy.
+func (s *SPDZWrapper) getLocalPortForPlayer(id int32) string {
+	return strconv.Itoa(int(d.BasePort + id))
 }
 
 // NewSPDZEngine returns a new instance of SPDZ engine that knows how to compile and trigger an execution of SPDZ runtime.
@@ -154,7 +168,7 @@ func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
 			s.proxy.Stop()
 		}
 	}()
-	err = s.writeIPFile(s.ipFile, proxyAddress, d.ExpectedPlayers)
+	err = s.writeIPFile(s.ipFile, proxyAddress, ctx.Spdz.PlayerCount)
 	if err != nil {
 		msg := "error due to writing to the ip file"
 		s.logger.Errorw(msg, GameID, act.GameID)
@@ -193,7 +207,13 @@ func (s *SPDZEngine) Compile(ctx *CtxConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.cmder.CallCMD([]string{fmt.Sprintf("./compile.py %s", appName)}, s.baseDir)
+	var stdoutSlice []byte
+	var stderrSlice []byte
+	command := fmt.Sprintf("./compile.py %s", appName)
+	stdoutSlice, stderrSlice, err = s.cmder.CallCMD([]string{command}, s.baseDir)
+	stdOut := string(stdoutSlice)
+	stdErr := string(stderrSlice)
+	s.logger.Debugw("Compiled Successfully", "Command", command, "StdOut", stdOut, "StdErr", stdErr)
 	if err != nil {
 		return err
 	}
@@ -206,15 +226,15 @@ func (s *SPDZEngine) getFeedPort() string {
 }
 
 func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
-	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID)
-	stdout, err := s.cmder.CallCMD([]string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(d.ExpectedPlayers), ipFile)}, s.baseDir)
+	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
+	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID, "command", command)
+	stdout, stderr, err := s.cmder.CallCMD(command, s.baseDir)
 	if err != nil {
 		err := fmt.Errorf("error while executing the user code: %v", err)
 		ctx.ErrCh <- err
 		s.logger.Errorw(err.Error(), GameID, ctx.Act.GameID)
 	}
-	s.logger.Infow(fmt.Sprintf("===== Begin of stdout from the user container =====\n%s", string(stdout)), GameID, ctx.Act.GameID)
-	s.logger.Infow("===== End of stdout from the user container =====", GameID, ctx.Act.GameID)
+	s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
 }
 
 func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error {
@@ -223,5 +243,6 @@ func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error 
 		addrs = addrs + fmt.Sprintf("%s\n", addr)
 	}
 	data := []byte(addrs)
+	s.logger.Infow("Writing to IPFile: ", "path", path, "content", addrs, "proxy address", addr, "parties", parties)
 	return ioutil.WriteFile(path, data, 0644)
 }

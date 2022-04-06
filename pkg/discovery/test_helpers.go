@@ -111,3 +111,24 @@ func assertExternalEventBody(event *pb.Event, topic string, g *GamesWithBus, don
 		return nil
 	})
 }
+
+// StatesAsserter allows checking for returned states from a Game more easily
+type StatesAsserter struct {
+	states       []string
+	currentIndex int
+}
+
+// NewStatesAsserter creates a new StatesAsserter that checks the provided states slice
+func NewStatesAsserter(states []string) *StatesAsserter {
+	return &StatesAsserter{
+		states: states,
+	}
+}
+
+// ExpectNext returns an Assertion over the next element of the internal states slice.
+//  This method does not perform any bounds checking, so calling this one time too many will panic
+func (s *StatesAsserter) ExpectNext() Assertion {
+	state := s.states[s.currentIndex]
+	s.currentIndex++
+	return Expect(state)
+}

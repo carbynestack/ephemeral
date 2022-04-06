@@ -82,5 +82,6 @@ data:
       },
       "frontendURL": "{{ .Values.ephemeral.frontendUrl }}",
       "discoveryAddress": "{{ .Values.ephemeral.discoveryAddress }}",
-      "playerID": {{ .Values.ephemeral.playerId }}
+      "playerID": {{ .Values.ephemeral.playerId }},
+      "playerCount": {{ .Values.playerCount }}
     }

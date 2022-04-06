@@ -93,15 +93,15 @@ func (f *FakePlayer) PublishEvent(name, topic string, event *pb.Event) {
 type FakeExecutor struct {
 }
 
-func (f *FakeExecutor) CallCMD(cmd []string, dir string) ([]byte, error) {
-	return []byte{}, nil
+func (f *FakeExecutor) CallCMD(cmd []string, dir string) ([]byte, []byte, error) {
+	return []byte{}, []byte{}, nil
 }
 
 type BrokenFakeExecutor struct {
 }
 
-func (f *BrokenFakeExecutor) CallCMD(cmd []string, dir string) ([]byte, error) {
-	return []byte{}, errors.New("some error")
+func (f *BrokenFakeExecutor) CallCMD(cmd []string, dir string) ([]byte, []byte, error) {
+	return []byte{}, []byte{}, errors.New("some error")
 }
 
 type FakeProxy struct {

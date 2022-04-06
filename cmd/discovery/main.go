@@ -68,7 +68,7 @@ func main() {
 		panic(err)
 	}
 	// TODO: extract this Istio address dynamically.
-	s := discovery.NewServiceNG(bus, pb, stateTimeout, tr, n, config.FrontendURL, logger, mode, client)
+	s := discovery.NewServiceNG(bus, pb, stateTimeout, tr, n, config.FrontendURL, logger, mode, client, config.PlayerCount)
 	if err != nil {
 		panic(err)
 	}
@@ -95,7 +95,7 @@ func NewClient(config *types.DiscoveryConfig, stateTimeout time.Duration, logger
 	mode := ModeMaster
 	client := &cl.Client{}
 	var err error
-	if config.Slave {
+	if config.Slave { // If Follower/Slave -> Open GRPc Connection to Master
 		inCh := make(chan *proto.Event)
 		outCh := make(chan *proto.Event)
 		grpcClientConf := &c.TransportClientConfig{
@@ -166,6 +166,12 @@ func ParseConfig(path string) (*DiscoveryConfig, error) {
 	}
 	if conf.MasterPort == "" {
 		return nil, errors.New("missing config error, MasterPort must be defined")
+	}
+	if conf.PlayerCount == 0 {
+		return nil, errors.New("missing config error, PlayerCount must be defined")
+	}
+	if conf.PlayerCount < 2 {
+		return nil, errors.New("invalid config error, PlayerCount must be 2 or higher")
 	}
 	return &conf, nil
 }
