@@ -19,7 +19,7 @@ import (
 
 var _ = Describe("Carrier", func() {
 	var ctx = context.TODO()
-	var playerId = int32(1) // PlayerID 1, since PlayerID==0 contains another check when connecting
+	var playerID = int32(1) // PlayerID 1, since PlayerID==0 contains another check when connecting
 
 	It("connects to a socket", func() {
 		var connected bool
@@ -28,14 +28,14 @@ var _ = Describe("Carrier", func() {
 			connected = true
 			return &conn, nil
 		}
-		fakeTlsConnector := func(connection net.Conn, playerID int32) (net.Conn, error) {
+		fakeTLSConnector := func(connection net.Conn, playerID int32) (net.Conn, error) {
 			return connection, nil
 		}
 		carrier := Carrier{
 			Dialer:       fakeDialer,
-			TlsConnector: fakeTlsConnector,
+			TLSConnector: fakeTLSConnector,
 		}
-		err := carrier.Connect(playerId, context.TODO(), "", "")
+		err := carrier.Connect(context.TODO(), playerID, "", "")
 		Expect(connected).To(BeTrue())
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -44,14 +44,14 @@ var _ = Describe("Carrier", func() {
 		fakeDialer := func(ctx context.Context, addr, port string) (net.Conn, error) {
 			return &conn, nil
 		}
-		fakeTlsConnector := func(connection net.Conn, playerID int32) (net.Conn, error) {
+		fakeTLSConnector := func(connection net.Conn, playerID int32) (net.Conn, error) {
 			return connection, nil
 		}
 		carrier := Carrier{
 			Dialer:       fakeDialer,
-			TlsConnector: fakeTlsConnector,
+			TLSConnector: fakeTLSConnector,
 		}
-		err := carrier.Connect(playerId, context.TODO(), "", "")
+		err := carrier.Connect(context.TODO(), playerID, "", "")
 		Expect(err).NotTo(HaveOccurred())
 		err = carrier.Close()
 		Expect(err).NotTo(HaveOccurred())
@@ -61,7 +61,7 @@ var _ = Describe("Carrier", func() {
 	var (
 		secret           []amphora.SecretShare
 		output           []byte
-		connectionOutput []byte //Will contain (length 4 byte, playerId 1 byte)
+		connectionOutput []byte //Will contain (length 4 byte, playerID 1 byte)
 		client, server   net.Conn
 		dialer           func(ctx context.Context, addr, port string) (net.Conn, error)
 		fakeTlsConnector func(conn net.Conn, playerID int32) (net.Conn, error)
@@ -89,26 +89,26 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TlsConnector: fakeTlsConnector,
+				TLSConnector: fakeTlsConnector,
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(playerId, ctx, "", "")
+			carrier.Connect(ctx, playerID, "", "")
 			go server.Read(output)
 			err := carrier.Send(secret)
 			carrier.Close()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(output[0]).To(Equal(byte(1)))
-			Expect(connectionOutput).To(Equal([]byte{1, 0, 0, 0, fmt.Sprintf("%d", playerId)[0]}))
+			Expect(connectionOutput).To(Equal([]byte{1, 0, 0, 0, fmt.Sprintf("%d", playerID)[0]}))
 		})
 		It("returns an error when it fails to marshal the object", func() {
 			packer := &FakeBrokenPacker{}
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TlsConnector: fakeTlsConnector,
+				TLSConnector: fakeTlsConnector,
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(playerId, ctx, "", "")
+			carrier.Connect(ctx, playerID, "", "")
 			go server.Read(output)
 			err := carrier.Send(secret)
 			carrier.Close()
@@ -122,10 +122,10 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TlsConnector: fakeTlsConnector,
+				TLSConnector: fakeTlsConnector,
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(playerId, ctx, "", "")
+			carrier.Connect(ctx, playerID, "", "")
 			// Closing the connection to trigger a failure due to writing into the closed socket.
 			server.Close()
 			err := carrier.Send(secret)
@@ -144,10 +144,10 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       &packer,
-				TlsConnector: fakeTlsConnector,
+				TLSConnector: fakeTlsConnector,
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(playerId, ctx, "", "")
+			carrier.Connect(ctx, playerID, "", "")
 			go func() {
 				server.Write(serverResponse)
 				server.Close()
@@ -166,10 +166,10 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       &packer,
-				TlsConnector: fakeTlsConnector,
+				TLSConnector: fakeTlsConnector,
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(playerId, ctx, "", "")
+			carrier.Connect(ctx, playerID, "", "")
 			server.Close()
 			anyConverter := &PlaintextConverter{}
 			_, err := carrier.Read(anyConverter, false)
@@ -181,10 +181,10 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TlsConnector: fakeTlsConnector,
+				TLSConnector: fakeTlsConnector,
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(playerId, ctx, "", "")
+			carrier.Connect(ctx, playerID, "", "")
 			go func() {
 				server.Write(serverResponse)
 				server.Close()
@@ -196,7 +196,7 @@ var _ = Describe("Carrier", func() {
 	})
 
 	Context("when connecting as Player0", func() {
-		playerId := int32(0)
+		playerID := int32(0)
 		It("will receive and handle the server's fileHeader", func() {
 			// Arrange
 			// ToDo: Better Response for real-life scenario?
@@ -205,7 +205,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TlsConnector: fakeTlsConnector,
+				TLSConnector: fakeTlsConnector,
 			}
 			waitGroup := sync.WaitGroup{}
 			waitGroup.Add(1)
@@ -214,7 +214,7 @@ var _ = Describe("Carrier", func() {
 			// Act
 			var errConnecting error
 			go func() {
-				errConnecting = carrier.Connect(playerId, ctx, "", "")
+				errConnecting = carrier.Connect(ctx, playerID, "", "")
 				waitGroup.Done()
 			}()
 
@@ -225,7 +225,7 @@ var _ = Describe("Carrier", func() {
 			waitGroup.Wait()
 
 			// Assert
-			Expect(connectionOutput).To(Equal([]byte{1, 0, 0, 0, fmt.Sprintf("%d", playerId)[0]}))
+			Expect(connectionOutput).To(Equal([]byte{1, 0, 0, 0, fmt.Sprintf("%d", playerID)[0]}))
 			Expect(errConnecting).NotTo(HaveOccurred())
 			Expect(errWrite).NotTo(HaveOccurred())
 			Expect(numberOfBytesWritten).To(Equal(len(serverResponse)))

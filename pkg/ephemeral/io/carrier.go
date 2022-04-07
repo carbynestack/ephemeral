@@ -24,7 +24,7 @@ type Result struct {
 
 // AbstractCarrier is the carriers interface.
 type AbstractCarrier interface {
-	Connect(int32, context.Context, string, string) error
+	Connect(context.Context, int32, string, string) error
 	Close() error
 	Send([]amphora.SecretShare) error
 	Read(ResponseConverter, bool) (*Result, error)
@@ -33,7 +33,7 @@ type AbstractCarrier interface {
 // Carrier is a TCP client for TCP sockets.
 type Carrier struct {
 	Dialer       func(ctx context.Context, addr, port string) (net.Conn, error)
-	TlsConnector func(conn net.Conn, playerID int32) (net.Conn, error)
+	TLSConnector func(conn net.Conn, playerID int32) (net.Conn, error)
 	Conn         net.Conn
 	Packer       Packer
 	connected    bool
@@ -46,7 +46,7 @@ type Config struct {
 }
 
 // Connect establishes a TCP connection to a socket on a given host and port.
-func (c *Carrier) Connect(playerID int32, ctx context.Context, host string, port string) error {
+func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port string) error {
 	conn, err := c.Dialer(ctx, host, port)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (c *Carrier) Connect(playerID int32, ctx context.Context, host string, port
 	if err != nil {
 		return err
 	}
-	c.Conn, err = c.TlsConnector(conn, playerID)
+	c.Conn, err = c.TLSConnector(conn, playerID)
 	if err != nil {
 		return err
 	}
@@ -117,11 +117,11 @@ func (c *Carrier) Send(secret []amphora.SecretShare) error {
 // The header consists of the clientId as string:
 // - 1 Long (4 Byte) that contains the length of the string in bytes
 // - Then come X Bytes for the String
-func (c *Carrier) buildHeader(playerId int32) []byte {
-	playerIdString := []byte(fmt.Sprintf("%d", playerId))
+func (c *Carrier) buildHeader(playerID int32) []byte {
+	playerIDString := []byte(fmt.Sprintf("%d", playerID))
 	lengthOfString := make([]byte, 4)
-	binary.LittleEndian.PutUint32(lengthOfString, uint32(len(playerIdString)))
-	return append(lengthOfString, playerIdString...)
+	binary.LittleEndian.PutUint32(lengthOfString, uint32(len(playerIDString)))
+	return append(lengthOfString, playerIDString...)
 }
 
 // Read reads the response from the TCP connection and unmarshals it.

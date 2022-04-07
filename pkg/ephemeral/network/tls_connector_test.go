@@ -109,7 +109,7 @@ LO+mQ15hUEpbjrXF3IdY+4MjDqFOETC0KuI72yjUGPZqWe+WAhBcni3VNzs2Ik4=
 -----END CERTIFICATE-----`
 )
 
-var _ = Describe("TlsConnector", func() {
+var _ = Describe("TLSConnector", func() {
 	var testDataFolder string
 	var certificateFolder string
 	var playerID = int32(0)
@@ -158,7 +158,7 @@ var _ = Describe("TlsConnector", func() {
 		)
 
 		BeforeEach(func() {
-			tlsConnector = NewTlsConnectorWithPath(certificateFolder)
+			tlsConnector = NewTLSConnectorWithPath(certificateFolder)
 			client, server = net.Pipe()
 		})
 
@@ -173,8 +173,8 @@ var _ = Describe("TlsConnector", func() {
 			serverConfig := &tls.Config{
 				Certificates: []tls.Certificate{serverCertificate},
 			}
-			serverTlsConnection := tls.Server(server, serverConfig)
-			go serverTlsConnection.Handshake()
+			serverTLSConnection := tls.Server(server, serverConfig)
+			go serverTLSConnection.Handshake()
 
 			// Act
 			tlsConnection, err := tlsConnector(client, playerID)
@@ -182,7 +182,7 @@ var _ = Describe("TlsConnector", func() {
 			go tlsConnection.Write(contentToSend)
 
 			contentToReceive := make([]byte, 1)
-			serverTlsConnection.Read(contentToReceive)
+			serverTLSConnection.Read(contentToReceive)
 
 			// Assert
 			Expect(err).NotTo(HaveOccurred())
