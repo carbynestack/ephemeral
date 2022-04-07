@@ -21,7 +21,7 @@ import (
 // Executor is an interface for calling a command and process its output.
 type Executor interface {
 	// CallCMD executes the command and returns the output's STDOUT, STDERR streams as well as any errors
-	CallCMD(theContext context.Context, cmd []string, dir string) ([]byte, []byte, error)
+	CallCMD(ctx context.Context, cmd []string, dir string) ([]byte, []byte, error)
 }
 
 var (
@@ -56,10 +56,10 @@ func (c *Commander) Run(cmd string) ([]byte, []byte, error) {
 // ```
 // If the command fails to run or doesn't complete successfully, the error is of type *ExitError. Other error types may be returned for I/O problems.
 // ```
-func (c *Commander) CallCMD(theContext context.Context, cmd []string, dir string) ([]byte, []byte, error) {
+func (c *Commander) CallCMD(ctx context.Context, cmd []string, dir string) ([]byte, []byte, error) {
 	baseCmd := c.Options
 	baseCmd = append(baseCmd, cmd...)
-	command := exec.CommandContext(theContext, c.Command, baseCmd...)
+	command := exec.CommandContext(ctx, c.Command, baseCmd...)
 	stderrBuffer := bytes.NewBuffer([]byte{})
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	command.Stderr = stderrBuffer
