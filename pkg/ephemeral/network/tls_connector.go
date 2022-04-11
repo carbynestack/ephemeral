@@ -6,19 +6,19 @@ import (
 	"net"
 )
 
-// NewTLSConnector creates a TLS connector Function in the default Path "Player-Data"
+// NewTLSConnector creates a TLS connector function in the default path "Player-Data".
 // Simply delegates to NewTLSConnectorWithPath
 func NewTLSConnector() func(conn net.Conn, playerID int32) (net.Conn, error) {
 	return NewTLSConnectorWithPath("Player-Data")
 }
 
-// NewTLSConnectorWithPath creates a new TLS connector Function.
-// The function will accept the Socket Connection and the PlayerID and upgrade it to a TLS encrypted one.
-// Will search for Certificates in the provided folder Path.
-// Certificates must be named in the format that MP-SPDZ uses (<Folder>/C<PlayerID>.pem and .key)
-func NewTLSConnectorWithPath(folderPath string) func(conn net.Conn, playerID int32) (net.Conn, error) {
+// NewTLSConnectorWithPath creates a new TLS connector function.
+// The function will accept the socket connection and the playerID and upgrade it to a TLS encrypted one.
+// Will search for certificates in the provided folder path.
+// Certificates must be named in the format that MP-SPDZ uses (<folder>/C<playerID>.pem and .key).
+func NewTLSConnectorWithPath(folder string) func(conn net.Conn, playerID int32) (net.Conn, error) {
 	return func(conn net.Conn, playerID int32) (net.Conn, error) {
-		tlsConfig, err := getTLSConfig(playerID, folderPath)
+		tlsConfig, err := getTLSConfig(playerID, folder)
 		if err != nil {
 			return nil, err
 		}
@@ -33,8 +33,8 @@ func NewTLSConnectorWithPath(folderPath string) func(conn net.Conn, playerID int
 	}
 }
 
-// getTLSConfig Loads the TLS Config for the provided PlayerId located in the given folder
-// Certificates must be named in the format that MP-SPDZ uses (<Folder>/C<PlayerID>.pem and .key)
+// getTLSConfig Loads the TLS config for the provided playerID located in the given folder.
+// Certificates must be named in the format that MP-SPDZ uses (<folder>/C<playerID>.pem and .key)
 func getTLSConfig(playerID int32, folder string) (*tls.Config, error) {
 	certFile := fmt.Sprintf("%s/C%d.pem", folder, playerID)
 	keyFile := fmt.Sprintf("%s/C%d.key", folder, playerID)
@@ -44,7 +44,8 @@ func getTLSConfig(playerID int32, folder string) (*tls.Config, error) {
 	}
 
 	tlsConfig := &tls.Config{
-		Certificates:       []tls.Certificate{cert},
+		Certificates: []tls.Certificate{cert},
+		// For future improvement, see https://github.com/carbynestack/ephemeral/issues/22
 		InsecureSkipVerify: true,
 	}
 	return tlsConfig, nil

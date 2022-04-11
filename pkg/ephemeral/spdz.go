@@ -211,7 +211,6 @@ func (s *SPDZEngine) Compile(ctx *CtxConfig) error {
 	var stdoutSlice []byte
 	var stderrSlice []byte
 	command := fmt.Sprintf("./compile.py -M %s", appName)
-	// TODO: ctx.context is nil at this time.
 	stdoutSlice, stderrSlice, err = s.cmder.CallCMD(context.TODO(), []string{command}, s.baseDir)
 	stdOut := string(stdoutSlice)
 	stdErr := string(stderrSlice)

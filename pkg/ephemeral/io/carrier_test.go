@@ -64,7 +64,7 @@ var _ = Describe("Carrier", func() {
 		connectionOutput []byte //Will contain (length 4 byte, playerID 1 byte)
 		client, server   net.Conn
 		dialer           func(ctx context.Context, addr, port string) (net.Conn, error)
-		fakeTlsConnector func(conn net.Conn, playerID int32) (net.Conn, error)
+		fakeTLSConnector func(conn net.Conn, playerID int32) (net.Conn, error)
 	)
 	BeforeEach(func() {
 		secret = []amphora.SecretShare{
@@ -76,7 +76,7 @@ var _ = Describe("Carrier", func() {
 		dialer = func(ctx context.Context, addr, port string) (net.Conn, error) {
 			return client, nil
 		}
-		fakeTlsConnector = func(connection net.Conn, playerID int32) (net.Conn, error) {
+		fakeTLSConnector = func(connection net.Conn, playerID int32) (net.Conn, error) {
 			return connection, nil
 		}
 	})
@@ -89,7 +89,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TLSConnector: fakeTlsConnector,
+				TLSConnector: fakeTLSConnector,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -105,7 +105,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TLSConnector: fakeTlsConnector,
+				TLSConnector: fakeTLSConnector,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -122,7 +122,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TLSConnector: fakeTlsConnector,
+				TLSConnector: fakeTLSConnector,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -144,7 +144,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       &packer,
-				TLSConnector: fakeTlsConnector,
+				TLSConnector: fakeTLSConnector,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -166,7 +166,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       &packer,
-				TLSConnector: fakeTlsConnector,
+				TLSConnector: fakeTLSConnector,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -181,7 +181,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TLSConnector: fakeTlsConnector,
+				TLSConnector: fakeTLSConnector,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -205,7 +205,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer:       dialer,
 				Packer:       packer,
-				TLSConnector: fakeTlsConnector,
+				TLSConnector: fakeTLSConnector,
 			}
 			waitGroup := sync.WaitGroup{}
 			waitGroup.Add(1)

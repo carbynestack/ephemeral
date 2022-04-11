@@ -224,5 +224,4 @@ func (c *Callbacker) sendEvent(name, topic string, e interface{}) {
 	}
 	c.pb.PublishWithBody(name, topic, event, c.playerParams.GameID)
 	c.logger.Debugw("Sending event", "event", event, "topic", topic)
-	c.logger.Debugf("Sending event.name %v to topic %s\n", event.Name, topic)
 }

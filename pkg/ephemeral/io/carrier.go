@@ -60,7 +60,7 @@ func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port
 		return err
 	}
 	if playerID == 0 {
-		err = c.readSpec()
+		err = c.readPrime()
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,17 @@ func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port
 	return nil
 }
 
-func (c Carrier) readSpec() error {
+// readPrime reads the file header from the MP-SPDZ connection
+// In MP-SPDZ connection, this will only be used when player0 connects as client to MP-SPDZ
+//
+// For the header composition, check:
+// https://github.com/data61/MP-SPDZ/issues/418#issuecomment-975424591
+//
+// It is made up as follows:
+//  - Careful: The other header parts are not part of this communication, they are only used when reading tuple files
+//  - length of the prime as 4-byte number little-endian (e.g. 16),
+//  - prime in big-endian (e.g. 170141183460469231731687303715885907969)
+func (c Carrier) readPrime() error {
 	const size = 4
 	readBytes := make([]byte, size)
 	_, err := io.LimitReader(c.Conn, size).Read(readBytes)
