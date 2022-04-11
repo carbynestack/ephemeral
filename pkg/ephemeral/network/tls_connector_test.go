@@ -218,8 +218,8 @@ var _ = Describe("TLSConnector", func() {
 					//No Server Certificates -> Client certificate won't match
 					Certificates: []tls.Certificate{},
 				}
-				serverTlsConnection := tls.Server(server, serverConfig)
-				go serverTlsConnection.Handshake()
+				serverTLSConnection := tls.Server(server, serverConfig)
+				go serverTLSConnection.Handshake()
 
 				// Act
 				tlsConnection, err := tlsConnector(client, playerID)
