@@ -34,8 +34,8 @@ jobs:
           servers: |
             [{
               "id": "github",
-              "username": "cs-minion",
-              "password": "&#103;&#104;&#112;&#95;cUbDuVYAtFgin3nB8cvTjZ3NZTEvLg4Vfhjf"
+              "username": "${{ github.actor }}",
+              "password": "${{ secrets.GITHUB_TOKEN }}"
             }]
       - name: Build with Maven
         run: mvn install -Dskip.tests --batch-mode --update-snapshots --no-transfer-progress
