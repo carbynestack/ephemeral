@@ -10,12 +10,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sync"
 )
 
 // Executor is an interface for calling a command and process its output.
@@ -69,21 +67,7 @@ func (c *Commander) CallCMD(ctx context.Context, cmd []string, dir string) ([]by
 	if err != nil {
 		return nil, nil, err
 	}
-
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(1)
-	go func() {
-		// Check if the command finished successfully.
-		err = command.Wait()
-		defer waitGroup.Done()
-		if err != nil {
-			println(fmt.Sprintf("Error occured!"))
-			println(fmt.Sprintf("StdOut: %s", stdoutBuffer.Bytes()))
-			println(fmt.Sprintf("StdErr: %s", stderrBuffer.Bytes()))
-		}
-	}()
-	waitGroup.Wait()
-
+	err = command.Wait()
 	if err != nil {
 		switch err.(type) {
 		case *exec.ExitError:

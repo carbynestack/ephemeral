@@ -8,17 +8,16 @@ package ephemeral
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	d "github.com/carbynestack/ephemeral/pkg/discovery"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral/io"
 	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	. "github.com/carbynestack/ephemeral/pkg/utils"
-	"sort"
-
-	"errors"
-	"fmt"
 	"io/ioutil"
+	"sort"
 	"strconv"
 	"time"
 
@@ -231,11 +230,12 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID, "command", command)
 	stdout, stderr, err := s.cmder.CallCMD(ctx.Context, command, s.baseDir)
 	if err != nil {
+		s.logger.Errorw("Error while executing the user code", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
 		err := fmt.Errorf("error while executing the user code: %v", err)
 		ctx.ErrCh <- err
-		s.logger.Errorw(err.Error(), GameID, ctx.Act.GameID)
+	} else {
+		s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout))
 	}
-	s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
 }
 
 func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error {
