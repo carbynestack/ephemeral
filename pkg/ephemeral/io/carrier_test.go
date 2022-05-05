@@ -28,12 +28,8 @@ var _ = Describe("Carrier", func() {
 			connected = true
 			return &conn, nil
 		}
-		fakeTLSConnector := func(connection net.Conn, playerID int32) (net.Conn, error) {
-			return connection, nil
-		}
 		carrier := Carrier{
-			Dialer:       fakeDialer,
-			TLSConnector: fakeTLSConnector,
+			Dialer: fakeDialer,
 		}
 		err := carrier.Connect(context.TODO(), playerID, "", "")
 		Expect(connected).To(BeTrue())
@@ -44,12 +40,8 @@ var _ = Describe("Carrier", func() {
 		fakeDialer := func(ctx context.Context, addr, port string) (net.Conn, error) {
 			return &conn, nil
 		}
-		fakeTLSConnector := func(connection net.Conn, playerID int32) (net.Conn, error) {
-			return connection, nil
-		}
 		carrier := Carrier{
-			Dialer:       fakeDialer,
-			TLSConnector: fakeTLSConnector,
+			Dialer: fakeDialer,
 		}
 		err := carrier.Connect(context.TODO(), playerID, "", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -64,7 +56,6 @@ var _ = Describe("Carrier", func() {
 		connectionOutput []byte //Will contain (length 4 byte, playerID 1 byte)
 		client, server   net.Conn
 		dialer           func(ctx context.Context, addr, port string) (net.Conn, error)
-		fakeTLSConnector func(conn net.Conn, playerID int32) (net.Conn, error)
 	)
 	BeforeEach(func() {
 		secret = []amphora.SecretShare{
@@ -76,9 +67,6 @@ var _ = Describe("Carrier", func() {
 		dialer = func(ctx context.Context, addr, port string) (net.Conn, error) {
 			return client, nil
 		}
-		fakeTLSConnector = func(connection net.Conn, playerID int32) (net.Conn, error) {
-			return connection, nil
-		}
 	})
 	Context("when sending secret shares through the carrier", func() {
 		It("sends an amphora secret to the socket", func() {
@@ -87,9 +75,8 @@ var _ = Describe("Carrier", func() {
 				MarshalResponse: serverResponse,
 			}
 			carrier := Carrier{
-				Dialer:       dialer,
-				Packer:       packer,
-				TLSConnector: fakeTLSConnector,
+				Dialer: dialer,
+				Packer: packer,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -103,9 +90,8 @@ var _ = Describe("Carrier", func() {
 		It("returns an error when it fails to marshal the object", func() {
 			packer := &FakeBrokenPacker{}
 			carrier := Carrier{
-				Dialer:       dialer,
-				Packer:       packer,
-				TLSConnector: fakeTLSConnector,
+				Dialer: dialer,
+				Packer: packer,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -120,9 +106,8 @@ var _ = Describe("Carrier", func() {
 				MarshalResponse: serverResponse,
 			}
 			carrier := Carrier{
-				Dialer:       dialer,
-				Packer:       packer,
-				TLSConnector: fakeTLSConnector,
+				Dialer: dialer,
+				Packer: packer,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -142,9 +127,8 @@ var _ = Describe("Carrier", func() {
 				UnmarshalResponse: []string{packerResponse},
 			}
 			carrier := Carrier{
-				Dialer:       dialer,
-				Packer:       &packer,
-				TLSConnector: fakeTLSConnector,
+				Dialer: dialer,
+				Packer: &packer,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -164,9 +148,8 @@ var _ = Describe("Carrier", func() {
 				UnmarshalResponse: []string{packerResponse},
 			}
 			carrier := Carrier{
-				Dialer:       dialer,
-				Packer:       &packer,
-				TLSConnector: fakeTLSConnector,
+				Dialer: dialer,
+				Packer: &packer,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -179,9 +162,8 @@ var _ = Describe("Carrier", func() {
 			serverResponse := []byte{byte(1)}
 			packer := &FakeBrokenPacker{}
 			carrier := Carrier{
-				Dialer:       dialer,
-				Packer:       packer,
-				TLSConnector: fakeTLSConnector,
+				Dialer: dialer,
+				Packer: packer,
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -203,9 +185,8 @@ var _ = Describe("Carrier", func() {
 			serverResponse := []byte{1, 0, 0, 0, 1} // 4 byte length + header, in this case "1". In real case Descriptor + Prime
 			packer := &FakeBrokenPacker{}
 			carrier := Carrier{
-				Dialer:       dialer,
-				Packer:       packer,
-				TLSConnector: fakeTLSConnector,
+				Dialer: dialer,
+				Packer: packer,
 			}
 			waitGroup := sync.WaitGroup{}
 			waitGroup.Add(1)
