@@ -32,11 +32,10 @@ type AbstractCarrier interface {
 
 // Carrier is a TCP client for TCP sockets.
 type Carrier struct {
-	Dialer       func(ctx context.Context, addr, port string) (net.Conn, error)
-	TLSConnector func(conn net.Conn, playerID int32) (net.Conn, error)
-	Conn         net.Conn
-	Packer       Packer
-	connected    bool
+	Dialer    func(ctx context.Context, addr, port string) (net.Conn, error)
+	Conn      net.Conn
+	Packer    Packer
+	connected bool
 }
 
 // Config contains TCP connection properties of Carrier.
@@ -48,14 +47,11 @@ type Config struct {
 // Connect establishes a TCP connection to a socket on a given host and port.
 func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port string) error {
 	conn, err := c.Dialer(ctx, host, port)
+	c.Conn = conn
 	if err != nil {
 		return err
 	}
 	_, err = conn.Write(c.buildHeader(playerID))
-	if err != nil {
-		return err
-	}
-	c.Conn, err = c.TLSConnector(conn, playerID)
 	if err != nil {
 		return err
 	}

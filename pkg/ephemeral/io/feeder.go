@@ -35,7 +35,6 @@ func NewAmphoraFeeder(l *zap.SugaredLogger, conf *SPDZEngineTypedConfig) *Amphor
 		Packer: &SPDZPacker{
 			MaxBulkSize: conf.MaxBulkSize,
 		},
-		TLSConnector: network.NewTLSConnector(),
 	}
 	return &AmphoraFeeder{
 		logger:  l,
