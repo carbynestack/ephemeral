@@ -9,4 +9,4 @@
 #   github.com/carbynestack/ephemeral/cmd/ephemeral: ghcr.io/carbynestack/ephemeral-spdz-base-image:cleared-20210827
 defaultBaseImage: ghcr.io/carbynestack/ubuntu:20.04-20210827-nonroot
 baseImageOverrides:
-  github.com/carbynestack/ephemeral/cmd/ephemeral: TODO Update me with an image that has NO_CLIENT_TLS set
+  github.com/carbynestack/ephemeral/cmd/ephemeral: ghcr.io/carbynestack/spdz:642d11f
