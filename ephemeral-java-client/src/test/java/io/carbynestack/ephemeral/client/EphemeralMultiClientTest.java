@@ -172,6 +172,6 @@ public class EphemeralMultiClientTest {
     EphemeralMultiClient client = new EphemeralMultiClient(clientMocks);
     Future<Either<ActivationError, List<ActivationResult>>> results =
         client.execute(activation.getCode(), inputObjects);
-    results.await(5, TimeUnit.SECONDS).get();
+    assertThat("activation timed out", results.await(5, TimeUnit.SECONDS).isSuccess());
   }
 }
