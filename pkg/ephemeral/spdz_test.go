@@ -47,7 +47,7 @@ var _ = Describe("Spdz", func() {
 			fileName = fmt.Sprintf("/tmp/program-%d.mpc", random)
 		})
 		AfterEach(func() {
-			cmder.CallCMD([]string{fmt.Sprintf("rm %s", fileName)}, "./")
+			cmder.CallCMD(context.TODO(), []string{fmt.Sprintf("rm %s", fileName)}, "./")
 		})
 		Context("writing succeeds", func() {
 			It("writes the source code on the disk and runs the compiler", func() {
@@ -63,7 +63,7 @@ var _ = Describe("Spdz", func() {
 				}
 				err := s.Compile(conf)
 				Expect(err).NotTo(HaveOccurred())
-				out, _, err := cmder.CallCMD([]string{fmt.Sprintf("cat %s", s.sourceCodePath)}, "./")
+				out, _, err := cmder.CallCMD(context.TODO(), []string{fmt.Sprintf("cat %s", s.sourceCodePath)}, "./")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(out)).To(Equal("a"))
 			})

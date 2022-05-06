@@ -340,7 +340,7 @@ func (s *Server) getPodName() (string, error) {
 	// TODO: this is brittle, read the pod name from more reliable place.
 	//       use something like os.Getenv("HOST_NAME")?
 	cmder := s.executor
-	name, _, err := cmder.CallCMD([]string{"hostname"}, "/")
+	name, _, err := cmder.CallCMD(context.TODO(), []string{"hostname"}, "/")
 	if err != nil {
 		return "", err
 	}

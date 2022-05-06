@@ -44,6 +44,7 @@ var _ = Describe("Feeder", func() {
 		conf = &CtxConfig{
 			Act:     act,
 			Context: context.TODO(),
+			Spdz:    &SPDZEngineTypedConfig{PlayerCount: 2},
 		}
 	})
 
@@ -211,7 +212,7 @@ type FakeCarrier struct {
 	isBulk bool
 }
 
-func (f *FakeCarrier) Connect(context.Context, string, string) error {
+func (f *FakeCarrier) Connect(context.Context, int32, string, string) error {
 	return nil
 }
 
@@ -232,7 +233,7 @@ type BrokenConnectFakeCarrier struct {
 	isBulk bool
 }
 
-func (f *BrokenConnectFakeCarrier) Connect(context.Context, string, string) error {
+func (f *BrokenConnectFakeCarrier) Connect(context.Context, int32, string, string) error {
 	return errors.New("carrier connect error")
 }
 
@@ -253,7 +254,7 @@ type BrokenSendFakeCarrier struct {
 	isBulk bool
 }
 
-func (f *BrokenSendFakeCarrier) Connect(context.Context, string, string) error {
+func (f *BrokenSendFakeCarrier) Connect(context.Context, int32, string, string) error {
 	return nil
 }
 

@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -57,7 +58,7 @@ var _ = Describe("Main", func() {
 		})
 		Context("all required parameters are specified", func() {
 			AfterEach(func() {
-				_, _, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
+				_, _, err := cmder.CallCMD(context.TODO(), []string{fmt.Sprintf("rm %s", path)}, "./")
 				Expect(err).NotTo(HaveOccurred())
 			})
 			Context("parameters are plausible", func() {
@@ -100,7 +101,7 @@ var _ = Describe("Main", func() {
 		Context("one of the required parameters is missing", func() {
 			Context("when no frontendURL is defined", func() {
 				AfterEach(func() {
-					_, _, err := cmder.CallCMD([]string{fmt.Sprintf("rm %s", path)}, "./")
+					_, _, err := cmder.CallCMD(context.TODO(), []string{fmt.Sprintf("rm %s", path)}, "./")
 					Expect(err).NotTo(HaveOccurred())
 				})
 				It("returns an error", func() {

@@ -118,7 +118,7 @@ func (f *AmphoraFeeder) feedAndRead(params []string, port string, ctx *CtxConfig
 	default:
 		return nil, fmt.Errorf("no output config is given, either %s, %s or %s must be defined", PlainText, SecretShare, AmphoraSecret)
 	}
-	err := f.carrier.Connect(ctx.Context, "localhost", port)
+	err := f.carrier.Connect(ctx.Context, ctx.Spdz.PlayerID, "localhost", port)
 	defer f.carrier.Close()
 	if err != nil {
 		return nil, err

@@ -7,6 +7,7 @@
 package utils_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -82,7 +83,7 @@ var _ = Describe("OS utils", func() {
 			}
 		})
 		AfterEach(func() {
-			cmder.CallCMD([]string{fmt.Sprintf("rm %s", fileName)}, "./")
+			cmder.CallCMD(context.TODO(), []string{fmt.Sprintf("rm %s", fileName)}, "./")
 		})
 		It("reads file content", func() {
 			data := []byte(`a`)
