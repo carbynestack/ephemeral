@@ -76,27 +76,25 @@ public class EphemeralClient {
    * Triggers a program execution.
    *
    * @param activation {@link Activation} configuration used as input for the program activation.
-   * @return A future completing normally either with a list of Amphora secret identifiers or an
-   *     http error code if the execution failed on server side and exceptionally in case an error
-   *     occurs on the network or representation layer
+   * @return Either a list of Amphora secret identifiers or an http error code if the execution
+   *     failed on server side.
+   * @throws CsHttpClientException In case an error occurs on the network or representation layer
    */
-  public Future<Either<ActivationError, ActivationResult>> execute(@NonNull Activation activation) {
-    return Future.of(
-        () -> {
-          CsResponseEntity<String, ActivationResult> responseEntity =
-              csHttpClient.postForEntity(
-                  endpoint.getActivationUri(
-                      activation.getCode() != null && !activation.getCode().isEmpty()),
-                  bearerToken.map(BearerTokenUtils::createBearerToken).collect(Collectors.toList()),
-                  activation,
-                  ActivationResult.class);
-          return responseEntity
-              .getContent()
-              .mapLeft(
-                  l ->
-                      new ActivationError()
-                          .setMessage(l)
-                          .setResponseCode(responseEntity.getHttpStatus()));
-        });
+  public Either<ActivationError, ActivationResult> execute(@NonNull Activation activation)
+      throws CsHttpClientException {
+    CsResponseEntity<String, ActivationResult> responseEntity =
+        csHttpClient.postForEntity(
+            endpoint.getActivationUri(
+                activation.getCode() != null && !activation.getCode().isEmpty()),
+            bearerToken.map(BearerTokenUtils::createBearerToken).collect(Collectors.toList()),
+            activation,
+            ActivationResult.class);
+    return responseEntity
+        .getContent()
+        .mapLeft(
+            l ->
+                new ActivationError()
+                    .setMessage(l)
+                    .setResponseCode(responseEntity.getHttpStatus()));
   }
 }
