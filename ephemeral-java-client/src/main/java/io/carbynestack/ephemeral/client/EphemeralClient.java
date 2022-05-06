@@ -10,7 +10,6 @@ import io.carbynestack.httpclient.BearerTokenUtils;
 import io.carbynestack.httpclient.CsHttpClient;
 import io.carbynestack.httpclient.CsHttpClientException;
 import io.carbynestack.httpclient.CsResponseEntity;
-import io.vavr.concurrent.Future;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.io.File;
@@ -25,15 +24,6 @@ import lombok.extern.slf4j.Slf4j;
  * A client for the Carbyne Stack Ephemeral service.
  *
  * <p>The client interacts with a single ephemeral backend service in order to execute MPC programs.
- *
- * <p>The methods of this client are all asynchronous and return a {@link Future}. This future
- * completes normally with either the requested domain object or a http status code.
- *
- * <p>In case a low-level error occurs on the network or representation layer the future terminates
- * exceptionally.
- *
- * <p>The public API of this class is defensive, i.e., arguments are checked for validity and an
- * {@link IllegalArgumentException} is thrown in case of a contract violation.
  */
 @Slf4j
 public class EphemeralClient {
