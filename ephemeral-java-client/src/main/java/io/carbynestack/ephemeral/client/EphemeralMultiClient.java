@@ -78,6 +78,54 @@ public class EphemeralMultiClient {
    * client talks to.
    *
    * @param code The MPC source code of the function to be invoked.
+   * @param inputTags The tag comparators that define the secrets that should be used as inputs to
+   *     the function execution.
+   * @return A future completing normally either with a list of Amphora secret identifiers or an
+   *     http error code if the execution failed on server side and exceptionally in case an error
+   *     occurs on the network or representation layer
+   */
+  public Future<Either<ActivationError, List<ActivationResult>>> executeWithTags(
+      @NonNull String code, @NonNull List<String> inputTags) {
+    return executeWithTags(code, UUID.randomUUID(), inputTags);
+  }
+
+  /**
+   * Compiles the given source code and triggers its execution on all Ephemeral endpoints this
+   * client talks to.
+   *
+   * @param code The MPC source code of the function to be invoked.
+   * @param gameId The UUID specifying the Ephemeral Execution ID used to correlate invocations
+   *     across the virtual cloud providers.
+   * @param inputTags The tag comparators that define the secrets that should be used as inputs to
+   *     the function execution.
+   * @return A future completing normally either with a list of Amphora secret identifiers or an
+   *     http error code if the execution failed on server side and exceptionally in case an error
+   *     occurs on the network or representation layer
+   */
+  public Future<Either<ActivationError, List<ActivationResult>>> executeWithTags(
+      @NonNull String code, @NonNull UUID gameId, @NonNull List<String> inputTags) {
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Invoking ephemeral services with tags at {} and game {}",
+          clients.stream().map(EphemeralClient::getEndpoint),
+          gameId);
+    }
+
+    Activation.ActivationBuilder activationBuilder =
+        new Activation.ActivationBuilder()
+            .gameId(gameId.toString())
+            .tagFilterParams(inputTags.toArray(new String[0]))
+            .code(code);
+    Activation activation = activationBuilder.build();
+
+    return callEphemeral(gameId, activation);
+  }
+
+  /**
+   * Compiles the given source code and triggers its execution on all Ephemeral endpoints this
+   * client talks to.
+   *
+   * @param code The MPC source code of the function to be invoked.
    * @param gameId The UUID specifying the Ephemeral Execution ID used to correlate invocations
    *     across the virtual cloud providers.
    * @param inputSecretIds The UUIDs of the Amphora secrets used as inputs to the function
@@ -94,20 +142,24 @@ public class EphemeralMultiClient {
           clients.stream().map(EphemeralClient::getEndpoint),
           gameId);
     }
+    Activation.ActivationBuilder activationBuilder =
+        new Activation.ActivationBuilder()
+            .gameId(gameId.toString())
+            .amphoraParams(
+                Stream.ofAll(inputSecretIds).map(UUID::toString).toJavaArray(String[]::new))
+            .code(code);
+    Activation activation = activationBuilder.build();
+
+    return callEphemeral(gameId, activation);
+  }
+
+  private Future<Either<ActivationError, List<ActivationResult>>> callEphemeral(
+      UUID gameId, Activation activation) {
     Seq<Future<Either<ActivationError, ActivationResult>>> invocations =
         Stream.ofAll(clients)
             .zipWithIndex()
             .map(
                 t -> {
-                  Activation.ActivationBuilder activationBuilder =
-                      new Activation.ActivationBuilder()
-                          .gameId(gameId.toString())
-                          .amphoraParams(
-                              Stream.ofAll(inputSecretIds)
-                                  .map(UUID::toString)
-                                  .toJavaArray(String[]::new))
-                          .code(code);
-                  Activation activation = activationBuilder.build();
                   if (log.isDebugEnabled()) {
                     log.debug(
                         "Activation for ephemeral service at {} is {}",
@@ -116,6 +168,7 @@ public class EphemeralMultiClient {
                   }
                   return Future.of(executor, () -> t._1.execute(activation));
                 });
+
     return Future.sequence(invocations)
         .andThen(a -> a.forEach(e -> log.debug("Results for game {} are {}", gameId, e.asJava())))
         .map(

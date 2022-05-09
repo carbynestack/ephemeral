@@ -42,6 +42,7 @@ func TestPostAndGet(t *testing.T) {
 			SecretID: secretID,
 			// Secred share of 42.
 			Data: "4tAU7fnIMu667ulrnjKLO4H6heQo0HPGSwJD8ZwVsh4=",
+			Tags: []Tag{{Key: "myTag", Value: "myValue", ValueType: "STRING"}},
 		}
 
 		err = client.CreateSecretShare(&os)
@@ -58,6 +59,20 @@ func TestPostAndGet(t *testing.T) {
 		}
 
 		fmt.Println(retrieved)
+
+		params := &ObjectListRequestParams{
+			Filter:        "myTag:myValue",
+			PageNumber:    0,
+			PageSize:      0,
+			SortProperty:  "",
+			SortDirection: "",
+		}
+
+		metadataPage, err := client.GetObjectList(params)
+		if err != nil {
+			t.Error(err)
+		}
+		fmt.Println(metadataPage)
 	} else {
 		fmt.Println("Not a demo, skipping the test")
 	}

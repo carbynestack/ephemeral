@@ -16,7 +16,7 @@ import lombok.Value;
 public class Activation {
 
   /** Identifiers of Amphora secrets that are provided to MPC programs as input. */
-  String[] amphoraParams;
+  @Builder.Default String[] amphoraParams = new String[0];
 
   /**
    * Secret shares of parameters that are directly provided.
@@ -24,6 +24,13 @@ public class Activation {
    * <p>This is currently not supported by the clients provided by this library.
    */
   String[] secretParams = new String[0];
+
+  /**
+   * Tag filters of Used Secrets
+   *
+   * <p>Will be joined via AND's
+   */
+  @Builder.Default String[] tagFilterParams = new String[0];
 
   /**
    * The UUID used to correlate function invocations among Carbyne Stack Virtual Cloud Providers.

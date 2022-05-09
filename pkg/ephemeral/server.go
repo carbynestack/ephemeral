@@ -34,7 +34,7 @@ import (
 
 type contextConf string
 
-const paramsMsg = "either secret params or amphora secret share UUIDs must be specified, %s"
+const paramsMsg = "either secret params or amphora secret share UUIDs or tag params must be specified, %s"
 
 var (
 	// The number of parallel games that could run per container.
@@ -117,6 +117,9 @@ func (s *Server) BodyFilter(next http.Handler) http.Handler {
 			s.logger.Error(msg)
 			return
 		}
+
+		s.logger.Debugw("Received input", "act", act)
+
 		if !isValidUUID(act.GameID) {
 			msg := fmt.Sprintf("GameID %s is not a valid UUID", act.GameID)
 			writer.WriteHeader(http.StatusBadRequest)
@@ -124,14 +127,14 @@ func (s *Server) BodyFilter(next http.Handler) http.Handler {
 			s.logger.Error(msg)
 			return
 		}
-		if len(act.SecretParams) > 0 && len(act.AmphoraParams) > 0 {
-			msg := fmt.Sprintf(paramsMsg, "not both of them")
+		if (len(act.SecretParams) > 0 && len(act.AmphoraParams) > 0) || (len(act.AmphoraParams) > 0 && len(act.TagFilterParams) > 0) || (len(act.SecretParams) > 0 && len(act.TagFilterParams) > 0) {
+			msg := fmt.Sprintf(paramsMsg, "not all of them")
 			writer.WriteHeader(http.StatusBadRequest)
 			writer.Write([]byte(msg))
 			s.logger.Error(msg)
 			return
 		}
-		if len(act.SecretParams) == 0 && len(act.AmphoraParams) == 0 {
+		if len(act.SecretParams) == 0 && len(act.AmphoraParams) == 0 && len(act.TagFilterParams) == 0 {
 			msg := fmt.Sprintf(paramsMsg, "none of them given")
 			writer.WriteHeader(http.StatusBadRequest)
 			writer.Write([]byte(msg))
