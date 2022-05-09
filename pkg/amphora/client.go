@@ -86,8 +86,8 @@ func (c *Client) GetObjectList(objectListRequestParams *ObjectListRequestParams)
 	urlParams.Add("filter", objectListRequestParams.Filter)
 	urlParams.Add("pageNumber", fmt.Sprintf("%v", objectListRequestParams.PageNumber))
 	urlParams.Add("pageSize", fmt.Sprintf("%v", objectListRequestParams.PageSize))
-	urlParams.Add("sortProperty", objectListRequestParams.SortProperty)
-	urlParams.Add("sortDirection", objectListRequestParams.SortDirection)
+	urlParams.Add("sort", objectListRequestParams.SortProperty)
+	urlParams.Add("dir", objectListRequestParams.SortDirection)
 
 	getObjectListUrl := c.URL
 	getObjectListUrl.Path += secretShareURI
