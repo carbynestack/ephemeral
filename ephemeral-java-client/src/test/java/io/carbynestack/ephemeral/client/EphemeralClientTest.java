@@ -6,7 +6,9 @@
  */
 package io.carbynestack.ephemeral.client;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -17,7 +19,6 @@ import io.carbynestack.httpclient.BearerTokenUtils;
 import io.carbynestack.httpclient.CsHttpClient;
 import io.carbynestack.httpclient.CsHttpClientException;
 import io.carbynestack.httpclient.CsResponseEntity;
-import io.vavr.concurrent.Future;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -66,9 +67,8 @@ public class EphemeralClientTest {
             activation,
             ActivationResult.class))
         .thenReturn(CsResponseEntity.success(200, result));
-    Future<Either<ActivationError, ActivationResult>> eitherFuture = client.execute(activation);
-    eitherFuture.await();
-    assertThat(eitherFuture.get().get(), equalTo(result));
+    Either<ActivationError, ActivationResult> response = client.execute(activation);
+    assertThat(response.get(), equalTo(result));
   }
 
   @Test
@@ -83,11 +83,9 @@ public class EphemeralClientTest {
             activation,
             ActivationResult.class))
         .thenReturn(CsResponseEntity.failed(httpFailureCode, errMessage));
-    Future<Either<ActivationError, ActivationResult>> eitherFuture =
-        client.execute(Activation.builder().build());
-    eitherFuture.await();
-    assertThat(eitherFuture.get().getLeft().responseCode, equalTo(httpFailureCode));
-    assertThat(eitherFuture.get().getLeft().message, equalTo(errMessage));
+    Either<ActivationError, ActivationResult> result = client.execute(Activation.builder().build());
+    assertThat(result.getLeft().responseCode, equalTo(httpFailureCode));
+    assertThat(result.getLeft().message, equalTo(errMessage));
   }
 
   @Test
@@ -102,9 +100,7 @@ public class EphemeralClientTest {
     ArgumentCaptor<List<Header>> headersCaptor = ArgumentCaptor.forClass(List.class);
     when(specsHttpClientMock.postForEntity(any(), headersCaptor.capture(), any(), any()))
         .thenReturn(CsResponseEntity.success(200, result));
-    Future<Either<ActivationError, ActivationResult>> eitherFuture =
-        clientWithToken.execute(activation);
-    eitherFuture.await();
+    clientWithToken.execute(activation);
     List<Header> headers = headersCaptor.getValue();
     assertThat("No header has been supplied", headers.size(), is(1));
     Header header = headers.get(0);

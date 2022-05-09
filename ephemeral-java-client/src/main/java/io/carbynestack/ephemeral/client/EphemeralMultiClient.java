@@ -18,6 +18,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -39,9 +41,11 @@ import lombok.extern.slf4j.Slf4j;
 public class EphemeralMultiClient {
 
   private final List<EphemeralClient> clients;
+  private final Executor executor;
 
   EphemeralMultiClient(final List<EphemeralClient> clients) {
     this.clients = clients;
+    this.executor = Executors.newFixedThreadPool(clients.size());
   }
 
   /**
@@ -110,7 +114,7 @@ public class EphemeralMultiClient {
                         clients.get(t._2).getEndpoint(),
                         activation);
                   }
-                  return t._1.execute(activation);
+                  return Future.of(executor, () -> t._1.execute(activation));
                 });
     return Future.sequence(invocations)
         .andThen(a -> a.forEach(e -> log.debug("Results for game {} are {}", gameId, e.asJava())))
