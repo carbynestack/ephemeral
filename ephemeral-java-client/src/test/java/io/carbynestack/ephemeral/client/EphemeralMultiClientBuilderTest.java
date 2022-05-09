@@ -6,7 +6,7 @@
  */
 package io.carbynestack.ephemeral.client;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.*;
@@ -19,14 +19,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.hamcrest.CoreMatchers;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
-public class EphemeralMultiClientBuilderTest {
+@ExtendWith(MockitoExtension.class)
+class EphemeralMultiClientBuilderTest {
 
   private static final List<EphemeralEndpoint> ENDPOINTS =
       Stream.of("https://testUri:80", "https://testUri:180")
@@ -41,28 +40,24 @@ public class EphemeralMultiClientBuilderTest {
   @Mock private EphemeralClient.EphemeralClientBuilder ephemeralClientBuilder;
 
   @Test
-  public void givenEndpointList_whenBuilding_createsClientWithCorrectEndpoints()
+  void givenEndpointList_whenBuilding_createsClientWithCorrectEndpoints()
       throws CsHttpClientException {
     EphemeralMultiClient client =
         new EphemeralMultiClient.Builder().withEndpoints(ENDPOINTS).build();
-    assertThat(
-        client.getEphemeralEndpoints(),
-        CoreMatchers.hasItems(ENDPOINTS.toArray(new EphemeralEndpoint[0])));
+    assertThat(client.getEphemeralEndpoints()).containsAll(ENDPOINTS);
   }
 
   @Test
-  public void givenEndpointIndividualEndpoints_whenBuilding_createsClientWithCorrectEndpoints()
+  void givenEndpointIndividualEndpoints_whenBuilding_createsClientWithCorrectEndpoints()
       throws CsHttpClientException {
     EphemeralMultiClient.Builder builder = new EphemeralMultiClient.Builder();
     ENDPOINTS.forEach(builder::withEndpoint);
     EphemeralMultiClient client = builder.build();
-    assertThat(
-        client.getEphemeralEndpoints(),
-        CoreMatchers.hasItems(ENDPOINTS.toArray(new EphemeralEndpoint[0])));
+    assertThat(client.getEphemeralEndpoints()).containsAll(ENDPOINTS);
   }
 
   @Test
-  public void
+  void
       givenSslCertificateValidationDisabledOnBuilder_whenBuilding_createsUnderlyingClientsWithSslCertificateValidationDisabled()
           throws CsHttpClientException {
     when(ephemeralClientBuilder.withEndpoint(any())).thenReturn(ephemeralClientBuilder);
@@ -78,7 +73,7 @@ public class EphemeralMultiClientBuilderTest {
   }
 
   @Test
-  public void
+  void
       givenTrustedCertificateProvidedToBuilder_whenBuilding_createsUnderlyingClientsWithCertificatesAdded()
           throws IOException {
     File cert = File.createTempFile("test", ".pem");
