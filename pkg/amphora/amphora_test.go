@@ -23,7 +23,7 @@ var _ = Describe("Amphora", func() {
 		js    []byte
 
 		metadataPage     MetadataPage
-		metadataPageJson []byte
+		metadataPageJSON []byte
 	)
 
 	BeforeEach(func() {
@@ -44,7 +44,7 @@ var _ = Describe("Amphora", func() {
 			TotalElements: 1,
 			TotalPages:    1,
 		}
-		metadataPageJson, _ = json.Marshal(&metadataPage)
+		metadataPageJSON, _ = json.Marshal(&metadataPage)
 	})
 	Context("when retrieving a shared secret", func() {
 		It("returns a shared object when it exists in amphora", func() {
@@ -87,7 +87,7 @@ var _ = Describe("Amphora", func() {
 
 	Context("when retrieving a metadata page", func() {
 		It("returns a metadata page object when it exists in amphora", func() {
-			rt := MockedRoundTripper{ExpectedPath: "/secret-shares", ReturnJson: metadataPageJson, ExpectedResponseCode: http.StatusOK}
+			rt := MockedRoundTripper{ExpectedPath: "/secret-shares", ReturnJson: metadataPageJSON, ExpectedResponseCode: http.StatusOK}
 			HTTPClient := http.Client{Transport: &rt}
 			client := Client{HTTPClient: HTTPClient, URL: url.URL{Host: "test", Scheme: "http"}}
 

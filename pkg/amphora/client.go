@@ -32,11 +32,13 @@ type Tag struct {
 	Value     string `json:"value"`
 }
 
+// Metadata describes additional attributes of a secret
 type Metadata struct {
 	SecretID string `json:"secretId"`
 	Tags     []Tag  `json:"tags"`
 }
 
+// MetadataPage describes a page of Metadata items and contains the amphora response requesting metadata of secrets
 type MetadataPage struct {
 	Content       []Metadata `json:"content"`
 	Number        int32      `json:"number"`
@@ -45,6 +47,7 @@ type MetadataPage struct {
 	TotalPages    int32      `json:"totalPages"`
 }
 
+// ObjectListRequestParams describes the query parameters for requesting metadata of secrets from amphora
 type ObjectListRequestParams struct {
 	Filter        string
 	PageNumber    int32
@@ -89,10 +92,10 @@ func (c *Client) GetObjectList(objectListRequestParams *ObjectListRequestParams)
 	urlParams.Add("sort", objectListRequestParams.SortProperty)
 	urlParams.Add("dir", objectListRequestParams.SortDirection)
 
-	getObjectListUrl := c.URL
-	getObjectListUrl.Path += secretShareURI
-	getObjectListUrl.RawQuery = urlParams.Encode()
-	req, err := http.NewRequest(http.MethodGet, getObjectListUrl.String(), nil)
+	getObjectListURL := c.URL
+	getObjectListURL.Path += secretShareURI
+	getObjectListURL.RawQuery = urlParams.Encode()
+	req, err := http.NewRequest(http.MethodGet, getObjectListURL.String(), nil)
 
 	if err != nil {
 		return result, err
