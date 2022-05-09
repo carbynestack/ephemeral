@@ -67,8 +67,8 @@ public class EphemeralClientTest {
             activation,
             ActivationResult.class))
         .thenReturn(CsResponseEntity.success(200, result));
-    Either<ActivationError, ActivationResult> eitherFuture = client.execute(activation);
-    assertThat(eitherFuture.get(), equalTo(result));
+    Either<ActivationError, ActivationResult> response = client.execute(activation);
+    assertThat(response.get(), equalTo(result));
   }
 
   @Test
