@@ -9,6 +9,7 @@ package types
 import (
 	"context"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
+	"github.com/carbynestack/ephemeral/pkg/castor"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	"math/big"
 	"time"
@@ -75,6 +76,7 @@ type SPDZEngineConfig struct {
 	Prime            string        `json:"prime"`
 	RInv             string        `json:"rInv"`
 	AmphoraConfig    AmphoraConfig `json:"amphoraConfig"`
+	CastorConfig     CastorConfig  `json:"castorConfig"`
 	FrontendURL      string        `json:"frontendURL"`
 	PlayerID         int32         `json:"playerID"`
 	PlayerCount      int32         `json:"playerCount"`
@@ -84,6 +86,13 @@ type SPDZEngineConfig struct {
 
 // AmphoraConfig specifies the amphora host parameters.
 type AmphoraConfig struct {
+	Host   string `json:"host"`
+	Scheme string `json:"scheme"`
+	Path   string `json:"path"`
+}
+
+// CastorConfig specifies the castor host parameters.
+type CastorConfig struct {
 	Host   string `json:"host"`
 	Scheme string `json:"scheme"`
 	Path   string `json:"path"`
@@ -102,6 +111,7 @@ type SPDZEngineTypedConfig struct {
 	Prime            big.Int
 	RInv             big.Int
 	AmphoraClient    amphora.AbstractClient
+	CastorClient     castor.AbstractClient
 	PlayerID         int32
 	PlayerCount      int32
 	FrontendURL      string

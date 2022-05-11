@@ -120,6 +120,9 @@ helm install --name my-release -f values.yaml ephemeral
 | `ephemeral.amphora.host`              | The hostname of the Amphora serivce                          | `amphora`                          |
 | `ephemeral.amphora.scheme`            | The scheme used to access the Amphora serivce                | `http`                             |
 | `ephemeral.amphora.path`              | The path under which the Amphora serivce is available        | `/`                                |
+| `ephemeral.castor.host`               | The hostname of the Castor serivce                           | `castor`                           |
+| `ephemeral.castor.scheme`             | The scheme used to access the Castor serivce                 | `http`                             |
+| `ephemeral.castor.path`               | The path under which the Castor serivce is available         | `/`                                |
 | `ephemeral.frontendUrl`               | The external base URL of the VCP                             | \`\`                               |
 | `ephemeral.spdz.prime`                | The prime used by SPDZ                                       | \`\`                               |
 | `ephemeral.playerId`                  | Id of this player                                            | \`\`                               |

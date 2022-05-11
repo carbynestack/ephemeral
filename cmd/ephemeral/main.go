@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
+	"github.com/carbynestack/ephemeral/pkg/castor"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral"
 	l "github.com/carbynestack/ephemeral/pkg/logger"
 	"github.com/carbynestack/ephemeral/pkg/utils"
@@ -111,7 +112,17 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		Scheme: conf.AmphoraConfig.Scheme,
 		Path:   conf.AmphoraConfig.Path,
 	}
-	client, err := amphora.NewAmphoraClient(amphoraURL)
+	amphoraClient, err := amphora.NewAmphoraClient(amphoraURL)
+	if err != nil {
+		return nil, err
+	}
+
+	castorURL := url.URL{
+		Host:   conf.CastorConfig.Host,
+		Scheme: conf.CastorConfig.Scheme,
+		Path:   conf.CastorConfig.Path,
+	}
+	castorClient, err := castor.NewCastorClient(castorURL)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +132,8 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		RetrySleep:       retrySleep,
 		Prime:            p,
 		RInv:             rInv,
-		AmphoraClient:    client,
+		AmphoraClient:    amphoraClient,
+		CastorClient:     castorClient,
 		PlayerID:         conf.PlayerID,
 		PlayerCount:      conf.PlayerCount,
 		FrontendURL:      conf.FrontendURL,

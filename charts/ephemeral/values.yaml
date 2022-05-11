@@ -43,6 +43,10 @@ ephemeral:
     host: "amphora"
     scheme: "http"
     path: "/"
+  castor:
+    host: "castor"
+    scheme: "http"
+    path: "/"
   frontendUrl:
   discoveryAddress: discovery.default.svc.cluster.local
   playerId:

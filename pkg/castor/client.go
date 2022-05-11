@@ -17,6 +17,11 @@ import (
 	"github.com/asaskevich/govalidator"
 )
 
+// AbstractClient is an interface for castor tuple client.
+type AbstractClient interface {
+	GetTuples(int32, TupleType, string) (TupleList, error)
+}
+
 func NewCastorClient(u url.URL) (*Client, error) {
 	ok := govalidator.IsURL(u.String())
 	if !ok {

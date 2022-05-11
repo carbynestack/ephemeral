@@ -80,6 +80,11 @@ data:
         "scheme": "{{ .Values.ephemeral.amphora.scheme }}",
         "path": "{{ .Values.ephemeral.amphora.path }}"
       },
+      "castorConfig": {
+        "host": "{{ .Values.ephemeral.castor.host }}",
+        "scheme": "{{ .Values.ephemeral.castor.scheme }}",
+        "path": "{{ .Values.ephemeral.castor.path }}"
+      },
       "frontendURL": "{{ .Values.ephemeral.frontendUrl }}",
       "discoveryAddress": "{{ .Values.ephemeral.discoveryAddress }}",
       "playerID": {{ .Values.ephemeral.playerId }},
