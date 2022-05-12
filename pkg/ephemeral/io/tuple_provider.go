@@ -2,6 +2,7 @@ package io
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"github.com/carbynestack/ephemeral/pkg/castor"
@@ -16,7 +17,7 @@ import (
 
 // TupleProvider writes Tuples to named Pipes
 type TupleProvider interface {
-	StartWritingToFiles() error
+	StartWritingToFiles(ctx context.Context) error
 	StopWritingToFiles()
 }
 
@@ -40,9 +41,7 @@ func NewTupleProvider(inputTypes []castor.InputType, numberOfThreads int, config
 	}
 }
 
-func (t *TupleProviderImpl) StartWritingToFiles() error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	t.cancelFunc = cancelFunc
+func (t *TupleProviderImpl) StartWritingToFiles(ctx context.Context) error {
 
 	for threadNumber := 0; threadNumber < t.NumberOfThreads; threadNumber++ {
 		for _, inputType := range t.InputTypes {
@@ -57,7 +56,7 @@ func (t *TupleProviderImpl) StartWritingToFiles() error {
 }
 
 func (t *TupleProviderImpl) StopWritingToFiles() {
-	t.cancelFunc()
+	// No-Op since already handled by the context
 }
 
 type tuplePipeWriter struct {
@@ -74,11 +73,12 @@ type tuplePipeWriter struct {
 
 func newTupleFileWriter(threadNumber int, inputType castor.InputType, castorClient castor.AbstractClient, config *types.SPDZEngineTypedConfig) tuplePipeWriter {
 	return tuplePipeWriter{
-		threadNumber: threadNumber,
-		inputType:    inputType,
-		castorClient: castorClient,
-		cache:        generateHeader(inputType, &config.Prime),
-		config:       config,
+		threadNumber:                   threadNumber,
+		inputType:                      inputType,
+		castorClient:                   castorClient,
+		cache:                          generateHeader(inputType, &config.Prime),
+		config:                         config,
+		numberOfTuplesToDownloadAtOnce: 10,
 	}
 }
 
@@ -104,30 +104,41 @@ func generateHeader(inputType castor.InputType, prime *big.Int) []byte {
 
 func (t *tuplePipeWriter) startWritingToFile(ctx context.Context) error {
 	fileName := castor.TupleFileNameFor(t.inputType, t.threadNumber, t.config)
+	fmt.Printf("FileName: %s\n", fileName)
 
+	_ = os.Remove(fileName)
 	err := unix.Mkfifo(fileName, 0666)
 	if err != nil {
 		return err
 	}
 
-	t.file, err = os.OpenFile(fileName, os.O_WRONLY, os.ModeNamedPipe)
-	if err != nil {
-		return err
-	}
-
-	err = t.file.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	if err != nil {
-		return err
-	}
-
 	go func() {
+		t.file, err = os.OpenFile(fileName, os.O_WRONLY, os.ModeNamedPipe)
+		if err != nil {
+			fmt.Printf("Error Opening File: %v\n", err)
+			return
+		}
+
+		err = t.file.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		if err != nil {
+			fmt.Printf("Error Setting Write Deadline 1: %v\n", err)
+			return
+		}
 		for {
 			select {
 			case <-ctx.Done():
+				_ = t.file.Close()
 				return
 			default:
-				_ = t.file.SetWriteDeadline(time.Now().Add(5 * time.Second))
-				t.writeToFile()
+				in5Seconds := time.Now().Add(5 * time.Second)
+				if err := t.file.SetWriteDeadline(in5Seconds); err != nil {
+					fmt.Printf("Error Setting Write Deadline 1: %v\n", err)
+					return
+				}
+				if err := t.writeToFile(); err != nil {
+					fmt.Printf("Error writing to File: %v\n", err)
+					return
+				}
 			}
 		}
 	}()
@@ -135,16 +146,23 @@ func (t *tuplePipeWriter) startWritingToFile(ctx context.Context) error {
 	return nil
 }
 
-func (t *tuplePipeWriter) writeToFile() {
+func (t *tuplePipeWriter) writeToFile() error {
 
 	t.updateCacheAndIndex()
-	t.fetchTuplesIfNeeded()
+	if err := t.fetchTuplesIfNeeded(); err != nil {
+		return err
+	}
 
+	fmt.Printf("Writing to Pipe of type %s\n", t.inputType)
 	write, err := t.file.Write(t.cache)
 	if err != nil {
 		fmt.Printf("Error: %v", err)
+		return err
 	}
+	fmt.Printf("Wrote %d bytes to file of type %s\n", write, t.inputType)
 	t.indexAtCache = write
+
+	return nil
 }
 
 func (t *tuplePipeWriter) updateCacheAndIndex() {
@@ -161,39 +179,47 @@ func (t *tuplePipeWriter) updateCacheAndIndex() {
 	}
 }
 
-func (t *tuplePipeWriter) fetchTuplesIfNeeded() {
+func (t *tuplePipeWriter) fetchTuplesIfNeeded() error {
 	if len(t.cache) > 0 {
-		return
+		return nil
 	}
+
+	fmt.Printf("Fetching Tuples of type %s\n", t.inputType)
 
 	requestName := fmt.Sprintf("%d-%s-%d", t.threadNumber, t.inputType, t.requestCounter)
 	t.requestCounter++
 	requestId := uuid.NewMD5(uuid.Nil, []byte(requestName))
 	files, err := t.castorClient.DownloadTupleFiles(requestId, t.numberOfTuplesToDownloadAtOnce, t.inputType)
-	t.cache = t.convertResult(files)
 	if err != nil {
 		fmt.Printf("Error: %v", err)
+		return err
 	}
+	t.cache, err = t.convertResult(files)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (t *tuplePipeWriter) convertResult(files castor.TupleList) []byte {
+func (t *tuplePipeWriter) convertResult(files castor.TupleList) ([]byte, error) {
 	var result []byte
 
-	var b64 []string
 	for _, tuple := range files.Tuples {
 		for _, share := range tuple.Shares {
-			b64 = append(b64, share.Value)
-			b64 = append(b64, share.Mac)
+			decodeString, err := base64.StdEncoding.DecodeString(share.Value)
+			if err != nil {
+				return []byte{}, err
+			}
+			result = append(result, decodeString...)
+
+			decodeString, err = base64.StdEncoding.DecodeString(share.Mac)
+			if err != nil {
+				return []byte{}, err
+			}
+			result = append(result, decodeString...)
 		}
 	}
 
-	packer := SPDZPacker{
-		MaxBulkSize: 10000,
-	}
-	err := packer.Marshal(b64, &result)
-	if err != nil {
-		fmt.Printf("Error: %v", err)
-	}
-
-	return result
+	return result, nil
 }

@@ -235,12 +235,16 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 		castor.MultiplicationTripleGfp,
 	}
 	numberOfThreads := 1
-	castorUrl, _ := url.Parse("")
+	castorUrl, _ := url.Parse("http://cs-castor:10100")
 
 	provider := NewTupleProvider(inputTypes, numberOfThreads, ctx.Spdz, castorUrl)
-	_ = provider.StartWritingToFiles()
 
-	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
+	err := provider.StartWritingToFiles(ctx.Context)
+	if err != nil {
+		s.logger.Errorw("Error from starting writing to files!", "error", err)
+	}
+
+	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s -f", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
 	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID, "command", command)
 	stdout, stderr, err := s.cmder.CallCMD(ctx.Context, command, s.baseDir)
 	if err != nil {
@@ -253,7 +257,6 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	//s.logger.Infow(fmt.Sprintf("===== Begin of stdout from the user container =====\n%s", string(stdout)), GameID, ctx.Act.GameID)
 	//s.logger.Infow("===== End of stdout from the user container =====", GameID, ctx.Act.GameID)
 
-	provider.StopWritingToFiles()
 	s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
 }
 

@@ -71,7 +71,7 @@ func NewCastorClient(u *url.URL) (*Client, error) {
 	return &Client{HTTPClient: httpClient, URL: u}, nil
 }
 
-const tupleURI = "/tuples"
+const tupleURI = "intra-vcp/tuples"
 
 // DownloadTupleFiles retrieves Tuple files by sending a
 func (c *Client) DownloadTupleFiles(requestId uuid.UUID, numberOfTuples int, tupleType InputType) (tupleFiles TupleList, err error) {
@@ -83,7 +83,7 @@ func (c *Client) DownloadTupleFiles(requestId uuid.UUID, numberOfTuples int, tup
 	urlParams.Add("count", strconv.Itoa(numberOfTuples))
 	urlParams.Add("reservationId", requestId.String())
 
-	getObjectListUrl := c.URL
+	getObjectListUrl := *c.URL
 	getObjectListUrl.Path += tupleURI
 	getObjectListUrl.RawQuery = urlParams.Encode()
 	req, err := http.NewRequest(http.MethodGet, getObjectListUrl.String(), nil)
@@ -121,18 +121,20 @@ func (c *Client) doRequest(req *http.Request, expected int) (io.ReadCloser, erro
 	return resp.Body, nil
 }
 
+const tupleBaseFolder = "Player-Data"
+
 func TupleFileNameFor(inputType InputType, threadNumber int, config *types.SPDZEngineTypedConfig) string {
 	switch inputType {
 	case BitGfp:
-		return fmt.Sprintf("%d-p-%d/Bits-p-P%d-T%d", config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
+		return fmt.Sprintf("%s/%d-p-%d/Bits-p-P%d-T%d", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
 	case InputMaskGfp:
-		return fmt.Sprintf("%d-p-%d/Inputs-p-P%d-T%d", config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
+		return fmt.Sprintf("%s/%d-p-%d/Inputs-p-P%d-T%d", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
 	case InverseTupleGfp:
-		return fmt.Sprintf("%d-p-%d/Inverses-p-P%d-T%d", config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
+		return fmt.Sprintf("%s/%d-p-%d/Inverses-p-P%d-T%d", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
 	case SquareTupleGfp:
-		return fmt.Sprintf("%d-p-%d/Squares-p-P%d-T%d", config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
+		return fmt.Sprintf("%s/%d-p-%d/Squares-p-P%d-T%d", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
 	case MultiplicationTripleGfp:
-		return fmt.Sprintf("%d-p-%d/Triples-p-P%d-T%d", config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
+		return fmt.Sprintf("%s/%d-p-%d/Triples-p-P%d-T%d", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
 	}
 
 	panic("Unknown type for Name " + inputType)
