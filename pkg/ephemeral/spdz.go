@@ -8,14 +8,17 @@ package ephemeral
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"github.com/carbynestack/ephemeral/pkg/castor"
 	d "github.com/carbynestack/ephemeral/pkg/discovery"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral/io"
 	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	. "github.com/carbynestack/ephemeral/pkg/utils"
+	"net/url"
+
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"sort"
 	"strconv"
@@ -187,6 +190,7 @@ func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
 			s.feeder.Close()
 		}
 	}()
+
 	// Read the secret shares either from Amphora or from the http request.
 	if len(act.AmphoraParams) > 0 {
 		return s.feeder.LoadFromSecretStoreAndFeed(act, feedPort, ctx)
@@ -226,6 +230,16 @@ func (s *SPDZEngine) getFeedPort() string {
 }
 
 func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
+	inputTypes := []castor.InputType{
+		castor.InputMaskGfp,
+		castor.MultiplicationTripleGfp,
+	}
+	numberOfThreads := 1
+	castorUrl, _ := url.Parse("")
+
+	provider := NewTupleProvider(inputTypes, numberOfThreads, ctx.Spdz, castorUrl)
+	_ = provider.StartWritingToFiles()
+
 	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
 	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID, "command", command)
 	stdout, stderr, err := s.cmder.CallCMD(ctx.Context, command, s.baseDir)
@@ -236,6 +250,11 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	} else {
 		s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout))
 	}
+	//s.logger.Infow(fmt.Sprintf("===== Begin of stdout from the user container =====\n%s", string(stdout)), GameID, ctx.Act.GameID)
+	//s.logger.Infow("===== End of stdout from the user container =====", GameID, ctx.Act.GameID)
+
+	provider.StopWritingToFiles()
+	s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
 }
 
 func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error {

@@ -89,7 +89,7 @@ func (c Carrier) readPrime() error {
 	if err != nil {
 		return err
 	}
-	//ToDo, compare read PRIME with prime number from config?
+	//ToDo, compare read PRIME with Prime number from config?
 	return nil
 }
 

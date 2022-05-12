@@ -57,7 +57,7 @@ type Client struct {
 
 const secretShareURI = "/intra-vcp/secret-shares"
 
-// GetSecretShare creates a new secret share by sending a POST request against Amphora.
+// GetSecretShare retrieves an existing secret share by sending a GET request against Amphora.
 func (c *Client) GetSecretShare(id string) (SecretShare, error) {
 	var os SecretShare
 	req, err := http.NewRequest(http.MethodGet, c.URL.String()+fmt.Sprintf("%s/%s", secretShareURI, id), nil)
