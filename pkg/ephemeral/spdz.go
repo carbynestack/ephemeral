@@ -231,6 +231,8 @@ func (s *SPDZEngine) getFeedPort() string {
 }
 
 func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
+	// ToDo: Which TupleTypes do we need to support?
+	//       Will there be any non-prime (like GF2N)?
 	inputTypes := []castor.InputType{
 		castor.BitGfp,
 		castor.InputMaskGfp,
@@ -238,7 +240,11 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 		castor.SquareTupleGfp,
 		castor.MultiplicationTripleGfp,
 	}
+	// ToDo: How do we know how many threads we will have?
+	//       Alternatively, an upper-Bound would work as well (how many threads will be supported at max).
 	numberOfThreads := 1
+
+	// ToDo: Add read from config File
 	castorUrl, _ := url.Parse("http://cs-castor:10100")
 
 	provider := NewTupleProvider(inputTypes, numberOfThreads, ctx.Spdz, castorUrl, uuid.MustParse(ctx.Act.GameID))

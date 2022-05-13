@@ -44,6 +44,8 @@ func NewTupleProvider(inputTypes []castor.InputType, numberOfThreads int, config
 	}
 }
 
+// StartWritingToFiles creates the named Pipes/FIFOs and will keep a write access on them, until the context closes.
+// ToDo: Quite frail, first error when doing something will stop file-writing for that pipe
 func (t *TupleProviderImpl) StartWritingToFiles(ctx context.Context) error {
 
 	for threadNumber := 0; threadNumber < t.NumberOfThreads; threadNumber++ {
@@ -58,6 +60,7 @@ func (t *TupleProviderImpl) StartWritingToFiles(ctx context.Context) error {
 	return nil
 }
 
+// StopWritingToFiles ToDo: Can be removed?
 func (t *TupleProviderImpl) StopWritingToFiles() {
 	// No-Op since already handled by the context
 }
@@ -131,11 +134,9 @@ func (t *tuplePipeWriter) startWritingToFile(ctx context.Context) error {
 			return
 		}
 
-		err = t.file.SetWriteDeadline(time.Now().Add(5 * time.Second))
-		if err != nil {
-			fmt.Printf("Error Setting Write Deadline 1: %v\n", err)
-			return
-		}
+		// This code will repeatedly try to write to the pipe for 5 secs, and then check if the context was closed
+		// This is done so that we don't block forever trying to write to a pipe that is never read, even after the
+		// Game was completed
 		for {
 			select {
 			case <-ctx.Done():
@@ -144,7 +145,7 @@ func (t *tuplePipeWriter) startWritingToFile(ctx context.Context) error {
 			default:
 				in5Seconds := time.Now().Add(5 * time.Second)
 				if err := t.file.SetWriteDeadline(in5Seconds); err != nil {
-					fmt.Printf("Error Setting Write Deadline 1: %v\n", err)
+					fmt.Printf("Error Setting Write Deadline: %v\n", err)
 					return
 				}
 				if err := t.writeToFile(); err != nil {

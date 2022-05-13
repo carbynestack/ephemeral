@@ -29,28 +29,39 @@ const (
 	MultiplicationTripleGf2n           = "MULTIPLICATION_TRIPLE_GF2N"
 )
 
+//region Structs that are retrieved from Castor as JSON Payloads
+
+// TupleList is the whole Payload from a "DownloadTuples" call to Castor
 type TupleList struct {
 	TupleCls string     `json:"tupleCls"`
-	Field    TupleField `json:"field"`
+	Field    TupleField `json:"field"` // ToDo: Do we need this in the Go Code or can we ignore it?
 	Tuples   []Tuple    `json:"tuples"`
 }
 
+// TupleField describes the Field (Galouis Prime, GF2N, ...) inside Castor
+// Not sure if we need this here?
 type TupleField struct {
-	Type        string `json:"@type"`
+	Type        string `json:"@type"` // ToDo: While this is part of the JSON, it's only used by Java Code, do we need it here?
 	Name        string `json:"name"`
 	ElementSize int    `json:"elementSize"`
 }
 
+// Tuple is a holder of actual Data.
+// Depending on its Type it can hold 1 Share (e.g. InputMask) or multiple Shares (e.g. MultiplicationTriple contains 3)
 type Tuple struct {
-	Type   string        `json:"@type"`
-	Field  TupleField    `json:"field"`
+	Type   string        `json:"@type"` // ToDo: While this is part of the JSON, it's only used by Java Code, do we need it here?
+	Field  TupleField    `json:"field"` // ToDo: Do we need this in the Go Code or can we ignore it?
 	Shares []TupleShares `json:"shares"`
 }
 
+// TupleShares are the actual Binary Tuple Values, encoded in Base64
+// MP-SPDZ expects first the Value, then the Mac as base64 decoded ByteStream
 type TupleShares struct {
 	Value string `json:"value"`
 	Mac   string `json:"mac"`
 }
+
+//endregion
 
 type AbstractClient interface {
 	DownloadTupleFiles(requestId uuid.UUID, numberOfTuples int, tupleType InputType) (tupleFiles TupleList, err error)
@@ -83,10 +94,10 @@ func (c *Client) DownloadTupleFiles(requestId uuid.UUID, numberOfTuples int, tup
 	urlParams.Add("count", strconv.Itoa(numberOfTuples))
 	urlParams.Add("reservationId", requestId.String())
 
-	getObjectListUrl := *c.URL
-	getObjectListUrl.Path += tupleURI
-	getObjectListUrl.RawQuery = urlParams.Encode()
-	req, err := http.NewRequest(http.MethodGet, getObjectListUrl.String(), nil)
+	downloadTuplesURL := *c.URL
+	downloadTuplesURL.Path += tupleURI
+	downloadTuplesURL.RawQuery = urlParams.Encode()
+	req, err := http.NewRequest(http.MethodGet, downloadTuplesURL.String(), nil)
 
 	if err != nil {
 		return result, err
@@ -106,6 +117,8 @@ func (c *Client) DownloadTupleFiles(requestId uuid.UUID, numberOfTuples int, tup
 
 // doRequest is a helper method that sends an HTTP request, compares the returned response code with expected and
 // does corresponding error handling.
+// ToDo: This method was copied from AmphoraClient
+//       -> Maybe it should be moved to moved to an io package and be made public?
 func (c *Client) doRequest(req *http.Request, expected int) (io.ReadCloser, error) {
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -121,9 +134,11 @@ func (c *Client) doRequest(req *http.Request, expected int) (io.ReadCloser, erro
 	return resp.Body, nil
 }
 
+// ToDo: Can this be constant -> Do we assume the Base-Image never overrides PREP_DIR on compilation?
 const tupleBaseFolder = "Player-Data"
 
 func TupleFileNameFor(inputType InputType, threadNumber int, config *types.SPDZEngineTypedConfig) string {
+	// ToDo: Clean up a bit (All that changes is the Bits/Inputs/Inverses/... part for Prime Tuples)
 	switch inputType {
 	case BitGfp:
 		return fmt.Sprintf("%s/%d-p-%d/Bits-p-P%d-T%d", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
@@ -136,9 +151,25 @@ func TupleFileNameFor(inputType InputType, threadNumber int, config *types.SPDZE
 	case MultiplicationTripleGfp:
 		return fmt.Sprintf("%s/%d-p-%d/Triples-p-P%d-T%d", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID, threadNumber)
 	}
-
+	// ToDo: Add GF2N Tuples?
 	panic("Unknown type for Name " + inputType)
 }
+
+//func WriteInformationFor(config *types.SPDZEngineTypedConfig) error {
+//	primeFolder := fmt.Sprintf("%s/%d-p-%d", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen())
+//
+//	primeParamFile := fmt.Sprintf("%s/Params-Data", primeFolder)
+//	primeMacFile := fmt.Sprintf("%s/Player-MAC-Keys-p-P%d", primeFolder, config.PlayerID)
+//
+//	err := os.WriteFile(primeParamFile, []byte(config.Prime.Text(10)), 0666)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// ToDo: Where do we get the MAC from?
+//	//       Do we even want this information written as Part of Ephemeral vs. mounting a Secret/Configmap into the Pod?
+//	return nil
+//}
 
 func ProtocolDescriptorFor(inputType InputType) string {
 	switch inputType {
