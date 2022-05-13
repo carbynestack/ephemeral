@@ -29,15 +29,18 @@ type TupleProviderImpl struct {
 	cancelFunc context.CancelFunc
 
 	castorClient castor.AbstractClient
+	gameId       uuid.UUID
 }
 
-func NewTupleProvider(inputTypes []castor.InputType, numberOfThreads int, config *types.SPDZEngineTypedConfig, castorUrl *url.URL) *TupleProviderImpl {
+func NewTupleProvider(inputTypes []castor.InputType, numberOfThreads int, config *types.SPDZEngineTypedConfig, castorUrl *url.URL, gameId uuid.UUID) *TupleProviderImpl {
 	client, _ := castor.NewCastorClient(castorUrl)
+
 	return &TupleProviderImpl{
 		InputTypes:      inputTypes,
 		NumberOfThreads: numberOfThreads,
 		config:          config,
 		castorClient:    client,
+		gameId:          gameId,
 	}
 }
 
@@ -45,7 +48,7 @@ func (t *TupleProviderImpl) StartWritingToFiles(ctx context.Context) error {
 
 	for threadNumber := 0; threadNumber < t.NumberOfThreads; threadNumber++ {
 		for _, inputType := range t.InputTypes {
-			writer := newTupleFileWriter(threadNumber, inputType, t.castorClient, t.config)
+			writer := newTupleFileWriter(threadNumber, inputType, t.castorClient, t.config, t.gameId)
 			if err := writer.startWritingToFile(ctx); err != nil {
 				return err
 			}
@@ -69,9 +72,10 @@ type tuplePipeWriter struct {
 	requestCounter                 int
 	numberOfTuplesToDownloadAtOnce int
 	castorClient                   castor.AbstractClient
+	gameId                         uuid.UUID
 }
 
-func newTupleFileWriter(threadNumber int, inputType castor.InputType, castorClient castor.AbstractClient, config *types.SPDZEngineTypedConfig) tuplePipeWriter {
+func newTupleFileWriter(threadNumber int, inputType castor.InputType, castorClient castor.AbstractClient, config *types.SPDZEngineTypedConfig, gameId uuid.UUID) tuplePipeWriter {
 	return tuplePipeWriter{
 		threadNumber:                   threadNumber,
 		inputType:                      inputType,
@@ -79,27 +83,35 @@ func newTupleFileWriter(threadNumber int, inputType castor.InputType, castorClie
 		cache:                          generateHeader(inputType, &config.Prime),
 		config:                         config,
 		numberOfTuplesToDownloadAtOnce: 10,
+		gameId:                         gameId,
 	}
 }
 
 func generateHeader(inputType castor.InputType, prime *big.Int) []byte {
 	descriptor := []byte(castor.ProtocolDescriptorFor(inputType))
 	lengthOfDescriptor := len(descriptor)
-
-	totalSizeInBytes := uint64(8 + lengthOfDescriptor + 1 + 4 + 16)
+	primeBytes := prime.Bytes()
+	primeByteLength := len(primeBytes)
+	totalSizeInBytes := uint64(lengthOfDescriptor + 1 + 4 + primeByteLength)
 
 	var result []byte
 
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, totalSizeInBytes)
-	result = append(result, bytes...)
-	result = append(result, descriptor...)
+	result = append(result, bytes...)      // Total length to follow (e.g. 29 bytes)
+	result = append(result, descriptor...) // e.g. "SPDZ gfp"
+	result = append(result, byte(0))       //Signum (0 == positive)
 
 	bytes = make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, uint32(prime.BitLen()))
-	result = append(result, bytes...)
 
-	return append(result, prime.Bytes()...)
+	binary.LittleEndian.PutUint32(bytes, uint32(primeByteLength))
+	result = append(result, bytes...) // Prime length to follow (e.g. 16 byte == 128 bit)
+
+	result = append(result, primeBytes...) // The prime itself
+	fmt.Printf("%x\n", result)
+	fmt.Printf("Prime: %s\n", prime.Text(10))
+
+	return result
 }
 
 func (t *tuplePipeWriter) startWritingToFile(ctx context.Context) error {
@@ -188,7 +200,7 @@ func (t *tuplePipeWriter) fetchTuplesIfNeeded() error {
 
 	requestName := fmt.Sprintf("%d-%s-%d", t.threadNumber, t.inputType, t.requestCounter)
 	t.requestCounter++
-	requestId := uuid.NewMD5(uuid.Nil, []byte(requestName))
+	requestId := uuid.NewMD5(t.gameId, []byte(requestName))
 	files, err := t.castorClient.DownloadTupleFiles(requestId, t.numberOfTuplesToDownloadAtOnce, t.inputType)
 	if err != nil {
 		fmt.Printf("Error: %v", err)

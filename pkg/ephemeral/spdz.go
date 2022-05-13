@@ -15,6 +15,7 @@ import (
 	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	. "github.com/carbynestack/ephemeral/pkg/utils"
+	"github.com/google/uuid"
 	"net/url"
 
 	"errors"
@@ -231,13 +232,16 @@ func (s *SPDZEngine) getFeedPort() string {
 
 func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	inputTypes := []castor.InputType{
+		castor.BitGfp,
 		castor.InputMaskGfp,
+		castor.InverseTupleGfp,
+		castor.SquareTupleGfp,
 		castor.MultiplicationTripleGfp,
 	}
 	numberOfThreads := 1
 	castorUrl, _ := url.Parse("http://cs-castor:10100")
 
-	provider := NewTupleProvider(inputTypes, numberOfThreads, ctx.Spdz, castorUrl)
+	provider := NewTupleProvider(inputTypes, numberOfThreads, ctx.Spdz, castorUrl, uuid.MustParse(ctx.Act.GameID))
 
 	err := provider.StartWritingToFiles(ctx.Context)
 	if err != nil {
