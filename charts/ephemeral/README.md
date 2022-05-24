@@ -123,6 +123,10 @@ helm install --name my-release -f values.yaml ephemeral
 | `ephemeral.castor.host`               | The hostname of the Castor serivce                           | `castor`                           |
 | `ephemeral.castor.scheme`             | The scheme used to access the Castor serivce                 | `http`                             |
 | `ephemeral.castor.path`               | The path under which the Castor serivce is available         | `/`                                |
+| `ephemeral.castor.tupleStock`         | The number of tuples to hold in stock for each tuple type    | `1000`                             |
 | `ephemeral.frontendUrl`               | The external base URL of the VCP                             | \`\`                               |
 | `ephemeral.spdz.prime`                | The prime used by SPDZ                                       | \`\`                               |
+| `ephemeral.spdz.rInv`                 | The rInv used by SPDZ                                        | \`\`                               |
+| `ephemeral.spdz.macKey`               | The macKey used by SPDZ                                      | \`\`                               |
+| `ephemeral.spdz.securityParameter`    | The securityParameter used by SPDZ                           | \`\`                               |
 | `ephemeral.playerId`                  | Id of this player                                            | \`\`                               |

@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/carbynestack/ephemeral/pkg/castor"
 	d "github.com/carbynestack/ephemeral/pkg/discovery"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral/io"
@@ -19,6 +20,7 @@ import (
 	"io/ioutil"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -226,15 +228,54 @@ func (s *SPDZEngine) getFeedPort() string {
 }
 
 func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
+	wg := sync.WaitGroup{}
+	defer func() {
+		gracefully := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(gracefully)
+		}()
+		select {
+		case <-gracefully:
+		case <-time.After(time.Second * 30):
+			s.logger.Error("Tuple streamers have not terminated gracefully")
+		}
+	}()
+	var tupleStreamers = []TupleStreamer{}
+	for _, tt := range castor.TupleTypes {
+		streamer, err := NewCastorTupleStreamer(s.logger, tt, s.config, ctx.Act.GameID)
+		if err != nil {
+			s.logger.Errorw("Error when initializing tuple streamer", "GameID", ctx.Act.GameID, "TupleType", tt, "Error", err)
+			ctx.ErrCh <- err
+			return
+		}
+		tupleStreamers = append(tupleStreamers, streamer)
+	}
+	terminate := make(chan struct{})
+	streamErrCh := make(chan error, len(castor.TupleTypes))
+	for _, s := range tupleStreamers {
+		wg.Add(1)
+		s.StartStreamTuples(terminate, streamErrCh, &wg)
+	}
 	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
 	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID, "command", command)
-	stdout, stderr, err := s.cmder.CallCMD(ctx.Context, command, s.baseDir)
-	if err != nil {
-		s.logger.Errorw("Error while executing the user code", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
-		err := fmt.Errorf("error while executing the user code: %v", err)
+	go func() {
+		stdout, stderr, err := s.cmder.CallCMD(ctx.Context, command, s.baseDir)
+		if err != nil {
+			s.logger.Errorw("Error while executing the user code", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
+			err := fmt.Errorf("error while executing the user code: %v", err)
+			ctx.ErrCh <- err
+		} else {
+			s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout))
+		}
+		close(terminate)
+	}()
+	select {
+	case <-terminate:
+	case err := <-streamErrCh:
+		close(terminate)
+		s.logger.Error(fmt.Sprintf("Error while streaming tuples: %v", err))
 		ctx.ErrCh <- err
-	} else {
-		s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout))
 	}
 }
 

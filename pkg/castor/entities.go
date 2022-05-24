@@ -33,7 +33,7 @@ const (
 	BitGfp                   TupleType = "BIT_GFP"
 	BitGf2n                  TupleType = "BIT_GF2N"
 	InputMaskGfp             TupleType = "INPUT_MASK_GFP"
-	InputMaskGf2n            TupleType = "INPUT_MASK_GFP"
+	InputMaskGf2n            TupleType = "INPUT_MASK_GF2N"
 	InverseTupleGfp          TupleType = "INVERSE_TUPLE_GFP"
 	InverseTupleGf2n         TupleType = "INVERSE_TUPLE_GF2N"
 	SquareTupleGfp           TupleType = "SQUARE_TUPLE_GFP"
@@ -41,5 +41,17 @@ const (
 	MultiplicationTripleGfp  TupleType = "MULTIPLICATION_TRIPLE_GFP"
 	MultiplicationTripleGf2n TupleType = "MULTIPLICATION_TRIPLE_GF2N"
 )
+
+var TupleTypes = []TupleType{
+	BitGfp,
+	BitGf2n,
+	InputMaskGfp,
+	InputMaskGf2n,
+	InverseTupleGfp,
+	InverseTupleGf2n,
+	SquareTupleGfp,
+	SquareTupleGf2n,
+	MultiplicationTripleGfp,
+	MultiplicationTripleGf2n}
 
 type TupleType string

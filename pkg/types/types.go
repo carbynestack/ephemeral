@@ -71,17 +71,19 @@ type CtxConfig struct {
 
 // SPDZEngineConfig is the VPC specific configuration.
 type SPDZEngineConfig struct {
-	RetrySleep       string        `json:"retrySleep"`
-	RetryTimeout     string        `json:"retryTimeout"`
-	Prime            string        `json:"prime"`
-	RInv             string        `json:"rInv"`
-	AmphoraConfig    AmphoraConfig `json:"amphoraConfig"`
-	CastorConfig     CastorConfig  `json:"castorConfig"`
-	FrontendURL      string        `json:"frontendURL"`
-	PlayerID         int32         `json:"playerID"`
-	PlayerCount      int32         `json:"playerCount"`
-	MaxBulkSize      int32         `json:"maxBulkSize"`
-	DiscoveryAddress string        `json:"discoveryAddress"`
+	RetrySleep        string        `json:"retrySleep"`
+	RetryTimeout      string        `json:"retryTimeout"`
+	Prime             string        `json:"prime"`
+	RInv              string        `json:"rInv"`
+	MacKey            string        `json:"macKey"`
+	SecurityParameter int           `json:"securityParameter"`
+	AmphoraConfig     AmphoraConfig `json:"amphoraConfig"`
+	CastorConfig      CastorConfig  `json:"castorConfig"`
+	FrontendURL       string        `json:"frontendURL"`
+	PlayerID          int32         `json:"playerID"`
+	PlayerCount       int32         `json:"playerCount"`
+	MaxBulkSize       int32         `json:"maxBulkSize"`
+	DiscoveryAddress  string        `json:"discoveryAddress"`
 }
 
 // AmphoraConfig specifies the amphora host parameters.
@@ -91,11 +93,12 @@ type AmphoraConfig struct {
 	Path   string `json:"path"`
 }
 
-// CastorConfig specifies the castor host parameters.
+// CastorConfig specifies the castor host and tuple stock parameters.
 type CastorConfig struct {
-	Host   string `json:"host"`
-	Scheme string `json:"scheme"`
-	Path   string `json:"path"`
+	Host       string `json:"host"`
+	Scheme     string `json:"scheme"`
+	Path       string `json:"path"`
+	TupleStock int32  `json:"tupleStock"`
 }
 
 // OutputConfig defines how the output of the app execution is treated.
@@ -106,17 +109,20 @@ type OutputConfig struct {
 // SPDZEngineTypedConfig reflects SPDZEngineConfig, but it contains the real property types.
 // We need this type, since the default json decoder doesn't know how to deserialize big.Int.
 type SPDZEngineTypedConfig struct {
-	RetrySleep       time.Duration
-	RetryTimeout     time.Duration
-	Prime            big.Int
-	RInv             big.Int
-	AmphoraClient    amphora.AbstractClient
-	CastorClient     castor.AbstractClient
-	PlayerID         int32
-	PlayerCount      int32
-	FrontendURL      string
-	MaxBulkSize      int32
-	DiscoveryAddress string
+	RetrySleep        time.Duration
+	RetryTimeout      time.Duration
+	Prime             big.Int
+	RInv              big.Int
+	MacKey            big.Int
+	SecurityParameter int
+	AmphoraClient     amphora.AbstractClient
+	CastorClient      castor.AbstractClient
+	TupleStock        int32
+	PlayerID          int32
+	PlayerCount       int32
+	FrontendURL       string
+	MaxBulkSize       int32
+	DiscoveryAddress  string
 }
 
 type contextKey string

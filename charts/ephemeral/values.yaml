@@ -47,12 +47,15 @@ ephemeral:
     host: "castor"
     scheme: "http"
     path: "/"
+    tupleStock: 1000
   frontendUrl:
   discoveryAddress: discovery.default.svc.cluster.local
   playerId:
   spdz:
     prime:
     rInv:
+    macKey:
+    securityParameter:
 
 networkController:
   image:

@@ -75,6 +75,8 @@ data:
       "retryTimeout": "1m",
       "prime": "{{ .Values.ephemeral.spdz.prime }}",
       "rInv": "{{ .Values.ephemeral.spdz.rInv }}",
+      "macKey": "{{ .Values.ephemeral.spdz.macKey }}",
+      "securityParameter": "{{ .Values.ephemeral.spdz.securityParameter }}",
       "amphoraConfig": {
         "host": "{{ .Values.ephemeral.amphora.host }}",
         "scheme": "{{ .Values.ephemeral.amphora.scheme }}",
@@ -83,7 +85,8 @@ data:
       "castorConfig": {
         "host": "{{ .Values.ephemeral.castor.host }}",
         "scheme": "{{ .Values.ephemeral.castor.scheme }}",
-        "path": "{{ .Values.ephemeral.castor.path }}"
+        "path": "{{ .Values.ephemeral.castor.path }}",
+        "tupleStock": "{{ .Values.ephemeral.castor.tupleStock }}"
       },
       "frontendURL": "{{ .Values.ephemeral.frontendUrl }}",
       "discoveryAddress": "{{ .Values.ephemeral.discoveryAddress }}",

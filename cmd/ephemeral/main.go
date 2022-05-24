@@ -97,7 +97,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	var p, rInv big.Int
+	var p, rInv, macKey big.Int
 	_, ok := p.SetString(conf.Prime, 10)
 	if !ok {
 		return nil, errors.New("wrong prime number format")
@@ -105,6 +105,10 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	_, ok = rInv.SetString(conf.RInv, 10)
 	if !ok {
 		return nil, errors.New("wrong rInv format")
+	}
+	_, ok = macKey.SetString(conf.MacKey, 10)
+	if !ok {
+		return nil, errors.New("wrong macKey format")
 	}
 
 	amphoraURL := url.URL{
@@ -132,8 +136,10 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		RetrySleep:       retrySleep,
 		Prime:            p,
 		RInv:             rInv,
+		MacKey:           macKey,
 		AmphoraClient:    amphoraClient,
 		CastorClient:     castorClient,
+		TupleStock:       conf.CastorConfig.TupleStock,
 		PlayerID:         conf.PlayerID,
 		PlayerCount:      conf.PlayerCount,
 		FrontendURL:      conf.FrontendURL,
