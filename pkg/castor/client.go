@@ -37,7 +37,7 @@ type Client struct {
 }
 
 const tupleURI = "/intra-vcp/tuples"
-const tupleTypeParam = "tupleType"
+const tupleTypeParam = "tupletype"
 const countParam = "count"
 const reservationIdParam = "reservationId"
 
@@ -56,7 +56,7 @@ func (c *Client) GetTuples(count int32, t TupleType, id string) (TupleList, erro
 		if err != nil {
 			return tuples, err
 		}
-		return tuples, errors.New(fmt.Sprintf("getting tuples failed with response code #%d: %s", resp.StatusCode, string(bodyBytes)))
+		return tuples, errors.New(fmt.Sprintf("getting tuples failed for \"%s\" with response code #%d: %s", req.URL, resp.StatusCode, string(bodyBytes)))
 	}
 	err = json.NewDecoder(resp.Body).Decode(&tuples)
 	if err != nil {

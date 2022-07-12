@@ -9,6 +9,7 @@ package io
 import (
 	"encoding/base64"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -18,58 +19,81 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 )
 
-type PipeWriterFactory func(string, time.Duration) (PipeWriter, error)
+type PipeWriterFactory func(*zap.SugaredLogger, string, time.Duration) (PipeWriter, error)
 
-func DefaultPipeWriterFactory(filePath string, writeDeadline time.Duration) (PipeWriter, error) {
-	pr, err := NewTuplePipeWriter(filePath, writeDeadline)
+func DefaultPipeWriterFactory(l *zap.SugaredLogger, filePath string, writeDeadline time.Duration) (PipeWriter, error) {
+	pr, err := NewTuplePipeWriter(l, filePath, writeDeadline)
 	return pr, err
 }
 
 type PipeWriter interface {
+	Open() error
 	Write([]byte) (int, error)
 	Close() error
 }
 
-func NewTuplePipeWriter(filePath string, writeDeadline time.Duration) (*TuplePipeWriter, error) {
-	_ = os.Remove(filePath)
-	err := unix.Mkfifo(filePath, 0666)
+func NewTuplePipeWriter(l *zap.SugaredLogger, filePath string, writeDeadline time.Duration) (*TuplePipeWriter, error) {
+	err := os.Remove(filePath)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("Error deleting existing Tuple file: %v\n", err)
+	}
+	err = os.MkdirAll(filePath[0:strings.LastIndex(filePath, "/")], 0755)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("Error creating directory path: %v\n", err)
+	}
+	err = unix.Mkfifo(filePath, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating pipe: %v\n", err)
 	}
-	file, err := os.OpenFile(filePath, os.O_WRONLY, os.ModeNamedPipe)
-	if err != nil {
-		return nil, fmt.Errorf("Error Opening File: %v\n", err)
-	}
 	return &TuplePipeWriter{
-		tupleFile:     file,
+		tupleFilePath: filePath,
 		writeDeadline: writeDeadline,
+		logger:        l,
 	}, nil
 }
 
 type TuplePipeWriter struct {
+	tupleFilePath string
 	tupleFile     *os.File
 	writeDeadline time.Duration
+	logger        *zap.SugaredLogger
 }
 
+// Write writes the given data to the underlying tuple file pipe.
+//
+// **Note:** Make sure to call Open() first.
 func (tpw *TuplePipeWriter) Write(data []byte) (int, error) {
 	deadline := time.Now().Add(tpw.writeDeadline)
 	err := tpw.tupleFile.SetWriteDeadline(deadline)
 	if err != nil {
-		return 0, fmt.Errorf("Error setting write deadline: %v", err)
+		return 0, fmt.Errorf("error setting write deadline: %v", err)
 	}
-	c, err := tpw.tupleFile.Write(data)
-	if err != nil {
-		return 0, fmt.Errorf("Error wrting data to pipe: %v", err)
-	}
-	return c, nil
+	return tpw.tupleFile.Write(data)
 }
 
+// Open opens a file as write only pipe. This function should be called within a go routine as opening a pipe as
+// write-only is a blocking call until opposing side opens the file to read.
+//
+// This is especially important when streaming tuples to MP-SPDZ, as it does open only those tuple files that are
+// actually required for the current computation.
+func (tpw *TuplePipeWriter) Open() error {
+	var err error
+	tpw.tupleFile, err = os.OpenFile(tpw.tupleFilePath, os.O_WRONLY, os.ModeNamedPipe)
+	if err != nil {
+		return fmt.Errorf("Error opening file: %v\n", err)
+	}
+	tpw.logger.Debugw("Pipe writer connected", "filePath", tpw.tupleFilePath)
+	return nil
+}
+
+// Close calls os.File.Close() on the tuple file pipe
 func (tpw *TuplePipeWriter) Close() error {
 	return tpw.tupleFile.Close()
 }
@@ -82,10 +106,10 @@ type TupleStreamer interface {
 const tupleBaseFolder = "Player-Data"
 const defaultWriteDeadline = 5 * time.Second
 
-func TupleFilePath(t castor.TupleType, config *SPDZEngineTypedConfig) string {
-	gfpFileFormat := fmt.Sprintf("%s/%d-p-%d/%%s-p-P%d", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID)
-	gf2nFileFormat := fmt.Sprintf("%s/%d-2-%d/%%s-p-P%d", tupleBaseFolder, config.PlayerCount, config.SecurityParameter, config.PlayerID)
-	switch t {
+func TupleFilePath(tt castor.TupleType, config *SPDZEngineTypedConfig) string {
+	gfpFileFormat := fmt.Sprintf("%s/%d-p-%d/%%s-p-P%d-T0", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID)
+	gf2nFileFormat := fmt.Sprintf("%s/%d-2-%d/%%s-p-P%d-T0", tupleBaseFolder, config.PlayerCount, config.SecurityParameter, config.PlayerID)
+	switch tt {
 	case castor.BitGfp:
 		return fmt.Sprintf(gfpFileFormat, "Bits")
 	case castor.InputMaskGfp:
@@ -107,36 +131,36 @@ func TupleFilePath(t castor.TupleType, config *SPDZEngineTypedConfig) string {
 	case castor.MultiplicationTripleGf2n:
 		return fmt.Sprintf(gf2nFileFormat, "Triples")
 	}
-	panic("Unsupported tuplye type " + t)
+	panic("Unsupported tuple type " + tt)
 }
 
 // NewCastorTupleStreamer returns a new instance of castor tuple streamer.
-func NewCastorTupleStreamer(l *zap.SugaredLogger, t castor.TupleType, conf *SPDZEngineTypedConfig, gameID string) (*CastorTupleStreamer, error) {
-	ts, err := NewCastorTupleStreamerWithWriterFactory(l, t, conf, gameID, DefaultPipeWriterFactory)
+func NewCastorTupleStreamer(l *zap.SugaredLogger, tt castor.TupleType, conf *SPDZEngineTypedConfig, gameID string) (*CastorTupleStreamer, error) {
+	ts, err := NewCastorTupleStreamerWithWriterFactory(l, tt, conf, gameID, DefaultPipeWriterFactory)
 	return ts, err
 }
 
 // NewCastorTupleStreamerWithWriterFactory returns a new instance of castor tuple streamer.
-func NewCastorTupleStreamerWithWriterFactory(l *zap.SugaredLogger, t castor.TupleType, conf *SPDZEngineTypedConfig, gameID string, pipeWriterFactory PipeWriterFactory) (*CastorTupleStreamer, error) {
-	tupleFilePath := TupleFilePath(t, conf)
-	pipeWriter, err := pipeWriterFactory(tupleFilePath, defaultWriteDeadline)
+func NewCastorTupleStreamerWithWriterFactory(l *zap.SugaredLogger, tt castor.TupleType, conf *SPDZEngineTypedConfig, gameID string, pipeWriterFactory PipeWriterFactory) (*CastorTupleStreamer, error) {
+	tupleFilePath := TupleFilePath(tt, conf)
+	pipeWriter, err := pipeWriterFactory(l, tupleFilePath, defaultWriteDeadline)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating pipe writer: %v", err)
+		return nil, fmt.Errorf("error creating pipe writer: %v", err)
 	}
-	headerData := generateHeader(t, &conf.Prime)
-	l.Debugw(fmt.Sprintf("Generated tuple file header %x", headerData), "TupleType", t, "Prime", conf.Prime.Text(10))
+	headerData := generateHeader(tt, &conf.Prime)
+	l.Debugw(fmt.Sprintf("Generated tuple file header %x", headerData), TupleType, tt, "Prime", conf.Prime.Text(10))
 	gameUUID, err := uuid.Parse(gameID)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing gameID: %v", err)
+		return nil, fmt.Errorf("error parsing gameID: %v", err)
 	}
 	return &CastorTupleStreamer{
 		logger:        l,
 		pipeWriter:    pipeWriter,
-		tupleType:     t,
+		tupleType:     tt,
 		stockSize:     conf.TupleStock,
 		castorClient:  conf.CastorClient,
-		baseRequestID: uuid.NewMD5(gameUUID, []byte(t)),
-		streamData:    headerData,
+		baseRequestID: uuid.NewMD5(gameUUID, []byte(tt)),
+		headerData:    headerData,
 	}, nil
 }
 
@@ -149,28 +173,59 @@ type CastorTupleStreamer struct {
 	castorClient  castor.AbstractClient
 	baseRequestID uuid.UUID
 	requestCycle  int
+	headerData    []byte
 	streamData    []byte
+	streamedBytes int
 }
 
-// StreamTuples repeatedly downloads a given type of tuples from castor and streams it to the according file as required by MP-SPDZ
+// StartStreamTuples repeatedly downloads a given type of tuples from castor and streams it to the according file as required by MP-SPDZ
 func (ts *CastorTupleStreamer) StartStreamTuples(terminate chan struct{}, errCh chan error, wg *sync.WaitGroup) {
-	defer func() {
-		ts.logger.Debugw(fmt.Sprintf("Done streaming tuples, discarding %d bytes.", len(ts.streamData)), "TupleType", ts.tupleType)
-		ts.pipeWriter.Close()
-		wg.Done()
-	}()
-	for {
-		select {
-		case <-terminate:
-			return
-		default:
-			err := ts.writeDataToPipe()
+	ts.streamData = append(ts.streamData, ts.headerData...)
+	pipeWriterReady := make(chan struct{})
+	go func() {
+		defer func() {
+			var streamedTupleBytes, discardedTupleBytes int
+			if ts.streamedBytes > len(ts.headerData) {
+				streamedTupleBytes = ts.streamedBytes - len(ts.headerData)
+			}
+			if streamedTupleBytes > 0 {
+				discardedTupleBytes = len(ts.streamData)
+			}
+			if streamedTupleBytes > 0 || discardedTupleBytes > 0 {
+				ts.logger.Debugw("Terminate tuple streamer.", TupleType, ts.tupleType, "Provided bytes", streamedTupleBytes, "Discarded bytes", discardedTupleBytes)
+			}
+			_ = ts.pipeWriter.Close()
+			wg.Done()
+		}()
+		go func() {
+			err := ts.pipeWriter.Open()
 			if err != nil {
 				errCh <- err
 				return
 			}
+			close(pipeWriterReady)
+		}()
+		for {
+			select {
+			case <-terminate:
+				return
+			case <-pipeWriterReady:
+				err := ts.writeDataToPipe()
+				if err != nil {
+					if errors.Is(err, syscall.EPIPE) {
+						// pipe error (most likely "broken pipe") is considered to indicate the computation to be
+						// terminated and therefore won't cause the tuple streamer to an errant termination . In case
+						// the pipe was closed because of a computation error this will be reported by the MPC execution
+						// itself
+						ts.logger.Debugw("received pipe error for tuple stream", TupleType, ts.tupleType, "Error", err)
+						return
+					}
+					errCh <- err
+					return
+				}
+			}
 		}
-	}
+	}()
 }
 
 func (ts *CastorTupleStreamer) writeDataToPipe() error {
@@ -181,14 +236,23 @@ func (ts *CastorTupleStreamer) writeDataToPipe() error {
 		if err != nil {
 			return err
 		}
+		ts.logger.Debugw("Fetched new tuples from Castor", TupleType, ts.tupleType, "RequestID", requestID)
 		ts.streamData, err = ts.tupleListToByteArray(tupleList)
 	}
 	c, err := ts.pipeWriter.Write(ts.streamData)
 	if err != nil {
-		ts.logger.Errorw(err.Error(), "TupleType", ts.tupleType)
+		// if pipe error occurred it is most likely a "broken pipe" indicating file has been closed on opposing side
+		// tuple streamer will terminate in this case as computation is considered terminated and tuple streamer is no
+		// longer required.
+		// in all other cases the tuple streamer will retry
+		if errors.Is(err, syscall.EPIPE) {
+			return err
+		} else {
+			ts.logger.Errorw(err.Error(), TupleType, ts.tupleType)
+		}
 	}
 	ts.streamData = ts.streamData[c:]
-	ts.logger.Debug(fmt.Sprintf("Wrote %d %s to file %s", c, ts.tupleType, ts.pipeWriter.(*TuplePipeWriter).tupleFile.Name()))
+	ts.streamedBytes += c
 	return nil
 }
 

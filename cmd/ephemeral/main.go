@@ -132,18 +132,19 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	}
 
 	return &SPDZEngineTypedConfig{
-		RetryTimeout:     retryTimeout,
-		RetrySleep:       retrySleep,
-		Prime:            p,
-		RInv:             rInv,
-		MacKey:           macKey,
-		AmphoraClient:    amphoraClient,
-		CastorClient:     castorClient,
-		TupleStock:       conf.CastorConfig.TupleStock,
-		PlayerID:         conf.PlayerID,
-		PlayerCount:      conf.PlayerCount,
-		FrontendURL:      conf.FrontendURL,
-		MaxBulkSize:      conf.MaxBulkSize,
-		DiscoveryAddress: conf.DiscoveryAddress,
+		RetryTimeout:      retryTimeout,
+		RetrySleep:        retrySleep,
+		Prime:             p,
+		RInv:              rInv,
+		MacKey:            macKey,
+		SecurityParameter: conf.SecurityParameter,
+		AmphoraClient:     amphoraClient,
+		CastorClient:      castorClient,
+		TupleStock:        conf.CastorConfig.TupleStock,
+		PlayerID:          conf.PlayerID,
+		PlayerCount:       conf.PlayerCount,
+		FrontendURL:       conf.FrontendURL,
+		MaxBulkSize:       conf.MaxBulkSize,
+		DiscoveryAddress:  conf.DiscoveryAddress,
 	}, nil
 }

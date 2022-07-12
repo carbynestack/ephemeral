@@ -228,7 +228,8 @@ func (s *SPDZEngine) getFeedPort() string {
 }
 
 func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
-	wg := sync.WaitGroup{}
+	s.logger.Debugw("Starting MPC", GameID, ctx.Act.GameID)
+	wg := new(sync.WaitGroup)
 	defer func() {
 		gracefully := make(chan struct{})
 		go func() {
@@ -245,7 +246,7 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	for _, tt := range castor.TupleTypes {
 		streamer, err := NewCastorTupleStreamer(s.logger, tt, s.config, ctx.Act.GameID)
 		if err != nil {
-			s.logger.Errorw("Error when initializing tuple streamer", "GameID", ctx.Act.GameID, "TupleType", tt, "Error", err)
+			s.logger.Errorw("Error when initializing tuple streamer", GameID, ctx.Act.GameID, TupleType, tt, "Error", err)
 			ctx.ErrCh <- err
 			return
 		}
@@ -255,9 +256,9 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	streamErrCh := make(chan error, len(castor.TupleTypes))
 	for _, s := range tupleStreamers {
 		wg.Add(1)
-		s.StartStreamTuples(terminate, streamErrCh, &wg)
+		s.StartStreamTuples(terminate, streamErrCh, wg)
 	}
-	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
+	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s --file-prep-per-thread", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
 	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID, "command", command)
 	go func() {
 		stdout, stderr, err := s.cmder.CallCMD(ctx.Context, command, s.baseDir)

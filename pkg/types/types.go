@@ -76,7 +76,7 @@ type SPDZEngineConfig struct {
 	Prime             string        `json:"prime"`
 	RInv              string        `json:"rInv"`
 	MacKey            string        `json:"macKey"`
-	SecurityParameter int           `json:"securityParameter"`
+	SecurityParameter int32         `json:"securityParameter"`
 	AmphoraConfig     AmphoraConfig `json:"amphoraConfig"`
 	CastorConfig      CastorConfig  `json:"castorConfig"`
 	FrontendURL       string        `json:"frontendURL"`
@@ -114,7 +114,7 @@ type SPDZEngineTypedConfig struct {
 	Prime             big.Int
 	RInv              big.Int
 	MacKey            big.Int
-	SecurityParameter int
+	SecurityParameter int32
 	AmphoraClient     amphora.AbstractClient
 	CastorClient      castor.AbstractClient
 	TupleStock        int32
