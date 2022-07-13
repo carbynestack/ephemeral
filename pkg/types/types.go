@@ -71,19 +71,22 @@ type CtxConfig struct {
 
 // SPDZEngineConfig is the VPC specific configuration.
 type SPDZEngineConfig struct {
-	RetrySleep        string        `json:"retrySleep"`
-	RetryTimeout      string        `json:"retryTimeout"`
-	Prime             string        `json:"prime"`
-	RInv              string        `json:"rInv"`
-	MacKey            string        `json:"macKey"`
-	SecurityParameter int32         `json:"securityParameter"`
-	AmphoraConfig     AmphoraConfig `json:"amphoraConfig"`
-	CastorConfig      CastorConfig  `json:"castorConfig"`
-	FrontendURL       string        `json:"frontendURL"`
-	PlayerID          int32         `json:"playerID"`
-	PlayerCount       int32         `json:"playerCount"`
-	MaxBulkSize       int32         `json:"maxBulkSize"`
-	DiscoveryAddress  string        `json:"discoveryAddress"`
+	RetrySleep    string `json:"retrySleep"`
+	RetryTimeout  string `json:"retryTimeout"`
+	Prime         string `json:"prime"`
+	RInv          string `json:"rInv"`
+	MacKey        string `json:"macKey"`
+	Gf2nBitLength int32  `json:"gf2nBitLength"`
+	// Gf2nStorageSize represents the size in bytes for each gf2n element e.g. depending on the 'USE_GF2N_LONG' flag
+	// being set when compiling SPDZ where storage size is 16 for USE_GF2N_LONG=1, or 8 if set to 0
+	Gf2nStorageSize  int32         `json:"gf2nStorageSize"`
+	AmphoraConfig    AmphoraConfig `json:"amphoraConfig"`
+	CastorConfig     CastorConfig  `json:"castorConfig"`
+	FrontendURL      string        `json:"frontendURL"`
+	PlayerID         int32         `json:"playerID"`
+	PlayerCount      int32         `json:"playerCount"`
+	MaxBulkSize      int32         `json:"maxBulkSize"`
+	DiscoveryAddress string        `json:"discoveryAddress"`
 }
 
 // AmphoraConfig specifies the amphora host parameters.
@@ -109,20 +112,21 @@ type OutputConfig struct {
 // SPDZEngineTypedConfig reflects SPDZEngineConfig, but it contains the real property types.
 // We need this type, since the default json decoder doesn't know how to deserialize big.Int.
 type SPDZEngineTypedConfig struct {
-	RetrySleep        time.Duration
-	RetryTimeout      time.Duration
-	Prime             big.Int
-	RInv              big.Int
-	MacKey            big.Int
-	SecurityParameter int32
-	AmphoraClient     amphora.AbstractClient
-	CastorClient      castor.AbstractClient
-	TupleStock        int32
-	PlayerID          int32
-	PlayerCount       int32
-	FrontendURL       string
-	MaxBulkSize       int32
-	DiscoveryAddress  string
+	RetrySleep       time.Duration
+	RetryTimeout     time.Duration
+	Prime            big.Int
+	RInv             big.Int
+	MacKey           big.Int
+	Gf2nBitLength    int32
+	Gf2nStorageSize  int32
+	AmphoraClient    amphora.AbstractClient
+	CastorClient     castor.AbstractClient
+	TupleStock       int32
+	PlayerID         int32
+	PlayerCount      int32
+	FrontendURL      string
+	MaxBulkSize      int32
+	DiscoveryAddress string
 }
 
 type contextKey string

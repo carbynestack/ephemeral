@@ -75,45 +75,41 @@ var _ = Describe("Tuple Streamer", func() {
 				Prime:        prime,
 			}
 			gameID, _ := uuid.NewRandom()
-			fakePipeWriterFactory := func(fp string, wd time.Duration) (PipeWriter, error) {
+			fakePipeWriterFactory := func(l *zap.SugaredLogger, dir string, name string, wd time.Duration) (PipeWriter, error) {
 				return &FakeConsumingPipeWriter{
-					filePath: fp,
+					filePath: dir + name,
 				}, nil
 			}
 			ts, _ := NewCastorTupleStreamerWithWriterFactory(logger, tupleType, conf, gameID.String(), fakePipeWriterFactory)
 			Expect(ts.logger).To(Equal(logger))
-			Expect(ts.pipeWriter.(*FakeConsumingPipeWriter).filePath).To(Equal("Player-Data/0-p-128/Bits-p-P0"))
+			Expect(ts.pipeWriter.(*FakeConsumingPipeWriter).filePath).To(Equal("Player-Data/0-p-128/Bits-p-P0-T0"))
 			Expect(ts.tupleType).To(Equal(tupleType))
 			Expect(ts.stockSize).To(Equal(conf.TupleStock))
 			Expect(ts.castorClient).To(Equal(conf.CastorClient))
-			Expect(ts.baseRequestID).To(Equal(uuid.NewMD5(gameID, []byte(tupleType))))
-			Expect(ts.streamData).To(Equal(generateHeader(tupleType, &prime)))
+			Expect(ts.baseRequestID).To(Equal(uuid.NewMD5(gameID, []byte(tupleType.Name))))
+			Expect(ts.headerData).To(Equal(generateHeader(tupleType.SpdzProtocol, conf)))
 			Expect(ts.requestCycle).To(Equal(0))
 		})
 	})
 
-	Context("when building protocol descriptor", func() {
-		It("returns correct string for gfp txpes", func() {
-			gfpTypes := []castor.TupleType{castor.BitGfp, castor.MultiplicationTripleGfp, castor.InputMaskGfp, castor.InverseTupleGfp, castor.SquareTupleGfp}
-			for _, tt := range gfpTypes {
-				Expect(protocolDescriptorFor(tt)).To(Equal("SPDZ gfp"))
-			}
-		})
-
-		It("returns correct string for gf2n txpes", func() {
-			gfpTypes := []castor.TupleType{castor.BitGf2n, castor.MultiplicationTripleGf2n, castor.InputMaskGf2n, castor.InverseTupleGf2n, castor.SquareTupleGf2n}
-			for _, tt := range gfpTypes {
-				Expect(protocolDescriptorFor(tt)).To(Equal("SPDZ gf2n"))
-			}
-		})
-	})
-
 	Context("when generating tuple file header", func() {
-		It("returns correct header", func() {
-			expecteHeader := []byte{29, 0, 0, 0, 0, 0, 0, 0, 83, 80, 68, 90, 32, 103, 102, 112, 0, 16, 0, 0, 0, 149, 137, 7, 69, 143, 33, 54, 134, 27, 215, 85, 74, 36, 52, 0, 1}
-			var prime big.Int
-			prime.SetString("198766463529478683931867765928436695041", 10)
-			Expect(generateHeader(castor.BitGfp, &prime)).To(Equal(expecteHeader))
+		Context("when protocol is SPD gfp", func() {
+			It("returns correct header", func() {
+				expectedHeader := []byte{29, 0, 0, 0, 0, 0, 0, 0, 83, 80, 68, 90, 32, 103, 102, 112, 0, 16, 0, 0, 0, 149, 137, 7, 69, 143, 33, 54, 134, 27, 215, 85, 74, 36, 52, 0, 1}
+				var prime big.Int
+				prime.SetString("198766463529478683931867765928436695041", 10)
+				config := SPDZEngineTypedConfig{Prime: prime}
+				Expect(generateHeader(castor.SpdzGfp, &config)).To(Equal(expectedHeader))
+			})
+		})
+		Context("when protocol is SPD gf2n", func() {
+			It("returns correct header", func() {
+				expectedHeader := []byte{22, 0, 0, 0, 0, 0, 0, 0, 83, 80, 68, 90, 32, 103, 102, 50, 110, 95, 8, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0}
+				gf2nBitLength := int32(40)
+				gf2nStorageSize := int32(8)
+				config := SPDZEngineTypedConfig{Gf2nBitLength: gf2nBitLength, Gf2nStorageSize: gf2nStorageSize}
+				Expect(generateHeader(castor.SpdzGf2n, &config)).To(Equal(expectedHeader))
+			})
 		})
 	})
 })
@@ -121,6 +117,10 @@ var _ = Describe("Tuple Streamer", func() {
 type FakeConsumingPipeWriter struct {
 	filePath string
 	isClosed bool
+}
+
+func (ff *FakeConsumingPipeWriter) Open() error {
+	return nil
 }
 
 func (ff *FakeConsumingPipeWriter) Write(data []byte) (int, error) {

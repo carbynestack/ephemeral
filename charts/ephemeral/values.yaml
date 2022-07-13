@@ -55,7 +55,8 @@ ephemeral:
     prime:
     rInv:
     macKey:
-    securityParameter:
+    gf2nBitLength:
+    gf2nStorageSize:
 
 networkController:
   image:

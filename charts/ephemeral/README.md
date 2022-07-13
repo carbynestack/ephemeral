@@ -128,5 +128,6 @@ helm install --name my-release -f values.yaml ephemeral
 | `ephemeral.spdz.prime`                | The prime used by SPDZ                                       | \`\`                               |
 | `ephemeral.spdz.rInv`                 | The rInv used by SPDZ                                        | \`\`                               |
 | `ephemeral.spdz.macKey`               | The macKey used by SPDZ                                      | \`\`                               |
-| `ephemeral.spdz.securityParameter`    | The securityParameter used by SPDZ                           | \`\`                               |
+| `ephemeral.spdz.gf2nBitLength`        | The Bit length of the GF(2^n) field used by SPDZ             | \`\`                               |
+| `ephemeral.spdz.gf2nStorageSize`      | The size of GF(2^n) tuples in bytes used by SPDZ             | \`\`                               |
 | `ephemeral.playerId`                  | Id of this player                                            | \`\`                               |

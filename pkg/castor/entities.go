@@ -26,23 +26,39 @@ type Tuple struct {
 
 type Share struct {
 	Value string `json:"value"`
-	Mac   string `json:"mac"'`
+	Mac   string `json:"mac"`
 }
 
-const (
-	BitGfp                   TupleType = "BIT_GFP"
-	BitGf2n                  TupleType = "BIT_GF2N"
-	InputMaskGfp             TupleType = "INPUT_MASK_GFP"
-	InputMaskGf2n            TupleType = "INPUT_MASK_GF2N"
-	InverseTupleGfp          TupleType = "INVERSE_TUPLE_GFP"
-	InverseTupleGf2n         TupleType = "INVERSE_TUPLE_GF2N"
-	SquareTupleGfp           TupleType = "SQUARE_TUPLE_GFP"
-	SquareTupleGf2n          TupleType = "SQUARE_TUPLE_GF2N"
-	MultiplicationTripleGfp  TupleType = "MULTIPLICATION_TRIPLE_GFP"
-	MultiplicationTripleGf2n TupleType = "MULTIPLICATION_TRIPLE_GF2N"
+type SPDZProtocol struct {
+	Descriptor string
+	Shorthand  string
+}
+
+var (
+	SpdzGfp  = SPDZProtocol{"SPDZ gfp", "p"}
+	SpdzGf2n = SPDZProtocol{"SPDZ gf2n_", "2"}
 )
 
-var TupleTypes = []TupleType{
+type TupleType struct {
+	Name              string
+	PreprocessingName string
+	SpdzProtocol      SPDZProtocol
+}
+
+var (
+	BitGfp                   = TupleType{"BIT_GFP", "Bits", SpdzGfp}
+	BitGf2n                  = TupleType{"BIT_GF2N", "Bits", SpdzGf2n}
+	InputMaskGfp             = TupleType{"INPUT_MASK_GFP", "Inputs", SpdzGfp}
+	InputMaskGf2n            = TupleType{"INPUT_MASK_GF2N", "Inputs", SpdzGf2n}
+	InverseTupleGfp          = TupleType{"INVERSE_TUPLE_GFP", "Inverses", SpdzGfp}
+	InverseTupleGf2n         = TupleType{"INVERSE_TUPLE_GF2N", "Inverses", SpdzGf2n}
+	SquareTupleGfp           = TupleType{"SQUARE_TUPLE_GFP", "Squares", SpdzGfp}
+	SquareTupleGf2n          = TupleType{"SQUARE_TUPLE_GF2N", "Squares", SpdzGf2n}
+	MultiplicationTripleGfp  = TupleType{"MULTIPLICATION_TRIPLE_GFP", "Triples", SpdzGfp}
+	MultiplicationTripleGf2n = TupleType{"MULTIPLICATION_TRIPLE_GF2N", "Triples", SpdzGf2n}
+)
+
+var SupportedTupleTypes = []TupleType{
 	BitGfp,
 	BitGf2n,
 	InputMaskGfp,
@@ -53,5 +69,3 @@ var TupleTypes = []TupleType{
 	SquareTupleGf2n,
 	MultiplicationTripleGfp,
 	MultiplicationTripleGf2n}
-
-type TupleType string

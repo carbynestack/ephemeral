@@ -41,9 +41,9 @@ const tupleTypeParam = "tupletype"
 const countParam = "count"
 const reservationIdParam = "reservationId"
 
-func (c *Client) GetTuples(count int32, t TupleType, id string) (TupleList, error) {
+func (c *Client) GetTuples(count int32, tt TupleType, id string) (TupleList, error) {
 	var tuples TupleList
-	req, err := http.NewRequest(http.MethodGet, c.Url.String()+fmt.Sprintf("%s?%s=%s&%s=%d&%s=%s", tupleURI, tupleTypeParam, t, countParam, count, reservationIdParam, id), nil)
+	req, err := http.NewRequest(http.MethodGet, c.Url.String()+fmt.Sprintf("%s?%s=%s&%s=%d&%s=%s", tupleURI, tupleTypeParam, tt.Name, countParam, count, reservationIdParam, id), nil)
 	if err != nil {
 		return tuples, err
 	}

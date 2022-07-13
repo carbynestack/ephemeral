@@ -76,7 +76,8 @@ data:
       "prime": "{{ .Values.ephemeral.spdz.prime }}",
       "rInv": "{{ .Values.ephemeral.spdz.rInv }}",
       "macKey": "{{ .Values.ephemeral.spdz.macKey }}",
-      "securityParameter": {{ .Values.ephemeral.spdz.securityParameter }},
+      "gf2nBitLength": {{ .Values.ephemeral.spdz.gf2nBitLength }},
+      "gf2nStorageSize": {{ .Values.ephemeral.spdz.gf2nStorageSize }},
       "amphoraConfig": {
         "host": "{{ .Values.ephemeral.amphora.host }}",
         "scheme": "{{ .Values.ephemeral.amphora.scheme }}",

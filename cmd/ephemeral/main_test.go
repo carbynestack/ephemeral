@@ -49,7 +49,7 @@ var _ = Describe("Main", func() {
 				})
 				Context("when it succeeds", func() {
 					It("initializes the config", func() {
-						data := []byte(`{"retrySleep":"50ms","retryTimeout":"1m","prime":"p","rInv":"r","macKey":"key","securityParameter":40,"amphoraConfig":{"host":"mock-server:1080","scheme":"http","path":"/amphora1"},"castorConfig":{"host":"mock-server:1081","scheme":"http","path":"/castor1","tupleStock":1000},"frontendURL":"apollo.test.specs.cloud","playerID":0,"maxBulkSize":32000,"discoveryAddress":"discovery.default.svc.cluster.local"}`)
+						data := []byte(`{"retrySleep":"50ms","retryTimeout":"1m","prime":"p","rInv":"r","macKey":"key","gf2nBitLength":40,"gf2nStorageSize":8,"amphoraConfig":{"host":"mock-server:1080","scheme":"http","path":"/amphora1"},"castorConfig":{"host":"mock-server:1081","scheme":"http","path":"/castor1","tupleStock":1000},"frontendURL":"apollo.test.specs.cloud","playerID":0,"maxBulkSize":32000,"discoveryAddress":"discovery.default.svc.cluster.local"}`)
 						err := ioutil.WriteFile(path, data, 0644)
 						Expect(err).NotTo(HaveOccurred())
 						conf, err := ParseConfig(path)
@@ -79,12 +79,13 @@ var _ = Describe("Main", func() {
 		Context("when initializing typed config", func() {
 			It("succeeds when all parameters are specified", func() {
 				conf := &SPDZEngineConfig{
-					RetryTimeout:      "2s",
-					RetrySleep:        "1s",
-					Prime:             "198766463529478683931867765928436695041",
-					RInv:              "133854242216446749056083838363708373830",
-					MacKey:            "1113507028231509545156335486838233835",
-					SecurityParameter: 40,
+					RetryTimeout:    "2s",
+					RetrySleep:      "1s",
+					Prime:           "198766463529478683931867765928436695041",
+					RInv:            "133854242216446749056083838363708373830",
+					MacKey:          "1113507028231509545156335486838233835",
+					Gf2nBitLength:   40,
+					Gf2nStorageSize: 8,
 					AmphoraConfig: AmphoraConfig{
 						Host:   "localhost",
 						Scheme: "http",
@@ -168,12 +169,13 @@ var _ = Describe("Main", func() {
 				Context("amphora URL is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout:      "2s",
-							RetrySleep:        "1s",
-							Prime:             "123",
-							RInv:              "123",
-							MacKey:            "123",
-							SecurityParameter: 40,
+							RetryTimeout:    "2s",
+							RetrySleep:      "1s",
+							Prime:           "123",
+							RInv:            "123",
+							MacKey:          "123",
+							Gf2nBitLength:   40,
+							Gf2nStorageSize: 8,
 							AmphoraConfig: AmphoraConfig{
 								Host: "",
 							},
@@ -193,12 +195,13 @@ var _ = Describe("Main", func() {
 				Context("amphora scheme is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout:      "2s",
-							RetrySleep:        "1s",
-							Prime:             "123",
-							RInv:              "123",
-							MacKey:            "123",
-							SecurityParameter: 40,
+							RetryTimeout:    "2s",
+							RetrySleep:      "1s",
+							Prime:           "123",
+							RInv:            "123",
+							MacKey:          "123",
+							Gf2nBitLength:   40,
+							Gf2nStorageSize: 8,
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "",
@@ -219,12 +222,13 @@ var _ = Describe("Main", func() {
 				Context("castor URL is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout:      "2s",
-							RetrySleep:        "1s",
-							Prime:             "123",
-							RInv:              "123",
-							MacKey:            "123",
-							SecurityParameter: 40,
+							RetryTimeout:    "2s",
+							RetrySleep:      "1s",
+							Prime:           "123",
+							RInv:            "123",
+							MacKey:          "123",
+							Gf2nBitLength:   40,
+							Gf2nStorageSize: 8,
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -243,12 +247,13 @@ var _ = Describe("Main", func() {
 				Context("castor scheme is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout:      "2s",
-							RetrySleep:        "1s",
-							Prime:             "123",
-							RInv:              "123",
-							MacKey:            "123",
-							SecurityParameter: 40,
+							RetryTimeout:    "2s",
+							RetrySleep:      "1s",
+							Prime:           "123",
+							RInv:            "123",
+							MacKey:          "123",
+							Gf2nBitLength:   40,
+							Gf2nStorageSize: 8,
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -273,12 +278,13 @@ var _ = Describe("Main", func() {
 			It("returns the handler chain", func() {
 				logger := zap.NewNop().Sugar()
 				conf := &SPDZEngineConfig{
-					RetryTimeout:      "2s",
-					RetrySleep:        "1s",
-					Prime:             "198766463529478683931867765928436695041",
-					RInv:              "133854242216446749056083838363708373830",
-					MacKey:            "1113507028231509545156335486838233835",
-					SecurityParameter: 40,
+					RetryTimeout:    "2s",
+					RetrySleep:      "1s",
+					Prime:           "198766463529478683931867765928436695041",
+					RInv:            "133854242216446749056083838363708373830",
+					MacKey:          "1113507028231509545156335486838233835",
+					Gf2nBitLength:   40,
+					Gf2nStorageSize: 8,
 					AmphoraConfig: AmphoraConfig{
 						Host:   "localhost",
 						Scheme: "http",
@@ -300,12 +306,13 @@ var _ = Describe("Main", func() {
 			It("is returned", func() {
 				logger := zap.NewNop().Sugar()
 				conf := &SPDZEngineConfig{
-					RetryTimeout:      "2s",
-					RetrySleep:        "1s",
-					Prime:             "198766463529478683931867765928436695041",
-					RInv:              "133854242216446749056083838363708373830",
-					MacKey:            "1113507028231509545156335486838233835",
-					SecurityParameter: 40,
+					RetryTimeout:    "2s",
+					RetrySleep:      "1s",
+					Prime:           "198766463529478683931867765928436695041",
+					RInv:            "133854242216446749056083838363708373830",
+					MacKey:          "1113507028231509545156335486838233835",
+					Gf2nBitLength:   40,
+					Gf2nStorageSize: 8,
 					// an empty amphora config is given to provoke an error.
 					AmphoraConfig: AmphoraConfig{},
 					CastorConfig: CastorConfig{

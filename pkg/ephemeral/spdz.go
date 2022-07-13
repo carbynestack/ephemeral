@@ -243,7 +243,7 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 		}
 	}()
 	var tupleStreamers = []TupleStreamer{}
-	for _, tt := range castor.TupleTypes {
+	for _, tt := range castor.SupportedTupleTypes {
 		streamer, err := NewCastorTupleStreamer(s.logger, tt, s.config, ctx.Act.GameID)
 		if err != nil {
 			s.logger.Errorw("Error when initializing tuple streamer", GameID, ctx.Act.GameID, TupleType, tt, "Error", err)
@@ -253,7 +253,7 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 		tupleStreamers = append(tupleStreamers, streamer)
 	}
 	terminate := make(chan struct{})
-	streamErrCh := make(chan error, len(castor.TupleTypes))
+	streamErrCh := make(chan error, len(castor.SupportedTupleTypes))
 	for _, s := range tupleStreamers {
 		wg.Add(1)
 		s.StartStreamTuples(terminate, streamErrCh, wg)

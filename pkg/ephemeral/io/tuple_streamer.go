@@ -26,10 +26,10 @@ import (
 	. "github.com/carbynestack/ephemeral/pkg/types"
 )
 
-type PipeWriterFactory func(*zap.SugaredLogger, string, time.Duration) (PipeWriter, error)
+type PipeWriterFactory func(l *zap.SugaredLogger, fileDir string, fileName string, writeDeadline time.Duration) (PipeWriter, error)
 
-func DefaultPipeWriterFactory(l *zap.SugaredLogger, filePath string, writeDeadline time.Duration) (PipeWriter, error) {
-	pr, err := NewTuplePipeWriter(l, filePath, writeDeadline)
+func DefaultPipeWriterFactory(l *zap.SugaredLogger, fileDir string, fileName string, writeDeadline time.Duration) (PipeWriter, error) {
+	pr, err := NewTuplePipeWriter(l, fileDir, fileName, writeDeadline)
 	return pr, err
 }
 
@@ -39,12 +39,16 @@ type PipeWriter interface {
 	Close() error
 }
 
-func NewTuplePipeWriter(l *zap.SugaredLogger, filePath string, writeDeadline time.Duration) (*TuplePipeWriter, error) {
+func NewTuplePipeWriter(l *zap.SugaredLogger, fileDir string, fileName string, writeDeadline time.Duration) (*TuplePipeWriter, error) {
+	if !strings.HasSuffix(fileDir, "/") {
+		fileDir += "/"
+	}
+	filePath := fileDir + fileName
 	err := os.Remove(filePath)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("Error deleting existing Tuple file: %v\n", err)
 	}
-	err = os.MkdirAll(filePath[0:strings.LastIndex(filePath, "/")], 0755)
+	err = os.MkdirAll(fileDir, 0755)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("Error creating directory path: %v\n", err)
 	}
@@ -106,32 +110,19 @@ type TupleStreamer interface {
 const tupleBaseFolder = "Player-Data"
 const defaultWriteDeadline = 5 * time.Second
 
-func TupleFilePath(tt castor.TupleType, config *SPDZEngineTypedConfig) string {
-	gfpFileFormat := fmt.Sprintf("%s/%d-p-%d/%%s-p-P%d-T0", tupleBaseFolder, config.PlayerCount, config.Prime.BitLen(), config.PlayerID)
-	gf2nFileFormat := fmt.Sprintf("%s/%d-2-%d/%%s-p-P%d-T0", tupleBaseFolder, config.PlayerCount, config.SecurityParameter, config.PlayerID)
-	switch tt {
-	case castor.BitGfp:
-		return fmt.Sprintf(gfpFileFormat, "Bits")
-	case castor.InputMaskGfp:
-		return fmt.Sprintf(gfpFileFormat, "Inputs")
-	case castor.InverseTupleGfp:
-		return fmt.Sprintf(gfpFileFormat, "Inverses")
-	case castor.SquareTupleGfp:
-		return fmt.Sprintf(gfpFileFormat, "Squares")
-	case castor.MultiplicationTripleGfp:
-		return fmt.Sprintf(gfpFileFormat, "Triples")
-	case castor.BitGf2n:
-		return fmt.Sprintf(gf2nFileFormat, "Bits")
-	case castor.InputMaskGf2n:
-		return fmt.Sprintf(gf2nFileFormat, "Inputs")
-	case castor.InverseTupleGf2n:
-		return fmt.Sprintf(gf2nFileFormat, "Inverses")
-	case castor.SquareTupleGf2n:
-		return fmt.Sprintf(gf2nFileFormat, "Squares")
-	case castor.MultiplicationTripleGf2n:
-		return fmt.Sprintf(gf2nFileFormat, "Triples")
+// GetTupleFilePath returns a tuple containing directory path and filename for a given tuple type and spdz configuration
+func GetTupleFilePath(tt castor.TupleType, config *SPDZEngineTypedConfig, threadNr int) (string, string) {
+	var dirPath string
+	switch tt.SpdzProtocol {
+	case castor.SpdzGfp:
+		dirPath = fmt.Sprintf("%s/%d-%s-%d/", tupleBaseFolder, config.PlayerCount, castor.SpdzGfp.Shorthand, config.Prime.BitLen())
+	case castor.SpdzGf2n:
+		dirPath = fmt.Sprintf("%s/%d-%s-%d/", tupleBaseFolder, config.PlayerCount, castor.SpdzGf2n.Shorthand, config.Gf2nBitLength)
+	default:
+		panic("Unsupported SpdzProtocol " + tt.SpdzProtocol.Descriptor)
 	}
-	panic("Unsupported tuple type " + tt)
+
+	return dirPath, fmt.Sprintf("%s-%s-P%d-T%d", tt.PreprocessingName, tt.SpdzProtocol.Shorthand, config.PlayerID, threadNr)
 }
 
 // NewCastorTupleStreamer returns a new instance of castor tuple streamer.
@@ -142,12 +133,12 @@ func NewCastorTupleStreamer(l *zap.SugaredLogger, tt castor.TupleType, conf *SPD
 
 // NewCastorTupleStreamerWithWriterFactory returns a new instance of castor tuple streamer.
 func NewCastorTupleStreamerWithWriterFactory(l *zap.SugaredLogger, tt castor.TupleType, conf *SPDZEngineTypedConfig, gameID string, pipeWriterFactory PipeWriterFactory) (*CastorTupleStreamer, error) {
-	tupleFilePath := TupleFilePath(tt, conf)
-	pipeWriter, err := pipeWriterFactory(l, tupleFilePath, defaultWriteDeadline)
+	tupleFileDir, tupleFileName := GetTupleFilePath(tt, conf, 0)
+	pipeWriter, err := pipeWriterFactory(l, tupleFileDir, tupleFileName, defaultWriteDeadline)
 	if err != nil {
 		return nil, fmt.Errorf("error creating pipe writer: %v", err)
 	}
-	headerData := generateHeader(tt, &conf.Prime)
+	headerData := generateHeader(tt.SpdzProtocol, conf)
 	l.Debugw(fmt.Sprintf("Generated tuple file header %x", headerData), TupleType, tt, "Prime", conf.Prime.Text(10))
 	gameUUID, err := uuid.Parse(gameID)
 	if err != nil {
@@ -159,7 +150,7 @@ func NewCastorTupleStreamerWithWriterFactory(l *zap.SugaredLogger, tt castor.Tup
 		tupleType:     tt,
 		stockSize:     conf.TupleStock,
 		castorClient:  conf.CastorClient,
-		baseRequestID: uuid.NewMD5(gameUUID, []byte(tt)),
+		baseRequestID: uuid.NewMD5(gameUUID, []byte(tt.Name)),
 		headerData:    headerData,
 	}, nil
 }
@@ -278,13 +269,18 @@ func (ts *CastorTupleStreamer) tupleListToByteArray(tl castor.TupleList) ([]byte
 	return result, nil
 }
 
-func protocolDescriptorFor(tt castor.TupleType) string {
-	var typeString string = fmt.Sprint(tt)
-	return fmt.Sprint("SPDZ ", strings.ToLower(typeString[strings.LastIndex(typeString, "_")+1:]))
+func generateHeader(sp castor.SPDZProtocol, conf *SPDZEngineTypedConfig) []byte {
+	switch sp {
+	case castor.SpdzGfp:
+		return generateGfpHeader(castor.SpdzGfp.Descriptor, conf.Prime)
+	case castor.SpdzGf2n:
+		return generateGf2nHeader(castor.SpdzGf2n.Descriptor, conf.Gf2nBitLength)
+	}
+	panic("Unsupported spdz protocol " + sp.Descriptor)
 }
 
-func generateHeader(tt castor.TupleType, prime *big.Int) []byte {
-	descriptor := []byte(protocolDescriptorFor(tt))
+func generateGfpHeader(protocolDescriptor string, prime big.Int) []byte {
+	descriptor := []byte(protocolDescriptor)
 	primeBytes := prime.Bytes()
 	primeByteLength := len(primeBytes)
 	totalSizeInBytes := uint64(len(descriptor) + 1 + 4 + primeByteLength)
@@ -294,13 +290,36 @@ func generateHeader(tt castor.TupleType, prime *big.Int) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, totalSizeInBytes)
 	result = append(result, bytes...)      // Total length to follow (e.g. 29 bytes)
-	result = append(result, descriptor...) // e.g. "SPDZ gfp"
-	result = append(result, byte(0))       //Signum (0 == positive)
+	result = append(result, descriptor...) // "SPDZ gfp"
+	result = append(result, byte(0))       // Signum (0 == positive)
 
 	bytes = make([]byte, 4)
 	binary.LittleEndian.PutUint32(bytes, uint32(primeByteLength))
 	result = append(result, bytes...)      // Prime length to follow (e.g. 16 byte == 128 bit)
 	result = append(result, primeBytes...) // The prime itself
+
+	return result
+}
+
+func generateGf2nHeader(protocolDescriptor string, bitLength int32) []byte {
+	protocol := []byte(protocolDescriptor) // e.g. "SPDZ gf2n"
+
+	var domain []byte
+	storageSize := make([]byte, 8)
+	binary.LittleEndian.PutUint32(storageSize, uint32(8))
+	nValue := make([]byte, 4)
+	binary.LittleEndian.PutUint32(nValue, uint32(bitLength))
+	domain = append(domain, storageSize...) // e.g. 8
+	domain = append(domain, nValue...)      // e.g. 40
+
+	totalSizeInBytes := uint64(len(protocol) + len(domain))
+	size := make([]byte, 8)
+	binary.LittleEndian.PutUint64(size, totalSizeInBytes)
+
+	var result []byte
+	result = append(result, size...)     // Total length to follow (e.g. 29 bytes)
+	result = append(result, protocol...) // e.g. "SPDZ gf2n"
+	result = append(result, domain...)   // e.g. 40
 
 	return result
 }
