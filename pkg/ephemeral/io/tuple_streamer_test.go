@@ -74,15 +74,16 @@ var _ = Describe("Tuple Streamer", func() {
 				CastorClient: &FakeCastorClient{},
 				Prime:        prime,
 			}
+			playerDataDir := "Player-Data/0-p-128/"
 			gameID, _ := uuid.NewRandom()
-			fakePipeWriterFactory := func(l *zap.SugaredLogger, dir string, name string, wd time.Duration) (PipeWriter, error) {
+			fakePipeWriterFactory := func(l *zap.SugaredLogger, filePath string, wd time.Duration) (PipeWriter, error) {
 				return &FakeConsumingPipeWriter{
-					filePath: dir + name,
+					filePath: filePath,
 				}, nil
 			}
-			ts, _ := NewCastorTupleStreamerWithWriterFactory(logger, tupleType, conf, gameID.String(), fakePipeWriterFactory)
+			ts, _ := NewCastorTupleStreamerWithWriterFactory(logger, tupleType, conf, playerDataDir, gameID, 1, fakePipeWriterFactory)
 			Expect(ts.logger).To(Equal(logger))
-			Expect(ts.pipeWriter.(*FakeConsumingPipeWriter).filePath).To(Equal("Player-Data/0-p-128/Bits-p-P0-T0"))
+			Expect(ts.pipeWriter.(*FakeConsumingPipeWriter).filePath).To(Equal("Player-Data/0-p-128/Bits-p-P0-T1"))
 			Expect(ts.tupleType).To(Equal(tupleType))
 			Expect(ts.stockSize).To(Equal(conf.TupleStock))
 			Expect(ts.castorClient).To(Equal(conf.CastorClient))
@@ -135,12 +136,12 @@ func (ff *FakeConsumingPipeWriter) Close() error {
 type FakeCastorClient struct {
 }
 
-func (fcc *FakeCastorClient) GetTuples(int32, castor.TupleType, string) (castor.TupleList, error) {
-	return castor.TupleList{}, nil
+func (fcc *FakeCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) (*castor.TupleList, error) {
+	return &castor.TupleList{}, nil
 }
 
 type BrokenDownloadCastorClient struct{}
 
-func (fcc *BrokenDownloadCastorClient) GetTuples(int32, castor.TupleType, string) (castor.TupleList, error) {
-	return castor.TupleList{}, errors.New("Fetching tuples failed")
+func (fcc *BrokenDownloadCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) (*castor.TupleList, error) {
+	return &castor.TupleList{}, errors.New("fetching tuples failed")
 }

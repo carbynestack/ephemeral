@@ -10,13 +10,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/carbynestack/ephemeral/pkg/castor"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	. "github.com/carbynestack/ephemeral/pkg/types"
-	"time"
-
 	"github.com/carbynestack/ephemeral/pkg/utils"
-
+	"io/ioutil"
 	"math/rand"
+	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,19 +36,20 @@ var _ = Describe("Spdz", func() {
 			Options: []string{"-c"},
 		}
 	})
-
 	Context("compiling the user code", func() {
 		var (
-			fileName string
-			random   int32
+			fileName   string
+			prepFolder string
+			random     int32
 		)
 		BeforeEach(func() {
 			rand.Seed(time.Now().UnixNano())
 			random = rand.Int31()
-			fileName = fmt.Sprintf("/tmp/program-%d.mpc", random)
+			prepFolder, _ := ioutil.TempDir("", "ephemeral_")
+			fileName = fmt.Sprintf("%s/program.mpc", prepFolder)
 		})
 		AfterEach(func() {
-			cmder.CallCMD(context.TODO(), []string{fmt.Sprintf("rm %s", fileName)}, "./")
+			_ = os.RemoveAll(prepFolder)
 		})
 		Context("writing succeeds", func() {
 			It("writes the source code on the disk and runs the compiler", func() {
@@ -55,6 +57,7 @@ var _ = Describe("Spdz", func() {
 					cmder:          &FakeExecutor{},
 					sourceCodePath: fileName,
 					logger:         zap.NewNop().Sugar(),
+					config:         &SPDZEngineTypedConfig{PrepFolder: prepFolder},
 				}
 				conf := &CtxConfig{
 					Act: &Activation{
@@ -73,6 +76,7 @@ var _ = Describe("Spdz", func() {
 				s := &SPDZEngine{
 					cmder:          &FakeExecutor{},
 					sourceCodePath: fmt.Sprintf("/non-existing-dir-%d/non-existing-file-%d", random, random),
+					config:         &SPDZEngineTypedConfig{PrepFolder: prepFolder},
 				}
 				conf := &CtxConfig{
 					Act: &Activation{
@@ -81,6 +85,7 @@ var _ = Describe("Spdz", func() {
 				}
 				err := s.Compile(conf)
 				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(And(ContainSubstring(s.sourceCodePath), HaveSuffix("no such file or directory")))
 			})
 		})
 		Context("compilation fails", func() {
@@ -89,6 +94,7 @@ var _ = Describe("Spdz", func() {
 					cmder:          &BrokenFakeExecutor{},
 					sourceCodePath: fileName,
 					logger:         zap.NewNop().Sugar(),
+					config:         &SPDZEngineTypedConfig{PrepFolder: prepFolder},
 				}
 				conf := &CtxConfig{
 					Act: &Activation{
@@ -97,20 +103,23 @@ var _ = Describe("Spdz", func() {
 				}
 				err := s.Compile(conf)
 				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("some error"))
 			})
 		})
 	})
 	Context("executing the user code", func() {
 		var (
-			random   int32
-			fileName string
-			s        *SPDZEngine
-			ctx      *CtxConfig
+			random     int32
+			fileName   string
+			prepFolder string
+			s          *SPDZEngine
+			ctx        *CtxConfig
 		)
 		BeforeEach(func() {
 			rand.Seed(time.Now().UnixNano())
 			random = rand.Int31()
-			fileName = fmt.Sprintf("/tmp/ip-file-%d", random)
+			prepFolder, _ := ioutil.TempDir("", "ephemeral_")
+			fileName = fmt.Sprintf("%s/ip-file", prepFolder)
 			s = &SPDZEngine{
 				proxy:   &FakeProxy{},
 				logger:  zap.NewNop().Sugar(),
@@ -119,12 +128,13 @@ var _ = Describe("Spdz", func() {
 				baseDir: "/tmp",
 				ipFile:  fileName,
 				config: &SPDZEngineTypedConfig{
-					PlayerID: int32(0),
+					PlayerID:   int32(0),
+					PrepFolder: prepFolder,
 				},
 			}
 			ctx = &CtxConfig{
 				Act: &Activation{
-					GameID: "0",
+					GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 				},
 				Context: context.TODO(),
 				Spdz: &SPDZEngineTypedConfig{
@@ -133,7 +143,7 @@ var _ = Describe("Spdz", func() {
 			}
 		})
 		AfterEach(func() {
-			cmder.Run(fmt.Sprintf("rm %s", fileName))
+			_ = os.RemoveAll(prepFolder)
 		})
 		Context("when amphora parameters are provided", func() {
 			It("returns the result of the execution", func() {
@@ -183,12 +193,20 @@ var _ = Describe("Spdz", func() {
 	})
 	Context("when creating a new instance of SPDZEngine", func() {
 		It("sets the required parameters", func() {
+			prepFolder, _ := ioutil.TempDir("", "ephemeral_")
+			defer os.RemoveAll(prepFolder)
 			logger := zap.NewNop().Sugar()
 			cmder := &utils.Commander{}
-			config := &SPDZEngineTypedConfig{}
+			config := &SPDZEngineTypedConfig{PrepFolder: prepFolder}
 			s := NewSPDZEngine(logger, cmder, config)
 			Expect(s.baseDir).To(Equal(baseDir))
 			Expect(s.ipFile).To(Equal(ipFile))
+			gf2nMacFile := fmt.Sprintf("%s/%d-%s-%d/Player-MAC-Keys-%s-P%d",
+				config.PrepFolder, config.PlayerCount, castor.SpdzGf2n.Shorthand, config.Gf2nBitLength, castor.SpdzGf2n.Shorthand, config.PlayerID)
+			gfpMacFile := fmt.Sprintf("%s/%d-%s-%d/Player-MAC-Keys-%s-P%d",
+				config.PrepFolder, config.PlayerCount, castor.SpdzGfp.Shorthand, config.Prime.BitLen(), castor.SpdzGfp.Shorthand, config.PlayerID)
+			Expect(gf2nMacFile).To(BeAnExistingFile())
+			Expect(gfpMacFile).To(BeAnExistingFile())
 		})
 	})
 	Context("executing SPDZWrapper", func() {
@@ -213,7 +231,7 @@ var _ = Describe("Spdz", func() {
 						PlayerID: 0,
 					},
 					Act: &Activation{
-						GameID: "abc",
+						GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 					},
 				},
 			}

@@ -54,9 +54,11 @@ ephemeral:
   spdz:
     prime:
     rInv:
-    macKey:
+    gfpMacKey:
+    gf2nMacKey:
     gf2nBitLength:
     gf2nStorageSize:
+    prepFolder: "Player-Data"
 
 networkController:
   image:

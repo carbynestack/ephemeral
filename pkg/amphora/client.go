@@ -19,7 +19,7 @@ import (
 	"github.com/asaskevich/govalidator"
 )
 
-// SecretShare is a secret shared value stored in Amphora.
+// SecretShare is a secret-shared value stored in Amphora.
 type SecretShare struct {
 	SecretID string `json:"secretId"`
 	Data     string `json:"data"`

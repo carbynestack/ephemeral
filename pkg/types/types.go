@@ -75,11 +75,13 @@ type SPDZEngineConfig struct {
 	RetryTimeout  string `json:"retryTimeout"`
 	Prime         string `json:"prime"`
 	RInv          string `json:"rInv"`
-	MacKey        string `json:"macKey"`
+	GfpMacKey     string `json:"gfpMacKey"`
+	Gf2nMacKey    string `json:"gf2nMacKey"`
 	Gf2nBitLength int32  `json:"gf2nBitLength"`
 	// Gf2nStorageSize represents the size in bytes for each gf2n element e.g. depending on the 'USE_GF2N_LONG' flag
 	// being set when compiling SPDZ where storage size is 16 for USE_GF2N_LONG=1, or 8 if set to 0
 	Gf2nStorageSize  int32         `json:"gf2nStorageSize"`
+	PrepFolder       string        `json:"prepFolder"`
 	AmphoraConfig    AmphoraConfig `json:"amphoraConfig"`
 	CastorConfig     CastorConfig  `json:"castorConfig"`
 	FrontendURL      string        `json:"frontendURL"`
@@ -116,9 +118,11 @@ type SPDZEngineTypedConfig struct {
 	RetryTimeout     time.Duration
 	Prime            big.Int
 	RInv             big.Int
-	MacKey           big.Int
+	GfpMacKey        big.Int
+	Gf2nMacKey       string
 	Gf2nBitLength    int32
 	Gf2nStorageSize  int32
+	PrepFolder       string
 	AmphoraClient    amphora.AbstractClient
 	CastorClient     castor.AbstractClient
 	TupleStock       int32

@@ -67,7 +67,7 @@ func generateEphemeralIntegrationTestsWithPlayerCount(playerCount int) {
 			go s.Start()
 			s.WaitUntilReady(5 * time.Second)
 			act := &Activation{
-				GameID: "0",
+				GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 			}
 			players := make([]*p.PlayerWithIO, playerCount)
 			for i := 0; i < playerCount; i++ {

@@ -29,7 +29,7 @@ var _ = Describe("Feeder", func() {
 		carrier = &FakeCarrier{}
 		act = &Activation{
 			AmphoraParams: []string{"a"},
-			GameID:        "abc",
+			GameID:        "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 			Output: OutputConfig{
 				Type: PlainText,
 			},
@@ -78,7 +78,7 @@ var _ = Describe("Feeder", func() {
 					Expect(err).NotTo(HaveOccurred())
 					var response Result
 					json.Unmarshal(res, &response)
-					Expect(response.Response[0]).To(Equal("abc"))
+					Expect(response.Response[0]).To(Equal("71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"))
 					Expect(carrier.isBulk).To(BeTrue())
 				})
 			})
@@ -129,7 +129,7 @@ var _ = Describe("Feeder", func() {
 					Expect(err).NotTo(HaveOccurred())
 					var response Result
 					json.Unmarshal(res, &response)
-					Expect(response.Response[0]).To(Equal("abc"))
+					Expect(response.Response[0]).To(Equal("71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"))
 					Expect(carrier.isBulk).To(BeTrue())
 				})
 			})

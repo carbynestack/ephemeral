@@ -6,29 +6,23 @@
 //
 package castor
 
+// TupleList is a collection of a specific type of tuples
 type TupleList struct {
-	TupleCls string  `json:"tupleCls"`
-	Field    Field   `json:"field"`
-	Tuples   []Tuple `json:"tuples"`
+	Tuples []Tuple `json:"tuples"`
 }
 
-type Field struct {
-	Type        string `json:"@type"`
-	Name        string `json:"name"`
-	ElementSize int64  `json:"elementSize"`
-}
-
+// Tuple describes the actual tuple and its shares
 type Tuple struct {
-	Type   string  `json:"@type"`
-	Field  Field   `json:"field"`
 	Shares []Share `json:"shares"`
 }
 
+// Share represents a single share of a tuple with its shared value and mac data
 type Share struct {
 	Value string `json:"value"`
 	Mac   string `json:"mac"`
 }
 
+// SPDZProtocol describes the protocol used for the MPC computation
 type SPDZProtocol struct {
 	Descriptor string
 	Shorthand  string
@@ -39,6 +33,11 @@ var (
 	SpdzGf2n = SPDZProtocol{"SPDZ gf2n_", "2"}
 )
 
+var SupportedSpdzProtocols = []SPDZProtocol{
+	SpdzGfp,
+	SpdzGf2n}
+
+// TupleType describes a type of Tuples provided by Castor
 type TupleType struct {
 	Name              string
 	PreprocessingName string

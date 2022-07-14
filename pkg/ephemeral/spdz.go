@@ -7,6 +7,7 @@
 package ephemeral
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -17,9 +18,12 @@ import (
 	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	. "github.com/carbynestack/ephemeral/pkg/utils"
+	"github.com/google/uuid"
 	"io/ioutil"
+	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,14 +31,15 @@ import (
 )
 
 const (
-	proxyAddress      = "localhost"
-	basePort          = int32(10000)
-	appName           = "mpc-program"
-	baseDir           = "/mp-spdz"
-	ipFile            = baseDir + "/ip-file"
-	timeout           = 20 * time.Second
-	tcpCheckerTimeout = 50 * time.Millisecond
-	defaultPath       = baseDir + "/Programs/Source/" + appName + ".mpc"
+	proxyAddress        = "localhost"
+	basePort            = int32(10000)
+	appName             = "mpc-program"
+	baseDir             = "/mp-spdz"
+	ipFile              = baseDir + "/ip-file"
+	timeout             = 20 * time.Second
+	tcpCheckerTimeout   = 50 * time.Millisecond
+	defaultPath         = baseDir + "/Programs/Source/" + appName + ".mpc"
+	defaultSchedulePath = baseDir + "/Programs/Schedules/" + appName + ".sch"
 )
 
 // MPCEngine is an interface for an MPC runtime that performs the computation.
@@ -126,30 +131,38 @@ func NewSPDZEngine(logger *zap.SugaredLogger, cmder Executor, config *SPDZEngine
 	feeder := NewAmphoraFeeder(logger, config)
 	checker := network.NewTCPChecker(c)
 	proxy := network.NewProxy(logger, config, checker)
+	playerDataPaths, err := preparePlayerData(config)
+	if err != nil {
+		panic(err)
+	}
 	return &SPDZEngine{logger: logger,
-		cmder:          cmder,
-		config:         config,
-		checker:        checker,
-		feeder:         feeder,
-		sourceCodePath: defaultPath,
-		proxy:          proxy,
-		baseDir:        baseDir,
-		ipFile:         ipFile,
+		cmder:           cmder,
+		config:          config,
+		checker:         checker,
+		feeder:          feeder,
+		playerDataPaths: playerDataPaths,
+		sourceCodePath:  defaultPath,
+		schedulePath:    defaultSchedulePath,
+		proxy:           proxy,
+		baseDir:         baseDir,
+		ipFile:          ipFile,
 	}
 }
 
 // SPDZEngine compiles, executes, provides IO operations for SPDZ based runtimes.
 type SPDZEngine struct {
-	logger         *zap.SugaredLogger
-	cmder          Executor
-	config         *SPDZEngineTypedConfig
-	doneCh         chan struct{}
-	checker        network.NetworkChecker
-	feeder         Feeder
-	sourceCodePath string
-	proxy          network.AbstractProxy
-	baseDir        string
-	ipFile         string
+	logger          *zap.SugaredLogger
+	cmder           Executor
+	config          *SPDZEngineTypedConfig
+	doneCh          chan struct{}
+	checker         network.NetworkChecker
+	feeder          Feeder
+	playerDataPaths map[castor.SPDZProtocol]string
+	sourceCodePath  string
+	schedulePath    string
+	proxy           network.AbstractProxy
+	baseDir         string
+	ipFile          string
 }
 
 // Activate starts a proxy, writes an IP file, start SPDZ execution, unpacks inputs parameters, sends them to the runtime and waits for the response.
@@ -183,10 +196,10 @@ func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
 		select {
 		case <-ctx.Context.Done():
 			s.logger.Debug("Closing the TCP socket connection - context cancelled")
-			s.feeder.Close()
+			_ = s.feeder.Close()
 		case <-time.After(s.config.RetryTimeout):
 			s.logger.Debug("Closing the TCP socket connection - retry timeout exceeded")
-			s.feeder.Close()
+			_ = s.feeder.Close()
 		}
 	}()
 	// Read the secret shares either from Amphora or from the http request.
@@ -200,7 +213,23 @@ func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
 	return nil, errors.New("no MPC parameters specified")
 }
 
-// Compile compiles a SPDZ application.
+func (s *SPDZEngine) getNumberOfThreads() (int, error) {
+	file, err := os.Open(defaultSchedulePath)
+	if err != nil {
+		msg := "error accessing the programs schedule"
+		return 0, fmt.Errorf("%s: %s", msg, err)
+	}
+	defer file.Close()
+	r := bufio.NewReader(file)
+	nThreads, err := r.ReadString('\n')
+	if err != nil {
+		msg := "reading number of threads"
+		return 0, fmt.Errorf("%s: %s", msg, err)
+	}
+	return strconv.Atoi(strings.TrimRight(nThreads, "\n"))
+}
+
+// Compile compiles a SPDZ application and returns the number of threads declared by the program.
 func (s *SPDZEngine) Compile(ctx *CtxConfig) error {
 	act := ctx.Act
 	path := s.sourceCodePath
@@ -229,6 +258,10 @@ func (s *SPDZEngine) getFeedPort() string {
 
 func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	s.logger.Debugw("Starting MPC", GameID, ctx.Act.GameID)
+	nThreads, err := s.getNumberOfThreads()
+	if err != nil {
+		ctx.ErrCh <- fmt.Errorf("failed to determine the number of threads: %v", err)
+	}
 	wg := new(sync.WaitGroup)
 	defer func() {
 		gracefully := make(chan struct{})
@@ -242,15 +275,23 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 			s.logger.Error("Tuple streamers have not terminated gracefully")
 		}
 	}()
+
 	var tupleStreamers = []TupleStreamer{}
+	gameUUID, err := uuid.Parse(ctx.Act.GameID)
+	if err != nil {
+		ctx.ErrCh <- fmt.Errorf("error parsing gameID: %v", err)
+		return
+	}
 	for _, tt := range castor.SupportedTupleTypes {
-		streamer, err := NewCastorTupleStreamer(s.logger, tt, s.config, ctx.Act.GameID)
-		if err != nil {
-			s.logger.Errorw("Error when initializing tuple streamer", GameID, ctx.Act.GameID, TupleType, tt, "Error", err)
-			ctx.ErrCh <- err
-			return
+		for thread := 0; thread < nThreads; thread++ {
+			streamer, err := NewCastorTupleStreamer(s.logger, tt, s.config, s.playerDataPaths[tt.SpdzProtocol], gameUUID, thread)
+			if err != nil {
+				s.logger.Errorw("Error when initializing tuple streamer", GameID, ctx.Act.GameID, TupleType, tt, "Error", err)
+				ctx.ErrCh <- err
+				return
+			}
+			tupleStreamers = append(tupleStreamers, streamer)
 		}
-		tupleStreamers = append(tupleStreamers, streamer)
 	}
 	terminate := make(chan struct{})
 	streamErrCh := make(chan error, len(castor.SupportedTupleTypes))
@@ -288,4 +329,56 @@ func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error 
 	data := []byte(addrs)
 	s.logger.Infow("Writing to IPFile: ", "path", path, "content", addrs, "proxy address", addr, "parties", parties)
 	return ioutil.WriteFile(path, data, 0644)
+}
+
+// preparePlayerData Returns the directories for the supported protocol's preprocessing data. It therefore creates
+// the required directories and writes the mac keys to the files expected by SPDZ.
+func preparePlayerData(conf *SPDZEngineTypedConfig) (map[castor.SPDZProtocol]string, error) {
+	playerDataDirs := make(map[castor.SPDZProtocol]string)
+	for _, p := range castor.SupportedSpdzProtocols {
+		path, err := createPlayerDataForProtocol(p, conf)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create preprocessing data directories: %v", err)
+		}
+		playerDataDirs[p] = path
+
+	}
+	return playerDataDirs, nil
+}
+
+func createPlayerDataForProtocol(p castor.SPDZProtocol, conf *SPDZEngineTypedConfig) (string, error) {
+	var playerDataDir, macKey string
+	switch p {
+	case castor.SpdzGfp:
+		playerDataDir = fmt.Sprintf("%s/%d-%s-%d/",
+			conf.PrepFolder, conf.PlayerCount, castor.SpdzGfp.Shorthand, conf.Prime.BitLen())
+		macKey = conf.GfpMacKey.String()
+	case castor.SpdzGf2n:
+		playerDataDir = fmt.Sprintf("%s/%d-%s-%d/",
+			conf.PrepFolder, conf.PlayerCount, castor.SpdzGf2n.Shorthand, conf.Gf2nBitLength)
+		macKey = conf.Gf2nMacKey
+	default:
+		panic("Unsupported SpdzProtocol " + p.Descriptor)
+	}
+	err := os.MkdirAll(playerDataDir, 0755)
+	if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("error creating directory path: %v", err)
+	}
+	macKeyFileName := fmt.Sprintf("Player-MAC-Keys-%s-P%d", p.Shorthand, conf.PlayerID)
+	err = writeMacKey(playerDataDir+macKeyFileName, conf.PlayerCount, macKey)
+	if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("failed to write mac key to file: %v", err)
+	}
+
+	return playerDataDir, nil
+}
+
+func writeMacKey(macKeyFilePath string, playerCount int32, macKey string) error {
+	file, err := os.OpenFile(macKeyFilePath, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed creating mac key file: %v", err)
+	}
+	defer file.Close()
+	_, err = file.WriteString(fmt.Sprintf("%d %s", playerCount, macKey))
+	return err
 }

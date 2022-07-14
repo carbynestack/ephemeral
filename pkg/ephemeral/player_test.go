@@ -42,7 +42,7 @@ var _ = Describe("Player", func() {
 			Players:  2,
 			Pod:      "pod",
 			IP:       "x.x.x.x",
-			GameID:   "123",
+			GameID:   "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 			Name:     id,
 		}
 		me = FakeSPDZEngine{}

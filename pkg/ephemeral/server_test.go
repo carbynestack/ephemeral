@@ -220,7 +220,7 @@ var _ = Describe("Server", func() {
 							req := requestWithContext("/?compile=true&other_param=abc", act)
 							conf := &CtxConfig{
 								Act: &Activation{
-									GameID: "abc",
+									GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 								},
 								Spdz: &SPDZEngineTypedConfig{},
 							}
@@ -263,7 +263,7 @@ var _ = Describe("Server", func() {
 				req, _ = http.NewRequest("POST", "/?compile=true", bytes.NewReader(body))
 				conf = &CtxConfig{
 					Act: &Activation{
-						GameID: "abc",
+						GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 					},
 					Context: context.Background(),
 					Spdz:    &SPDZEngineTypedConfig{},
@@ -334,7 +334,7 @@ var _ = Describe("Server", func() {
 			}
 			ctx = &CtxConfig{
 				Act: &Activation{
-					GameID: "123",
+					GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 				},
 				Context: context.TODO(),
 			}
@@ -397,7 +397,7 @@ var _ = Describe("Server", func() {
 						PlayerID: 0,
 					},
 					Act: &Activation{
-						GameID: "abc",
+						GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 					},
 				}
 				conf := &io.Config{
@@ -430,7 +430,7 @@ func requestWithContext(path string, act *Activation) *http.Request {
 	req, _ := http.NewRequest("POST", path, bytes.NewReader(body))
 	conf := &CtxConfig{
 		Act: &Activation{
-			GameID: "abc",
+			GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 		},
 		Spdz: &SPDZEngineTypedConfig{},
 	}
