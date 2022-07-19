@@ -16,8 +16,8 @@ import (
 	"golang.org/x/sys/unix"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -43,19 +43,20 @@ type PipeWriter interface {
 // NewTuplePipeWriter returns a new TuplePipeWriter with the given configuration. It will create a new pipe with the
 // given path. If a file with this path already exists, it will be deleted first.
 func NewTuplePipeWriter(l *zap.SugaredLogger, filePath string, writeDeadline time.Duration) (*TuplePipeWriter, error) {
+	logger := l.With("FilePath", filePath)
 	err := os.Remove(filePath)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("Error deleting existing Tuple file: %v\n", err)
 	}
 	err = unix.Mkfifo(filePath, 0666)
 	if err != nil {
-		l.Debugw("Error creating pipe", "FilePath", filePath, "Error", err)
+		logger.Debugw("Error creating pipe", "Error", err)
 		return nil, err
 	}
 	return &TuplePipeWriter{
 		tupleFilePath: filePath,
 		writeDeadline: writeDeadline,
-		logger:        l,
+		logger:        logger,
 	}, nil
 }
 
@@ -90,7 +91,7 @@ func (tpw *TuplePipeWriter) Open() error {
 	if err != nil {
 		return fmt.Errorf("Error opening file: %v\n", err)
 	}
-	tpw.logger.Debugw("Pipe writer connected", "filePath", tpw.tupleFilePath)
+	tpw.logger.Debugw("Pipe writer connected")
 	return nil
 }
 
@@ -120,24 +121,22 @@ func NewCastorTupleStreamer(l *zap.SugaredLogger, tt castor.TupleType, conf *SPD
 
 // NewCastorTupleStreamerWithWriterFactory returns a new instance of castor tuple streamer.
 func NewCastorTupleStreamerWithWriterFactory(l *zap.SugaredLogger, tt castor.TupleType, conf *SPDZEngineTypedConfig, playerDataDir string, gameID uuid.UUID, threadNr int, pipeWriterFactory PipeWriterFactory) (*CastorTupleStreamer, error) {
+	loggerWithContext := l.With(GameID, gameID, TupleType, tt, "ThreadNr", threadNr)
 	tupleFileName := GetTupleFileName(tt, conf, threadNr)
-	if !strings.HasSuffix(playerDataDir, "/") {
-		playerDataDir += "/"
-	}
-	filePath := playerDataDir + tupleFileName
-	pipeWriter, err := pipeWriterFactory(l, filePath, defaultWriteDeadline)
+	filePath := filepath.Join(playerDataDir, tupleFileName)
+	pipeWriter, err := pipeWriterFactory(loggerWithContext, filePath, defaultWriteDeadline)
 	if err != nil {
 		return nil, fmt.Errorf("error creating pipe writer: %v", err)
 	}
 	headerData := generateHeader(tt.SpdzProtocol, conf)
-	l.Debugw(fmt.Sprintf("Generated tuple file header %x", headerData), TupleType, tt, "Prime", conf.Prime.Text(10))
+	loggerWithContext.Debugw(fmt.Sprintf("Generated tuple file header %x", headerData))
 	return &CastorTupleStreamer{
-		logger:        l,
+		logger:        loggerWithContext,
 		pipeWriter:    pipeWriter,
 		tupleType:     tt,
 		stockSize:     conf.TupleStock,
 		castorClient:  conf.CastorClient,
-		baseRequestID: uuid.NewMD5(gameID, []byte(tt.Name)),
+		baseRequestID: uuid.NewMD5(gameID, []byte(tt.Name+strconv.Itoa(threadNr))),
 		headerData:    headerData,
 	}, nil
 }
@@ -171,7 +170,7 @@ func (ts *CastorTupleStreamer) StartStreamTuples(terminateCh chan struct{}, errC
 				discardedTupleBytes = len(ts.streamData)
 			}
 			if streamedTupleBytes > 0 || discardedTupleBytes > 0 {
-				ts.logger.Debugw("Terminate tuple streamer.", TupleType, ts.tupleType,
+				ts.logger.Debugw("Terminate tuple streamer.",
 					"Provided bytes", streamedTupleBytes, "Discarded bytes", discardedTupleBytes)
 			}
 			_ = ts.pipeWriter.Close()
@@ -197,7 +196,7 @@ func (ts *CastorTupleStreamer) StartStreamTuples(terminateCh chan struct{}, errC
 						// terminated and therefore won't cause the tuple streamer to an errant termination . In case
 						// the pipe was closed because of a computation error this will be reported by the MPC execution
 						// itself
-						ts.logger.Debugw("received pipe error for tuple stream", TupleType, ts.tupleType, "Error", err)
+						ts.logger.Debugw("received pipe error for tuple stream", "Error", err)
 						return
 					}
 					errCh <- err
@@ -217,7 +216,7 @@ func (ts *CastorTupleStreamer) writeDataToPipe() error {
 		if err != nil {
 			return err
 		}
-		ts.logger.Debugw("Fetched new tuples from Castor", TupleType, ts.tupleType, "RequestID", requestID)
+		ts.logger.Debugw("Fetched new tuples from Castor", "RequestID", requestID)
 		ts.streamData, err = ts.tupleListToByteArray(tupleList)
 	}
 	c, err := ts.pipeWriter.Write(ts.streamData)
@@ -229,7 +228,7 @@ func (ts *CastorTupleStreamer) writeDataToPipe() error {
 		if errors.Is(err, syscall.EPIPE) {
 			return err
 		} else {
-			ts.logger.Errorw(err.Error(), TupleType, ts.tupleType)
+			ts.logger.Errorw(err.Error())
 		}
 	}
 	ts.streamData = ts.streamData[c:]
@@ -264,15 +263,15 @@ func (ts *CastorTupleStreamer) tupleListToByteArray(tl *castor.TupleList) ([]byt
 func generateHeader(sp castor.SPDZProtocol, conf *SPDZEngineTypedConfig) []byte {
 	switch sp {
 	case castor.SpdzGfp:
-		return generateGfpHeader(castor.SpdzGfp.Descriptor, conf.Prime)
+		return generateGfpHeader(conf.Prime)
 	case castor.SpdzGf2n:
-		return generateGf2nHeader(castor.SpdzGf2n.Descriptor, conf.Gf2nBitLength)
+		return generateGf2nHeader(conf.Gf2nBitLength)
 	}
 	panic("Unsupported spdz protocol " + sp.Descriptor)
 }
 
-func generateGfpHeader(protocolDescriptor string, prime big.Int) []byte {
-	descriptor := []byte(protocolDescriptor)
+func generateGfpHeader(prime big.Int) []byte {
+	descriptor := []byte(castor.SpdzGfp.Descriptor)
 	primeBytes := prime.Bytes()
 	primeByteLength := len(primeBytes)
 	totalSizeInBytes := uint64(len(descriptor) + 1 + 4 + primeByteLength)
@@ -293,8 +292,8 @@ func generateGfpHeader(protocolDescriptor string, prime big.Int) []byte {
 	return result
 }
 
-func generateGf2nHeader(protocolDescriptor string, bitLength int32) []byte {
-	protocol := []byte(protocolDescriptor) // e.g. "SPDZ gf2n"
+func generateGf2nHeader(bitLength int32) []byte {
+	protocol := []byte(castor.SpdzGf2n.Descriptor) // e.g. "SPDZ gf2n"
 
 	var domain []byte
 	storageSize := make([]byte, 8)

@@ -9,6 +9,7 @@ package io
 import (
 	"errors"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 
@@ -67,6 +68,7 @@ var _ = Describe("Tuple Streamer", func() {
 		It("sets required parameters and returns a new instance", func() {
 			logger := zap.NewNop().Sugar()
 			tupleType := castor.BitGfp
+			threadNr := 1
 			var prime big.Int
 			prime.SetString("198766463529478683931867765928436695041", 10)
 			conf := &SPDZEngineTypedConfig{
@@ -81,13 +83,13 @@ var _ = Describe("Tuple Streamer", func() {
 					filePath: filePath,
 				}, nil
 			}
-			ts, _ := NewCastorTupleStreamerWithWriterFactory(logger, tupleType, conf, playerDataDir, gameID, 1, fakePipeWriterFactory)
+			ts, _ := NewCastorTupleStreamerWithWriterFactory(logger, tupleType, conf, playerDataDir, gameID, threadNr, fakePipeWriterFactory)
 			Expect(ts.logger).To(Equal(logger))
 			Expect(ts.pipeWriter.(*FakeConsumingPipeWriter).filePath).To(Equal("Player-Data/0-p-128/Bits-p-P0-T1"))
 			Expect(ts.tupleType).To(Equal(tupleType))
 			Expect(ts.stockSize).To(Equal(conf.TupleStock))
 			Expect(ts.castorClient).To(Equal(conf.CastorClient))
-			Expect(ts.baseRequestID).To(Equal(uuid.NewMD5(gameID, []byte(tupleType.Name))))
+			Expect(ts.baseRequestID).To(Equal(uuid.NewMD5(gameID, []byte(tupleType.Name+strconv.Itoa(threadNr)))))
 			Expect(ts.headerData).To(Equal(generateHeader(tupleType.SpdzProtocol, conf)))
 			Expect(ts.requestCycle).To(Equal(0))
 		})

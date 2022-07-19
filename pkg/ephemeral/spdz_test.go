@@ -198,7 +198,7 @@ var _ = Describe("Spdz", func() {
 			logger := zap.NewNop().Sugar()
 			cmder := &utils.Commander{}
 			config := &SPDZEngineTypedConfig{PrepFolder: prepFolder}
-			s := NewSPDZEngine(logger, cmder, config)
+			s, _ := NewSPDZEngine(logger, cmder, config)
 			Expect(s.baseDir).To(Equal(baseDir))
 			Expect(s.ipFile).To(Equal(ipFile))
 			gf2nMacFile := fmt.Sprintf("%s/%d-%s-%d/Player-MAC-Keys-%s-P%d",

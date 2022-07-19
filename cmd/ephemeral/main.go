@@ -60,7 +60,10 @@ func GetHandlerChain(conf *SPDZEngineConfig, logger *zap.SugaredLogger) (http.Ha
 	if err != nil {
 		return nil, err
 	}
-	spdzClient := NewSPDZEngine(logger, utils.NewCommander(), typedConfig)
+	spdzClient, err := NewSPDZEngine(logger, utils.NewCommander(), typedConfig)
+	if err != nil {
+		return nil, err
+	}
 	server := NewServer(spdzClient.Compile, spdzClient.Activate, logger, typedConfig)
 	activationHandler := http.HandlerFunc(server.ActivationHandler)
 	// Apply in Order:

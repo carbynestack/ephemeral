@@ -122,7 +122,7 @@ func (s *SPDZWrapper) getLocalPortForPlayer(id int32) string {
 }
 
 // NewSPDZEngine returns a new instance of SPDZ engine that knows how to compile and trigger an execution of SPDZ runtime.
-func NewSPDZEngine(logger *zap.SugaredLogger, cmder Executor, config *SPDZEngineTypedConfig) *SPDZEngine {
+func NewSPDZEngine(logger *zap.SugaredLogger, cmder Executor, config *SPDZEngineTypedConfig) (*SPDZEngine, error) {
 	c := &network.TCPCheckerConf{
 		DialTimeout:  tcpCheckerTimeout,
 		RetryTimeout: timeout,
@@ -133,7 +133,7 @@ func NewSPDZEngine(logger *zap.SugaredLogger, cmder Executor, config *SPDZEngine
 	proxy := network.NewProxy(logger, config, checker)
 	playerDataPaths, err := preparePlayerData(config)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	return &SPDZEngine{logger: logger,
 		cmder:           cmder,
@@ -146,7 +146,7 @@ func NewSPDZEngine(logger *zap.SugaredLogger, cmder Executor, config *SPDZEngine
 		proxy:           proxy,
 		baseDir:         baseDir,
 		ipFile:          ipFile,
-	}
+	}, nil
 }
 
 // SPDZEngine compiles, executes, provides IO operations for SPDZ based runtimes.
@@ -214,16 +214,16 @@ func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
 }
 
 func (s *SPDZEngine) getNumberOfThreads() (int, error) {
-	file, err := os.Open(defaultSchedulePath)
+	file, err := os.Open(s.schedulePath)
 	if err != nil {
-		msg := "error accessing the programs schedule"
+		msg := "error accessing the program's schedule"
 		return 0, fmt.Errorf("%s: %s", msg, err)
 	}
 	defer file.Close()
 	r := bufio.NewReader(file)
 	nThreads, err := r.ReadString('\n')
 	if err != nil {
-		msg := "reading number of threads"
+		msg := "error reading number of threads"
 		return 0, fmt.Errorf("%s: %s", msg, err)
 	}
 	return strconv.Atoi(strings.TrimRight(nThreads, "\n"))
@@ -361,12 +361,12 @@ func createPlayerDataForProtocol(p castor.SPDZProtocol, conf *SPDZEngineTypedCon
 		panic("Unsupported SpdzProtocol " + p.Descriptor)
 	}
 	err := os.MkdirAll(playerDataDir, 0755)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !os.IsExist(err) {
 		return "", fmt.Errorf("error creating directory path: %v", err)
 	}
 	macKeyFileName := fmt.Sprintf("Player-MAC-Keys-%s-P%d", p.Shorthand, conf.PlayerID)
 	err = writeMacKey(playerDataDir+macKeyFileName, conf.PlayerCount, macKey)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
 		return "", fmt.Errorf("failed to write mac key to file: %v", err)
 	}
 
@@ -374,7 +374,7 @@ func createPlayerDataForProtocol(p castor.SPDZProtocol, conf *SPDZEngineTypedCon
 }
 
 func writeMacKey(macKeyFilePath string, playerCount int32, macKey string) error {
-	file, err := os.OpenFile(macKeyFilePath, os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(macKeyFilePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed creating mac key file: %v", err)
 	}
