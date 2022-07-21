@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
+
 package io
 
 import (
@@ -26,6 +27,10 @@ import (
 	. "github.com/carbynestack/ephemeral/pkg/types"
 )
 
+// PipeWriterFactory is a factory method to create new PipeWriter.
+//
+// It accepts a logger, filepath of the pipe to write to and a deadline for write operations. It either returns a
+// PipeWriter or an error if creation failed.
 type PipeWriterFactory func(l *zap.SugaredLogger, filePath string, writeDeadline time.Duration) (PipeWriter, error)
 
 // DefaultPipeWriterFactory constructs a new PipeWriter instance
@@ -46,7 +51,7 @@ func NewTuplePipeWriter(l *zap.SugaredLogger, filePath string, writeDeadline tim
 	logger := l.With("FilePath", filePath)
 	err := os.Remove(filePath)
 	if err != nil && !os.IsNotExist(err) {
-		return nil, fmt.Errorf("Error deleting existing Tuple file: %v\n", err)
+		return nil, fmt.Errorf("error deleting existing Tuple file: %v", err)
 	}
 	err = unix.Mkfifo(filePath, 0666)
 	if err != nil {
@@ -89,7 +94,7 @@ func (tpw *TuplePipeWriter) Open() error {
 	var err error
 	tpw.tupleFile, err = os.OpenFile(tpw.tupleFilePath, os.O_WRONLY, os.ModeNamedPipe)
 	if err != nil {
-		return fmt.Errorf("Error opening file: %v\n", err)
+		return fmt.Errorf("error opening file: %v", err)
 	}
 	tpw.logger.Debugw("Pipe writer connected")
 	return nil
@@ -227,9 +232,8 @@ func (ts *CastorTupleStreamer) writeDataToPipe() error {
 		// in all other cases the tuple streamer will retry
 		if errors.Is(err, syscall.EPIPE) {
 			return err
-		} else {
-			ts.logger.Errorw(err.Error())
 		}
+		ts.logger.Errorw(err.Error())
 	}
 	ts.streamData = ts.streamData[c:]
 	ts.streamedBytes += c
@@ -262,16 +266,16 @@ func (ts *CastorTupleStreamer) tupleListToByteArray(tl *castor.TupleList) ([]byt
 // generateHeader returns the file header for the given protocol and spdz runtime configuration
 func generateHeader(sp castor.SPDZProtocol, conf *SPDZEngineTypedConfig) []byte {
 	switch sp {
-	case castor.SpdzGfp:
+	case castor.SPDZGfp:
 		return generateGfpHeader(conf.Prime)
-	case castor.SpdzGf2n:
+	case castor.SPDZGf2n:
 		return generateGf2nHeader(conf.Gf2nBitLength)
 	}
 	panic("Unsupported spdz protocol " + sp.Descriptor)
 }
 
 func generateGfpHeader(prime big.Int) []byte {
-	descriptor := []byte(castor.SpdzGfp.Descriptor)
+	descriptor := []byte(castor.SPDZGfp.Descriptor)
 	primeBytes := prime.Bytes()
 	primeByteLength := len(primeBytes)
 	totalSizeInBytes := uint64(len(descriptor) + 1 + 4 + primeByteLength)
@@ -293,7 +297,7 @@ func generateGfpHeader(prime big.Int) []byte {
 }
 
 func generateGf2nHeader(bitLength int32) []byte {
-	protocol := []byte(castor.SpdzGf2n.Descriptor) // e.g. "SPDZ gf2n"
+	protocol := []byte(castor.SPDZGf2n.Descriptor) // e.g. "SPDZ gf2n"
 
 	var domain []byte
 	storageSize := make([]byte, 8)

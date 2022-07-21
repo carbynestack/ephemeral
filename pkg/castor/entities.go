@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
+
 package castor
 
 // TupleList is a collection of a specific type of tuples
@@ -29,13 +30,16 @@ type SPDZProtocol struct {
 }
 
 var (
-	SpdzGfp  = SPDZProtocol{"SPDZ gfp", "p"}
-	SpdzGf2n = SPDZProtocol{"SPDZ gf2n_", "2"}
+	// SPDZGfp provides the SPDZProtocol protocol definition following the Modulo a prime domain
+	SPDZGfp = SPDZProtocol{"SPDZ gfp", "p"}
+	// SPDZGf2n provides the SPDZProtocol protocol definition following the GF(2^n) domain
+	SPDZGf2n = SPDZProtocol{"SPDZ gf2n_", "2"}
 )
 
-var SupportedSpdzProtocols = []SPDZProtocol{
-	SpdzGfp,
-	SpdzGf2n}
+// SupportedSPDZProtocols is a list of all SPDZProtocol supported by castor and ephemeral
+var SupportedSPDZProtocols = []SPDZProtocol{
+	SPDZGfp,
+	SPDZGf2n}
 
 // TupleType describes a type of Tuples provided by Castor
 type TupleType struct {
@@ -45,18 +49,29 @@ type TupleType struct {
 }
 
 var (
-	BitGfp                   = TupleType{"BIT_GFP", "Bits", SpdzGfp}
-	BitGf2n                  = TupleType{"BIT_GF2N", "Bits", SpdzGf2n}
-	InputMaskGfp             = TupleType{"INPUT_MASK_GFP", "Inputs", SpdzGfp}
-	InputMaskGf2n            = TupleType{"INPUT_MASK_GF2N", "Inputs", SpdzGf2n}
-	InverseTupleGfp          = TupleType{"INVERSE_TUPLE_GFP", "Inverses", SpdzGfp}
-	InverseTupleGf2n         = TupleType{"INVERSE_TUPLE_GF2N", "Inverses", SpdzGf2n}
-	SquareTupleGfp           = TupleType{"SQUARE_TUPLE_GFP", "Squares", SpdzGfp}
-	SquareTupleGf2n          = TupleType{"SQUARE_TUPLE_GF2N", "Squares", SpdzGf2n}
-	MultiplicationTripleGfp  = TupleType{"MULTIPLICATION_TRIPLE_GFP", "Triples", SpdzGfp}
-	MultiplicationTripleGf2n = TupleType{"MULTIPLICATION_TRIPLE_GF2N", "Triples", SpdzGf2n}
+	// BitGfp describes the Bits tuple type in the Mudulo a Prime domain
+	BitGfp = TupleType{"BIT_GFP", "Bits", SPDZGfp}
+	// BitGf2n describes the Bits tuple type in the GF(2^n) domain
+	BitGf2n = TupleType{"BIT_GF2N", "Bits", SPDZGf2n}
+	// InputMaskGfp describes the Inputs tuple type in the Mudulo a Prime domain
+	InputMaskGfp = TupleType{"INPUT_MASK_GFP", "Inputs", SPDZGfp}
+	// InputMaskGf2n describes the Inputs tuple type in the GF(2^n) domain
+	InputMaskGf2n = TupleType{"INPUT_MASK_GF2N", "Inputs", SPDZGf2n}
+	// InverseTupleGfp describes the Inverses tuple type in the Mudulo a Prime domain
+	InverseTupleGfp = TupleType{"INVERSE_TUPLE_GFP", "Inverses", SPDZGfp}
+	// InverseTupleGf2n describes the Inverses tuple type in the GF(2^n) domain
+	InverseTupleGf2n = TupleType{"INVERSE_TUPLE_GF2N", "Inverses", SPDZGf2n}
+	// SquareTupleGfp describes the Squares tuple type in the Mudulo a Prime domain
+	SquareTupleGfp = TupleType{"SQUARE_TUPLE_GFP", "Squares", SPDZGfp}
+	// SquareTupleGf2n describes the Squares tuple type in the GF(2^n) domain
+	SquareTupleGf2n = TupleType{"SQUARE_TUPLE_GF2N", "Squares", SPDZGf2n}
+	// MultiplicationTripleGfp describes the Triples tuple type in the Mudulo a Prime domain
+	MultiplicationTripleGfp = TupleType{"MULTIPLICATION_TRIPLE_GFP", "Triples", SPDZGfp}
+	// MultiplicationTripleGf2n describes the Triples tuple type in the GF(2^n) domain
+	MultiplicationTripleGf2n = TupleType{"MULTIPLICATION_TRIPLE_GF2N", "Triples", SPDZGf2n}
 )
 
+// SupportedTupleTypes is a list of all tuple types supported by the castor client
 var SupportedTupleTypes = []TupleType{
 	BitGfp,
 	BitGf2n,

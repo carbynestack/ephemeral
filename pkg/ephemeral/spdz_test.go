@@ -202,9 +202,9 @@ var _ = Describe("Spdz", func() {
 			Expect(s.baseDir).To(Equal(baseDir))
 			Expect(s.ipFile).To(Equal(ipFile))
 			gf2nMacFile := fmt.Sprintf("%s/%d-%s-%d/Player-MAC-Keys-%s-P%d",
-				config.PrepFolder, config.PlayerCount, castor.SpdzGf2n.Shorthand, config.Gf2nBitLength, castor.SpdzGf2n.Shorthand, config.PlayerID)
+				config.PrepFolder, config.PlayerCount, castor.SPDZGf2n.Shorthand, config.Gf2nBitLength, castor.SPDZGf2n.Shorthand, config.PlayerID)
 			gfpMacFile := fmt.Sprintf("%s/%d-%s-%d/Player-MAC-Keys-%s-P%d",
-				config.PrepFolder, config.PlayerCount, castor.SpdzGfp.Shorthand, config.Prime.BitLen(), castor.SpdzGfp.Shorthand, config.PlayerID)
+				config.PrepFolder, config.PlayerCount, castor.SPDZGfp.Shorthand, config.Prime.BitLen(), castor.SPDZGfp.Shorthand, config.PlayerID)
 			Expect(gf2nMacFile).To(BeAnExistingFile())
 			Expect(gfpMacFile).To(BeAnExistingFile())
 		})

@@ -335,7 +335,7 @@ func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error 
 // the required directories and writes the mac keys to the files expected by SPDZ.
 func preparePlayerData(conf *SPDZEngineTypedConfig) (map[castor.SPDZProtocol]string, error) {
 	playerDataDirs := make(map[castor.SPDZProtocol]string)
-	for _, p := range castor.SupportedSpdzProtocols {
+	for _, p := range castor.SupportedSPDZProtocols {
 		path, err := createPlayerDataForProtocol(p, conf)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create preprocessing data directories: %v", err)
@@ -349,13 +349,13 @@ func preparePlayerData(conf *SPDZEngineTypedConfig) (map[castor.SPDZProtocol]str
 func createPlayerDataForProtocol(p castor.SPDZProtocol, conf *SPDZEngineTypedConfig) (string, error) {
 	var playerDataDir, macKey string
 	switch p {
-	case castor.SpdzGfp:
+	case castor.SPDZGfp:
 		playerDataDir = fmt.Sprintf("%s/%d-%s-%d/",
-			conf.PrepFolder, conf.PlayerCount, castor.SpdzGfp.Shorthand, conf.Prime.BitLen())
+			conf.PrepFolder, conf.PlayerCount, castor.SPDZGfp.Shorthand, conf.Prime.BitLen())
 		macKey = conf.GfpMacKey.String()
-	case castor.SpdzGf2n:
+	case castor.SPDZGf2n:
 		playerDataDir = fmt.Sprintf("%s/%d-%s-%d/",
-			conf.PrepFolder, conf.PlayerCount, castor.SpdzGf2n.Shorthand, conf.Gf2nBitLength)
+			conf.PrepFolder, conf.PlayerCount, castor.SPDZGf2n.Shorthand, conf.Gf2nBitLength)
 		macKey = conf.Gf2nMacKey
 	default:
 		panic("Unsupported SpdzProtocol " + p.Descriptor)

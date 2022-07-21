@@ -4,10 +4,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
+
 package castor_test
 
 import (
 	"encoding/json"
+	. "github.com/carbynestack/ephemeral/pkg/utils"
 	"github.com/google/uuid"
 	"net/http"
 	"net/url"
@@ -24,19 +26,19 @@ var _ = Describe("Castor", func() {
 	Context("passing an URL to constructor", func() {
 		Context("when url is invalid", func() {
 			It("responds with error", func() {
-				invalidUrl := url.URL{Host: "host:8080", Scheme: "invalidScheme"}
-				_, err := NewCastorClient(invalidUrl)
+				invalidURL := url.URL{Host: "host:8080", Scheme: "invalidScheme"}
+				_, err := NewCastorClient(invalidURL)
 				Expect(err).To(HaveOccurred())
 			})
 		})
 		Context("when url is valid", func() {
 			It("returns a new client", func() {
-				validUrl := url.URL{Host: "host:8080", Scheme: "http"}
-				client, err := NewCastorClient(validUrl)
+				validURL := url.URL{Host: "host:8080", Scheme: "http"}
+				client, err := NewCastorClient(validURL)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(client).NotTo(BeNil())
-				Expect(client.HttpClient).NotTo(BeNil())
-				Expect(client.Url).To(Equal(validUrl))
+				Expect(client.HTTPClient).NotTo(BeNil())
+				Expect(client.URL).To(Equal(validURL))
 			})
 		})
 	})
@@ -45,7 +47,7 @@ var _ = Describe("Castor", func() {
 		var (
 			tupleList *TupleList
 			jsn       []byte
-			myUrl     url.URL
+			myURL     url.URL
 		)
 		BeforeEach(func() {
 			var shares []Share
@@ -54,14 +56,14 @@ var _ = Describe("Castor", func() {
 			tuples = append(tuples, Tuple{Shares: shares})
 			tupleList = &TupleList{Tuples: tuples}
 			jsn, _ = json.Marshal(tupleList)
-			myUrl = url.URL{Host: "host:8080", Scheme: "http"}
+			myURL = url.URL{Host: "host:8080", Scheme: "http"}
 		})
 		Context("when the path is correct", func() {
 			It("returns tuples", func() {
-				mockedRT := MockedRoundTripper{ExpectedPath: "/intra-vcp/tuples", ReturnJson: jsn}
+				mockedRT := MockedRoundTripper{ExpectedPath: "/intra-vcp/tuples", ReturnJSON: jsn, ExpectedResponseCode: http.StatusOK}
 				httpClient := &http.Client{Transport: &mockedRT}
 
-				client := Client{Url: myUrl, HttpClient: httpClient}
+				client := Client{URL: myURL, HTTPClient: httpClient}
 				tuples, err := client.GetTuples(0, BitGfp, uuid.MustParse("acc23dc8-7855-4a2f-bc89-494ba30a74d2"))
 
 				Expect(tuples).To(Equal(tupleList))
@@ -70,13 +72,13 @@ var _ = Describe("Castor", func() {
 		})
 		Context("when castor returns a non-200 HTTP response code", func() {
 			It("returns an error", func() {
-				mockedRT := MockedRoundTripper{ExpectedPath: "/wrongpath", ReturnJson: jsn}
+				mockedRT := MockedRoundTripper{ExpectedPath: "/wrongpath", ReturnJSON: jsn, ExpectedResponseCode: http.StatusOK}
 				httpClient := &http.Client{Transport: &mockedRT}
 
-				client := Client{Url: myUrl, HttpClient: httpClient}
+				client := Client{URL: myURL, HTTPClient: httpClient}
 				_, err := client.GetTuples(0, BitGfp, uuid.MustParse("acc23dc8-7855-4a2f-bc89-494ba30a74d2"))
 
-				Expect(checkHttpError(err.Error(), "getting tuples failed")).To(BeTrue())
+				Expect(checkHTTPError(err.Error(), "getting tuples failed")).To(BeTrue())
 			})
 		})
 		Context("when request to castor fails", func() {
@@ -84,22 +86,22 @@ var _ = Describe("Castor", func() {
 				rt := MockedBrokenRoundTripper{}
 				httpClient := &http.Client{Transport: &rt}
 
-				client := Client{Url: myUrl, HttpClient: httpClient}
+				client := Client{URL: myURL, HTTPClient: httpClient}
 				_, err := client.GetTuples(0, BitGfp, uuid.MustParse("acc23dc8-7855-4a2f-bc89-494ba30a74d2"))
 
-				Expect(checkHttpError(err.Error(), "communication with castor failed")).To(BeTrue())
+				Expect(checkHTTPError(err.Error(), "communication with castor failed")).To(BeTrue())
 			})
 		})
 		Context("when castor returns invalid json body", func() {
 			It("returns an error", func() {
 				jsn = []byte("invalid JSON String")
-				mockedRT := MockedRoundTripper{ExpectedPath: "/intra-vcp/tuples", ReturnJson: jsn}
+				mockedRT := MockedRoundTripper{ExpectedPath: "/intra-vcp/tuples", ReturnJSON: jsn, ExpectedResponseCode: http.StatusOK}
 				httpClient := &http.Client{Transport: &mockedRT}
 
-				client := Client{Url: myUrl, HttpClient: httpClient}
+				client := Client{URL: myURL, HTTPClient: httpClient}
 				_, err := client.GetTuples(0, BitGfp, uuid.MustParse("acc23dc8-7855-4a2f-bc89-494ba30a74d2"))
 
-				Expect(checkHttpError(err.Error(), "castor has returned an invalid response body")).To(BeTrue())
+				Expect(checkHTTPError(err.Error(), "castor has returned an invalid response body")).To(BeTrue())
 			})
 		})
 
@@ -107,6 +109,6 @@ var _ = Describe("Castor", func() {
 
 })
 
-func checkHttpError(actual, expected string) bool {
+func checkHTTPError(actual, expected string) bool {
 	return strings.Contains(actual, expected)
 }

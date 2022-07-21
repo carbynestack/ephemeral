@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
+
 package io
 
 import (
@@ -102,7 +103,7 @@ var _ = Describe("Tuple Streamer", func() {
 				var prime big.Int
 				prime.SetString("198766463529478683931867765928436695041", 10)
 				config := SPDZEngineTypedConfig{Prime: prime}
-				Expect(generateHeader(castor.SpdzGfp, &config)).To(Equal(expectedHeader))
+				Expect(generateHeader(castor.SPDZGfp, &config)).To(Equal(expectedHeader))
 			})
 		})
 		Context("when protocol is SPD gf2n", func() {
@@ -111,7 +112,7 @@ var _ = Describe("Tuple Streamer", func() {
 				gf2nBitLength := int32(40)
 				gf2nStorageSize := int32(8)
 				config := SPDZEngineTypedConfig{Gf2nBitLength: gf2nBitLength, Gf2nStorageSize: gf2nStorageSize}
-				Expect(generateHeader(castor.SpdzGf2n, &config)).To(Equal(expectedHeader))
+				Expect(generateHeader(castor.SPDZGf2n, &config)).To(Equal(expectedHeader))
 			})
 		})
 	})
