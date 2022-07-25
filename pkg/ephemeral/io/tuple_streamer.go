@@ -12,9 +12,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/carbynestack/ephemeral/pkg/utils"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"golang.org/x/sys/unix"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -49,11 +49,11 @@ type PipeWriter interface {
 // given path. If a file with this path already exists, it will be deleted first.
 func NewTuplePipeWriter(l *zap.SugaredLogger, filePath string, writeDeadline time.Duration) (*TuplePipeWriter, error) {
 	logger := l.With("FilePath", filePath)
-	err := os.Remove(filePath)
+	err := utils.Fio.Delete(filePath)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("error deleting existing Tuple file: %v", err)
 	}
-	err = unix.Mkfifo(filePath, 0666)
+	err = utils.Fio.CreatePipe(filePath)
 	if err != nil {
 		logger.Debugw("Error creating pipe", "Error", err)
 		return nil, err
@@ -68,7 +68,7 @@ func NewTuplePipeWriter(l *zap.SugaredLogger, filePath string, writeDeadline tim
 // TuplePipeWriter implements PipeWriter
 type TuplePipeWriter struct {
 	tupleFilePath string
-	tupleFile     *os.File
+	tupleFile     utils.File
 	writeDeadline time.Duration
 	logger        *zap.SugaredLogger
 }
@@ -92,7 +92,7 @@ func (tpw *TuplePipeWriter) Write(data []byte) (int, error) {
 // actually required for the current computation.
 func (tpw *TuplePipeWriter) Open() error {
 	var err error
-	tpw.tupleFile, err = os.OpenFile(tpw.tupleFilePath, os.O_WRONLY, os.ModeNamedPipe)
+	tpw.tupleFile, err = utils.Fio.OpenWritePipe(tpw.tupleFilePath)
 	if err != nil {
 		return fmt.Errorf("error opening file: %v", err)
 	}
@@ -100,7 +100,7 @@ func (tpw *TuplePipeWriter) Open() error {
 	return nil
 }
 
-// Close calls os.File.Close() on the tuple file pipe
+// Close calls File.Close() on the tuple file pipe
 func (tpw *TuplePipeWriter) Close() error {
 	return tpw.tupleFile.Close()
 }
@@ -133,7 +133,10 @@ func NewCastorTupleStreamerWithWriterFactory(l *zap.SugaredLogger, tt castor.Tup
 	if err != nil {
 		return nil, fmt.Errorf("error creating pipe writer: %v", err)
 	}
-	headerData := generateHeader(tt.SpdzProtocol, conf)
+	headerData, err := generateHeader(tt.SpdzProtocol, conf)
+	if err != nil {
+		return nil, fmt.Errorf("error creating header: %v", err)
+	}
 	loggerWithContext.Debugw(fmt.Sprintf("Generated tuple file header %x", headerData))
 	return &CastorTupleStreamer{
 		logger:        loggerWithContext,
@@ -223,6 +226,9 @@ func (ts *CastorTupleStreamer) writeDataToPipe() error {
 		}
 		ts.logger.Debugw("Fetched new tuples from Castor", "RequestID", requestID)
 		ts.streamData, err = ts.tupleListToByteArray(tupleList)
+		if err != nil {
+			return fmt.Errorf("error parsing received tuple list: %v", err)
+		}
 	}
 	c, err := ts.pipeWriter.Write(ts.streamData)
 	if err != nil {
@@ -264,14 +270,14 @@ func (ts *CastorTupleStreamer) tupleListToByteArray(tl *castor.TupleList) ([]byt
 }
 
 // generateHeader returns the file header for the given protocol and spdz runtime configuration
-func generateHeader(sp castor.SPDZProtocol, conf *SPDZEngineTypedConfig) []byte {
+func generateHeader(sp castor.SPDZProtocol, conf *SPDZEngineTypedConfig) ([]byte, error) {
 	switch sp {
 	case castor.SPDZGfp:
-		return generateGfpHeader(conf.Prime)
+		return generateGfpHeader(conf.Prime), nil
 	case castor.SPDZGf2n:
-		return generateGf2nHeader(conf.Gf2nBitLength)
+		return generateGf2nHeader(conf.Gf2nBitLength), nil
 	}
-	panic("Unsupported spdz protocol " + sp.Descriptor)
+	return nil, errors.New("unsupported spdz protocol " + sp.Descriptor)
 }
 
 func generateGfpHeader(prime big.Int) []byte {

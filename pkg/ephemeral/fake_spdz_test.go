@@ -11,7 +11,6 @@ import (
 	"errors"
 	"github.com/carbynestack/ephemeral/pkg/discovery/fsm"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
-
 	. "github.com/carbynestack/ephemeral/pkg/types"
 
 	mb "github.com/vardius/message-bus"
@@ -103,6 +102,16 @@ type BrokenFakeExecutor struct {
 
 func (f *BrokenFakeExecutor) CallCMD(ctx context.Context, cmd []string, dir string) ([]byte, []byte, error) {
 	return []byte{}, []byte{}, errors.New("some error")
+}
+
+type CallbackFakeExecutor struct {
+	fts      *FakeTupleStreamer
+	callback func(fts *FakeTupleStreamer)
+}
+
+func (cfe *CallbackFakeExecutor) CallCMD(ctx context.Context, cmd []string, dir string) ([]byte, []byte, error) {
+	cfe.callback(cfe.fts)
+	return []byte{}, []byte{}, nil
 }
 
 type FakeProxy struct {

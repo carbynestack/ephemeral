@@ -12,11 +12,15 @@ import (
 	"fmt"
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
+	"github.com/carbynestack/ephemeral/pkg/ephemeral/io"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	"github.com/carbynestack/ephemeral/pkg/utils"
+	"github.com/google/uuid"
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"strconv"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -191,6 +195,163 @@ var _ = Describe("Spdz", func() {
 			})
 		})
 	})
+
+	Context("when executing MPC computation", func() {
+		var (
+			oldFio    utils.FileIO
+			mockedFio *utils.MockedFileIO
+			errCh     chan error
+			s         *SPDZEngine
+			act       *Activation
+			ctx       *CtxConfig
+		)
+		BeforeEach(func() {
+			oldFio = utils.Fio
+			mockedFio = &utils.MockedFileIO{}
+			utils.Fio = mockedFio
+			errCh = make(chan error, 1)
+			s = &SPDZEngine{
+				logger:  zap.NewNop().Sugar(),
+				baseDir: "/tmp",
+				config: &SPDZEngineTypedConfig{
+					PlayerID: int32(0),
+				},
+				playerDataPaths: map[castor.SPDZProtocol]string{castor.SPDZGf2n: "gf2n", castor.SPDZGfp: "gfp"},
+			}
+			act = &Activation{}
+			ctx = &CtxConfig{
+				Act:     act,
+				Context: context.TODO(),
+				Spdz: &SPDZEngineTypedConfig{
+					PlayerCount: 2,
+				},
+				ErrCh: errCh,
+			}
+		})
+		AfterEach(func() {
+			utils.Fio = oldFio
+		})
+		Context("when getNumberOfThreads fails", func() {
+			Context("with schedule file cannot be opened", func() {
+				It("return error", func() {
+					expectedError := fmt.Errorf("expected error")
+					mockedFio.OpenReadResponse = utils.OpenReadResponse{File: nil, Error: expectedError}
+					s.startMPC(ctx)
+					err := <-errCh
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(And(
+						HavePrefix("failed to determine the number of threads:"),
+						HaveSuffix("error accessing the program's schedule: %v", expectedError)))
+				})
+			})
+			Context("with line cannot be read", func() {
+				It("return error", func() {
+					scheduleFile := &utils.SimpleFileMock{}
+					expectedError := fmt.Errorf("expected error")
+					mockedFio.OpenReadResponse = utils.OpenReadResponse{File: scheduleFile, Error: nil}
+					mockedFio.ReadLineResponse = utils.ReadLineResponse{Line: "", Error: expectedError}
+					s.startMPC(ctx)
+					err := <-errCh
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(And(
+						HavePrefix("failed to determine the number of threads:"),
+						HaveSuffix("error reading number of threads: %v", expectedError)))
+				})
+			})
+		})
+		Context("when multiple threads defined", func() {
+			var scheduleFile utils.File
+			numberOfThreads := 2
+			BeforeEach(func() {
+				scheduleFile = &utils.SimpleFileMock{}
+				mockedFio.OpenReadResponse = utils.OpenReadResponse{File: scheduleFile, Error: nil}
+				mockedFio.ReadLineResponse = utils.ReadLineResponse{Line: strconv.Itoa(numberOfThreads), Error: nil}
+			})
+			Context("when invalid gameID defined", func() {
+				It("return error", func() {
+					invalidGameID := "invalidUUID"
+					ctx.Act.GameID = invalidGameID
+					s.startMPC(ctx)
+					err := <-errCh
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(Equal(fmt.Errorf("error parsing gameID: invalid UUID length: %d", len(invalidGameID))))
+				})
+			})
+			Context("when gameId defined", func() {
+				gameID, _ := uuid.NewUUID()
+				BeforeEach(func() {
+					ctx.Act.GameID = gameID.String()
+				})
+				Context("when tuple streamers cannot be created", func() {
+					It("return error", func() {
+						s.streamerFactory = func(*zap.SugaredLogger, castor.TupleType, *SPDZEngineTypedConfig, string, uuid.UUID, int) (io.TupleStreamer, error) {
+							return nil, fmt.Errorf("expected error")
+						}
+						s.startMPC(ctx)
+						err := <-errCh
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(Equal(fmt.Errorf("expected error")))
+					})
+				})
+				Context("with tuple streamer started successfully", func() {
+					Context("when SPDZ process fails", func() {
+						BeforeEach(func() {
+							s.streamerFactory = func(*zap.SugaredLogger, castor.TupleType, *SPDZEngineTypedConfig, string, uuid.UUID, int) (io.TupleStreamer, error) {
+								return &FakeTupleStreamer{}, nil
+							}
+							s.cmder = &BrokenFakeExecutor{}
+						})
+						It("return error", func() {
+							s.startMPC(ctx)
+							err := <-errCh
+							Expect(err).To(HaveOccurred())
+							Expect(err).To(Equal(fmt.Errorf("error while executing the user code: some error")))
+						})
+					})
+					Context("when one tuple streamer emits error", func() {
+						expectedError := fmt.Errorf("expected error")
+						var cfe *CallbackFakeExecutor
+						BeforeEach(func() {
+							cfe = &CallbackFakeExecutor{
+								callback: func(fts *FakeTupleStreamer) {
+									fts.errCh <- expectedError
+									select {
+									case <-fts.terminateChan:
+									case <-time.After(10 * time.Second):
+										Fail("terminate timed out unexpectedly")
+									}
+								}}
+							s.cmder = cfe
+							s.streamerFactory = func(*zap.SugaredLogger, castor.TupleType, *SPDZEngineTypedConfig, string, uuid.UUID, int) (io.TupleStreamer, error) {
+								fts := &FakeTupleStreamer{}
+								cfe.fts = fts
+								return fts, nil
+							}
+						})
+						It("return error", func() {
+							go func() {
+								s.startMPC(ctx)
+							}()
+							var err error
+							select {
+							case err = <-errCh:
+							case <-time.After(5 * time.Second):
+								Fail("test timed out")
+							}
+							Expect(err).To(HaveOccurred())
+							Expect(err).To(Equal(fmt.Errorf("error while streaming tuples: %v", expectedError)))
+							select {
+							case <-cfe.fts.terminateChan:
+							case <-time.After(5 * time.Second):
+								Fail("terminate not received")
+							}
+						})
+					})
+				})
+			})
+		})
+	})
+
 	Context("when creating a new instance of SPDZEngine", func() {
 		It("sets the required parameters", func() {
 			prepFolder, _ := ioutil.TempDir("", "ephemeral_")
@@ -293,3 +454,16 @@ var _ = Describe("Spdz", func() {
 		})
 	})
 })
+
+type FakeTupleStreamer struct {
+	terminateChan chan struct{}
+	errCh         chan error
+	wg            *sync.WaitGroup
+}
+
+func (fts *FakeTupleStreamer) StartStreamTuples(terminateCh chan struct{}, errCh chan error, wg *sync.WaitGroup) {
+	wg.Done()
+	fts.terminateChan = terminateCh
+	fts.errCh = errCh
+	fts.wg = wg
+}

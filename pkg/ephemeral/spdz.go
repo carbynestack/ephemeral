@@ -7,7 +7,6 @@
 package ephemeral
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -23,7 +22,6 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -121,6 +119,18 @@ func (s *SPDZWrapper) getLocalPortForPlayer(id int32) string {
 	return strconv.Itoa(int(d.BasePort + id))
 }
 
+// TupleStreamerFactory is a factory method to create new io.TupleStreamer.
+//
+// It accepts a logger, the type of tuples it provides, the spdz config, path to the player data base directory, the
+// game ID, as well as the thread it serves. It either returns a pointer to the new TupleStreamer or an error if
+// creation failed.
+type TupleStreamerFactory func(l *zap.SugaredLogger, tt castor.TupleType, conf *SPDZEngineTypedConfig, playerDataDir string, gameID uuid.UUID, threadNr int) (TupleStreamer, error)
+
+// DefaultCastorTupleStreamerFactory default implementation of TupleStreamerFactory creating new io.CastorTupleStreamer
+func DefaultCastorTupleStreamerFactory(l *zap.SugaredLogger, tt castor.TupleType, conf *SPDZEngineTypedConfig, playerDataDir string, gameID uuid.UUID, threadNr int) (TupleStreamer, error) {
+	return NewCastorTupleStreamer(l, tt, conf, playerDataDir, gameID, threadNr)
+}
+
 // NewSPDZEngine returns a new instance of SPDZ engine that knows how to compile and trigger an execution of SPDZ runtime.
 func NewSPDZEngine(logger *zap.SugaredLogger, cmder Executor, config *SPDZEngineTypedConfig) (*SPDZEngine, error) {
 	c := &network.TCPCheckerConf{
@@ -146,6 +156,7 @@ func NewSPDZEngine(logger *zap.SugaredLogger, cmder Executor, config *SPDZEngine
 		proxy:           proxy,
 		baseDir:         baseDir,
 		ipFile:          ipFile,
+		streamerFactory: DefaultCastorTupleStreamerFactory,
 	}, nil
 }
 
@@ -163,6 +174,7 @@ type SPDZEngine struct {
 	proxy           network.AbstractProxy
 	baseDir         string
 	ipFile          string
+	streamerFactory TupleStreamerFactory
 }
 
 // Activate starts a proxy, writes an IP file, start SPDZ execution, unpacks inputs parameters, sends them to the runtime and waits for the response.
@@ -214,19 +226,18 @@ func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
 }
 
 func (s *SPDZEngine) getNumberOfThreads() (int, error) {
-	file, err := os.Open(s.schedulePath)
+	file, err := Fio.OpenRead(s.schedulePath)
 	if err != nil {
 		msg := "error accessing the program's schedule"
 		return 0, fmt.Errorf("%s: %s", msg, err)
 	}
 	defer file.Close()
-	r := bufio.NewReader(file)
-	nThreads, err := r.ReadString('\n')
+	nThreads, err := Fio.ReadLine(file)
 	if err != nil {
 		msg := "error reading number of threads"
 		return 0, fmt.Errorf("%s: %s", msg, err)
 	}
-	return strconv.Atoi(strings.TrimRight(nThreads, "\n"))
+	return strconv.Atoi(nThreads)
 }
 
 // Compile compiles a SPDZ application and returns the number of threads declared by the program.
@@ -261,6 +272,7 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	nThreads, err := s.getNumberOfThreads()
 	if err != nil {
 		ctx.ErrCh <- fmt.Errorf("failed to determine the number of threads: %v", err)
+		return
 	}
 	wg := new(sync.WaitGroup)
 	defer func() {
@@ -284,7 +296,7 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	}
 	for _, tt := range castor.SupportedTupleTypes {
 		for thread := 0; thread < nThreads; thread++ {
-			streamer, err := NewCastorTupleStreamer(s.logger, tt, s.config, s.playerDataPaths[tt.SpdzProtocol], gameUUID, thread)
+			streamer, err := s.streamerFactory(s.logger, tt, s.config, s.playerDataPaths[tt.SpdzProtocol], gameUUID, thread)
 			if err != nil {
 				s.logger.Errorw("Error when initializing tuple streamer", GameID, ctx.Act.GameID, TupleType, tt, "Error", err)
 				ctx.ErrCh <- err
@@ -293,11 +305,12 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 			tupleStreamers = append(tupleStreamers, streamer)
 		}
 	}
-	terminate := make(chan struct{})
+	computationFinished := make(chan struct{})
+	terminateStreams := make(chan struct{})
 	streamErrCh := make(chan error, len(castor.SupportedTupleTypes))
 	for _, s := range tupleStreamers {
 		wg.Add(1)
-		s.StartStreamTuples(terminate, streamErrCh, wg)
+		s.StartStreamTuples(terminateStreams, streamErrCh, wg)
 	}
 	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s --file-prep-per-thread", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
 	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID, "command", command)
@@ -310,15 +323,16 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 		} else {
 			s.logger.Debugw("Computation finished", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout))
 		}
-		close(terminate)
+		close(computationFinished)
 	}()
 	select {
-	case <-terminate:
+	case <-computationFinished:
 	case err := <-streamErrCh:
-		close(terminate)
-		s.logger.Error(fmt.Sprintf("Error while streaming tuples: %v", err))
-		ctx.ErrCh <- err
+		error := fmt.Errorf("error while streaming tuples: %v", err)
+		s.logger.Error(error)
+		ctx.ErrCh <- error
 	}
+	close(terminateStreams)
 }
 
 func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error {
@@ -360,7 +374,7 @@ func createPlayerDataForProtocol(p castor.SPDZProtocol, conf *SPDZEngineTypedCon
 	default:
 		panic("Unsupported SpdzProtocol " + p.Descriptor)
 	}
-	err := os.MkdirAll(playerDataDir, 0755)
+	err := Fio.CreatePath(playerDataDir)
 	if err != nil && !os.IsExist(err) {
 		return "", fmt.Errorf("error creating directory path: %v", err)
 	}
@@ -374,7 +388,7 @@ func createPlayerDataForProtocol(p castor.SPDZProtocol, conf *SPDZEngineTypedCon
 }
 
 func writeMacKey(macKeyFilePath string, playerCount int32, macKey string) error {
-	file, err := os.OpenFile(macKeyFilePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	file, err := Fio.OpenWriteOrCreate(macKeyFilePath)
 	if err != nil {
 		return fmt.Errorf("failed creating mac key file: %v", err)
 	}

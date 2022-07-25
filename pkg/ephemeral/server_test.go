@@ -296,7 +296,7 @@ var _ = Describe("Server", func() {
 			Context("when execution finishes with error", func() {
 				Context("when ephemeral error happens", func() {
 					It("responds with a 500", func() {
-						errCh <- errors.New("some error")
+						s.errCh <- errors.New("some error")
 						s.ActivationHandler(rr, req)
 						code := rr.Code
 						respBody := rr.Body.String()
