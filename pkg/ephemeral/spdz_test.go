@@ -366,8 +366,11 @@ var _ = Describe("Spdz", func() {
 				config.PrepFolder, config.PlayerCount, castor.SPDZGf2n.Shorthand, config.Gf2nBitLength, castor.SPDZGf2n.Shorthand, config.PlayerID)
 			gfpMacFile := fmt.Sprintf("%s/%d-%s-%d/Player-MAC-Keys-%s-P%d",
 				config.PrepFolder, config.PlayerCount, castor.SPDZGfp.Shorthand, config.Prime.BitLen(), castor.SPDZGfp.Shorthand, config.PlayerID)
+			gfpParamsFile := fmt.Sprintf("%s/%d-%s-%d/Params-Data",
+				config.PrepFolder, config.PlayerCount, castor.SPDZGfp.Shorthand, config.Prime.BitLen())
 			Expect(gf2nMacFile).To(BeAnExistingFile())
 			Expect(gfpMacFile).To(BeAnExistingFile())
+			Expect(gfpParamsFile).To(BeAnExistingFile())
 		})
 	})
 	Context("executing SPDZWrapper", func() {

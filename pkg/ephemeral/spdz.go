@@ -19,7 +19,9 @@ import (
 	. "github.com/carbynestack/ephemeral/pkg/utils"
 	"github.com/google/uuid"
 	"io/ioutil"
+	"math/big"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"sync"
@@ -346,7 +348,7 @@ func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error 
 }
 
 // preparePlayerData Returns the directories for the supported protocol's preprocessing data. It therefore creates
-// the required directories and writes the mac keys to the files expected by SPDZ.
+// the required directories and writes the mac keys  and other required parameters to the files expected by SPDZ.
 func preparePlayerData(conf *SPDZEngineTypedConfig) (map[castor.SPDZProtocol]string, error) {
 	playerDataDirs := make(map[castor.SPDZProtocol]string)
 	for _, p := range castor.SupportedSPDZProtocols {
@@ -355,7 +357,10 @@ func preparePlayerData(conf *SPDZEngineTypedConfig) (map[castor.SPDZProtocol]str
 			return nil, fmt.Errorf("failed to create preprocessing data directories: %v", err)
 		}
 		playerDataDirs[p] = path
-
+	}
+	err := writeGfpParams(playerDataDirs[castor.SPDZGfp], conf.Prime)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gfp Player-params: %v", err)
 	}
 	return playerDataDirs, nil
 }
@@ -394,5 +399,15 @@ func writeMacKey(macKeyFilePath string, playerCount int32, macKey string) error 
 	}
 	defer file.Close()
 	_, err = file.WriteString(fmt.Sprintf("%d %s", playerCount, macKey))
+	return err
+}
+
+func writeGfpParams(playerDataDir string, prime big.Int) error {
+	file, err := Fio.OpenWriteOrCreate(filepath.Join(playerDataDir, "Params-Data"))
+	if err != nil {
+		return fmt.Errorf("failed creating gfp params file: %v", err)
+	}
+	defer file.Close()
+	_, err = file.WriteString(prime.String())
 	return err
 }

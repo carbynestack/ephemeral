@@ -102,6 +102,9 @@ func (tpw *TuplePipeWriter) Open() error {
 
 // Close calls File.Close() on the tuple file pipe
 func (tpw *TuplePipeWriter) Close() error {
+	if tpw.tupleFile == nil {
+		return os.ErrInvalid
+	}
 	return tpw.tupleFile.Close()
 }
 
