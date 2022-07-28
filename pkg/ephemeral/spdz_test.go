@@ -135,6 +135,8 @@ var _ = Describe("Spdz", func() {
 					PlayerID:   int32(0),
 					PrepFolder: prepFolder,
 				},
+				playerDataPaths: map[castor.SPDZProtocol]string{},
+				streamerFactory: FakeStreamerFactory,
 			}
 			ctx = &CtxConfig{
 				Act: &Activation{
@@ -296,9 +298,7 @@ var _ = Describe("Spdz", func() {
 				Context("with tuple streamer started successfully", func() {
 					Context("when SPDZ process fails", func() {
 						BeforeEach(func() {
-							s.streamerFactory = func(*zap.SugaredLogger, castor.TupleType, *SPDZEngineTypedConfig, string, uuid.UUID, int) (io.TupleStreamer, error) {
-								return &FakeTupleStreamer{}, nil
-							}
+							s.streamerFactory = FakeStreamerFactory
 							s.cmder = &BrokenFakeExecutor{}
 						})
 						It("return error", func() {
@@ -457,6 +457,10 @@ var _ = Describe("Spdz", func() {
 		})
 	})
 })
+
+func FakeStreamerFactory(*zap.SugaredLogger, castor.TupleType, *SPDZEngineTypedConfig, string, uuid.UUID, int) (io.TupleStreamer, error) {
+	return &FakeTupleStreamer{}, nil
+}
 
 type FakeTupleStreamer struct {
 	terminateChan chan struct{}

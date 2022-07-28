@@ -298,6 +298,7 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	}
 	for _, tt := range castor.SupportedTupleTypes {
 		for thread := 0; thread < nThreads; thread++ {
+			s.logger.Debugw("Creating new tuple streamer", TupleType, tt, "Config", s.config, "Player-Data", s.playerDataPaths[tt.SpdzProtocol], GameID, gameUUID, "ThreadNr", thread)
 			streamer, err := s.streamerFactory(s.logger, tt, s.config, s.playerDataPaths[tt.SpdzProtocol], gameUUID, thread)
 			if err != nil {
 				s.logger.Errorw("Error when initializing tuple streamer", GameID, ctx.Act.GameID, TupleType, tt, "Error", err)
