@@ -230,14 +230,12 @@ func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
 func (s *SPDZEngine) getNumberOfThreads() (int, error) {
 	file, err := Fio.OpenRead(s.schedulePath)
 	if err != nil {
-		msg := "error accessing the program's schedule"
-		return 0, fmt.Errorf("%s: %s", msg, err)
+		return 0, fmt.Errorf("error accessing the program's schedule: %s", err)
 	}
 	defer file.Close()
 	nThreads, err := Fio.ReadLine(file)
 	if err != nil {
-		msg := "error reading number of threads"
-		return 0, fmt.Errorf("%s: %s", msg, err)
+		return 0, fmt.Errorf("error reading number of threads: %s", err)
 	}
 	return strconv.Atoi(nThreads)
 }
@@ -301,7 +299,7 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 			s.logger.Debugw("Creating new tuple streamer", TupleType, tt, "Config", s.config, "Player-Data", s.playerDataPaths[tt.SpdzProtocol], GameID, gameUUID, "ThreadNr", thread)
 			streamer, err := s.streamerFactory(s.logger, tt, s.config, s.playerDataPaths[tt.SpdzProtocol], gameUUID, thread)
 			if err != nil {
-				s.logger.Errorw("Error when initializing tuple streamer", GameID, ctx.Act.GameID, TupleType, tt, "Error", err)
+				s.logger.Errorw("error when initializing tuple streamer", GameID, ctx.Act.GameID, TupleType, tt, "Error", err)
 				ctx.ErrCh <- err
 				return
 			}
@@ -320,7 +318,7 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	go func() {
 		stdout, stderr, err := s.cmder.CallCMD(ctx.Context, command, s.baseDir)
 		if err != nil {
-			s.logger.Errorw("Error while executing the user code", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
+			s.logger.Errorw("error while executing the user code", GameID, ctx.Act.GameID, "StdErr", string(stderr), "StdOut", string(stdout), "error", err)
 			err := fmt.Errorf("error while executing the user code: %v", err)
 			ctx.ErrCh <- err
 		} else {
@@ -348,8 +346,8 @@ func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error 
 	return ioutil.WriteFile(path, data, 0644)
 }
 
-// preparePlayerData Returns the directories for the supported protocol's preprocessing data. It therefore creates
-// the required directories and writes the mac keys  and other required parameters to the files expected by SPDZ.
+// preparePlayerData returns the directories for the supported protocol's preprocessing data. It therefore creates
+// the required directories and writes the mac keys and other required parameters to the files expected by SPDZ.
 func preparePlayerData(conf *SPDZEngineTypedConfig) (map[castor.SPDZProtocol]string, error) {
 	playerDataDirs := make(map[castor.SPDZProtocol]string)
 	for _, p := range castor.SupportedSPDZProtocols {

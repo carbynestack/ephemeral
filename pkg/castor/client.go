@@ -26,8 +26,8 @@ type AbstractClient interface {
 	GetTuples(tupleCount int32, tupleType TupleType, requestID uuid.UUID) (*TupleList, error)
 }
 
-// NewCastorClient returns a new Castor client for the given endpoint
-func NewCastorClient(u url.URL) (*Client, error) {
+// NewClient returns a new Castor client for the given endpoint
+func NewClient(u url.URL) (*Client, error) {
 	ok := govalidator.IsURL(u.String())
 	if !ok {
 		return &Client{}, errors.New("invalid Url")
@@ -45,14 +45,14 @@ type Client struct {
 const tupleURI = "/intra-vcp/tuples"
 const tupleTypeParam = "tupletype"
 const countParam = "count"
-const reservationIdParam = "reservationId"
+const reservationIDParam = "reservationId"
 
 // GetTuples retrieves a list of tuples matching the given criteria from Castor
 func (c *Client) GetTuples(count int32, tt TupleType, requestID uuid.UUID) (*TupleList, error) {
 	values := url.Values{}
 	values.Add(tupleTypeParam, tt.Name)
 	values.Add(countParam, strconv.Itoa(int(count)))
-	values.Add(reservationIdParam, requestID.String())
+	values.Add(reservationIDParam, requestID.String())
 	requestURL, err := c.URL.Parse(tupleURI)
 	if err != nil {
 		return nil, err

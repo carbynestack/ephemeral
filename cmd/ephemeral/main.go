@@ -119,7 +119,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		Scheme: conf.AmphoraConfig.Scheme,
 		Path:   conf.AmphoraConfig.Path,
 	}
-	amphoraClient, err := amphora.NewAmphoraClient(amphoraURL)
+	amphoraClient, err := amphora.NewClient(amphoraURL)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		Scheme: conf.CastorConfig.Scheme,
 		Path:   conf.CastorConfig.Path,
 	}
-	castorClient, err := castor.NewCastorClient(castorURL)
+	castorClient, err := castor.NewClient(castorURL)
 	if err != nil {
 		return nil, err
 	}

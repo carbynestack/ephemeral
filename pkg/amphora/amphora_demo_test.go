@@ -31,7 +31,7 @@ func TestPostAndGet(t *testing.T) {
 			t.Error(errors.New("AMPHORA_MASTER_PORT is not set"))
 		}
 		url := url.URL{Host: fmt.Sprintf("%s:%s", minikubeIP, amphoraPort), Scheme: "http"}
-		client, err := NewAmphoraClient(url)
+		client, err := NewClient(url)
 		if err != nil {
 			t.Error(err)
 		}

@@ -87,7 +87,7 @@ var _ = Describe("Client", func() {
 			var resp *pb.Event
 			select {
 			case resp = <-clientIn:
-				Expect(resp.GameID).To(Equal("71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"))
+				Expect(resp.GameID).To(Equal(gameID))
 			case err := <-errCh:
 				Expect(err).To(BeNil())
 			case <-time.After(5 * time.Second):

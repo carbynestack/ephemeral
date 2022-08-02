@@ -39,8 +39,8 @@ type AbstractClient interface {
 	CreateSecretShare(*SecretShare) error
 }
 
-// NewAmphoraClient returns a new Amphora client.
-func NewAmphoraClient(u url.URL) (*Client, error) {
+// NewClient returns a new Amphora client.
+func NewClient(u url.URL) (*Client, error) {
 	ok := govalidator.IsURL(u.String())
 	if !ok {
 		return &Client{}, errors.New("invalid Url")

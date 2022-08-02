@@ -85,9 +85,10 @@ func (tpw *TuplePipeWriter) Write(data []byte) (int, error) {
 	return tpw.tupleFile.Write(data)
 }
 
-// Open opens a file as write only pipe. This function should be called within a go routine as opening a pipe as
-// write-only is a blocking call until opposing side opens the file to read.
+// Open opens a file as write only pipe.
 //
+// This function should be called within a go routine as opening a pipe as write-only is a blocking call until opposing
+// side opens the file to read.
 // This is especially important when streaming tuples to MP-SPDZ, as it does open only those tuple files that are
 // actually required for the current computation.
 func (tpw *TuplePipeWriter) Open() error {
@@ -140,7 +141,7 @@ func NewCastorTupleStreamerWithWriterFactory(l *zap.SugaredLogger, tt castor.Tup
 	if err != nil {
 		return nil, fmt.Errorf("error creating header: %v", err)
 	}
-	loggerWithContext.Debugw(fmt.Sprintf("Generated tuple file header %x", headerData))
+	loggerWithContext.Debugw("Generated tuple file header %x", headerData)
 	return &CastorTupleStreamer{
 		logger:        loggerWithContext,
 		pipeWriter:    pipeWriter,
@@ -242,7 +243,7 @@ func (ts *CastorTupleStreamer) writeDataToPipe() error {
 		if errors.Is(err, syscall.EPIPE) {
 			return err
 		}
-		ts.logger.Errorw(err.Error())
+		ts.logger.Debugw("Pipe broke while streaming: %v", err.Error())
 	}
 	ts.streamData = ts.streamData[c:]
 	ts.streamedBytes += c
@@ -252,7 +253,6 @@ func (ts *CastorTupleStreamer) writeDataToPipe() error {
 // tupleListToByteArray converts a given list of tuple to a byte array
 func (ts *CastorTupleStreamer) tupleListToByteArray(tl *castor.TupleList) ([]byte, error) {
 	var result []byte
-
 	for _, tuple := range tl.Tuples {
 		for _, share := range tuple.Shares {
 			decodeString, err := base64.StdEncoding.DecodeString(share.Value)
@@ -260,7 +260,6 @@ func (ts *CastorTupleStreamer) tupleListToByteArray(tl *castor.TupleList) ([]byt
 				return []byte{}, err
 			}
 			result = append(result, decodeString...)
-
 			decodeString, err = base64.StdEncoding.DecodeString(share.Mac)
 			if err != nil {
 				return []byte{}, err
@@ -268,7 +267,6 @@ func (ts *CastorTupleStreamer) tupleListToByteArray(tl *castor.TupleList) ([]byt
 			result = append(result, decodeString...)
 		}
 	}
-
 	return result, nil
 }
 
@@ -278,7 +276,7 @@ func generateHeader(sp castor.SPDZProtocol, conf *SPDZEngineTypedConfig) ([]byte
 	case castor.SPDZGfp:
 		return generateGfpHeader(conf.Prime), nil
 	case castor.SPDZGf2n:
-		return generateGf2nHeader(conf.Gf2nBitLength), nil
+		return generateGf2nHeader(conf.Gf2nBitLength, conf.Gf2nStorageSize), nil
 	}
 	return nil, errors.New("unsupported spdz protocol " + sp.Descriptor)
 }
@@ -305,16 +303,16 @@ func generateGfpHeader(prime big.Int) []byte {
 	return result
 }
 
-func generateGf2nHeader(bitLength int32) []byte {
+func generateGf2nHeader(bitLength int32, storageSize int32) []byte {
 	protocol := []byte(castor.SPDZGf2n.Descriptor) // e.g. "SPDZ gf2n"
 
 	var domain []byte
-	storageSize := make([]byte, 8)
-	binary.LittleEndian.PutUint32(storageSize, uint32(8))
+	storageSizeData := make([]byte, 8)
+	binary.LittleEndian.PutUint32(storageSizeData, uint32(storageSize))
 	nValue := make([]byte, 4)
 	binary.LittleEndian.PutUint32(nValue, uint32(bitLength))
-	domain = append(domain, storageSize...) // e.g. 8
-	domain = append(domain, nValue...)      // e.g. 40
+	domain = append(domain, storageSizeData...) // e.g. 8
+	domain = append(domain, nValue...)          // e.g. 40
 
 	totalSizeInBytes := uint64(len(protocol) + len(domain))
 	size := make([]byte, 8)

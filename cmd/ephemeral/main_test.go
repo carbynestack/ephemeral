@@ -50,7 +50,32 @@ var _ = Describe("Main", func() {
 				})
 				Context("when it succeeds", func() {
 					It("initializes the config", func() {
-						data := []byte(`{"retrySleep":"50ms","retryTimeout":"1m","prime":"p","rInv":"r","gfpMacKey":"gfpKey","gf2nMacKey":"gf2nKey","gf2nBitLength":40,"gf2nStorageSize":8,"prepFolder":"Player-Data","amphoraConfig":{"host":"mock-server:1080","scheme":"http","path":"/amphora1"},"castorConfig":{"host":"mock-server:1081","scheme":"http","path":"/castor1","tupleStock":1000},"frontendURL":"apollo.test.specs.cloud","playerID":0,"maxBulkSize":32000,"discoveryAddress":"discovery.default.svc.cluster.local"}`)
+						data := []byte(
+							`{
+								"retrySleep":"50ms",
+								"retryTimeout":"1m",
+								"prime":"p",
+								"rInv":"r",
+								"gfpMacKey":"gfpKey",
+								"gf2nMacKey":"gf2nKey",
+								"gf2nBitLength":40,
+								"gf2nStorageSize":8,
+								"prepFolder":"Player-Data",
+								"amphoraConfig": {
+									"host":"mock-server:1080",
+									"scheme":"http","path":"/amphora1"
+								},
+								"castorConfig": {
+									"host":"mock-server:1081",
+									"scheme":"http",
+									"path":"/castor1",
+									"tupleStock":1000
+								},
+								"frontendURL":"apollo.test.specs.cloud",
+								"playerID":0,
+								"maxBulkSize":32000,
+								"discoveryAddress":"discovery.default.svc.cluster.local"
+							}`)
 						err := ioutil.WriteFile(path, data, 0644)
 						Expect(err).NotTo(HaveOccurred())
 						conf, err := ParseConfig(path)

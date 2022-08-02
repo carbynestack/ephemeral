@@ -295,9 +295,9 @@ var _ = Describe("Tuple Streamer", func() {
 		})
 		Context("when protocol is SPD gf2n", func() {
 			It("returns correct header", func() {
-				expectedHeader := []byte{22, 0, 0, 0, 0, 0, 0, 0, 83, 80, 68, 90, 32, 103, 102, 50, 110, 95, 8, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0}
+				expectedHeader := []byte{22, 0, 0, 0, 0, 0, 0, 0, 83, 80, 68, 90, 32, 103, 102, 50, 110, 95, 16, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0}
 				gf2nBitLength := int32(40)
-				gf2nStorageSize := int32(8)
+				gf2nStorageSize := int32(16)
 				config := SPDZEngineTypedConfig{Gf2nBitLength: gf2nBitLength, Gf2nStorageSize: gf2nStorageSize}
 				Expect(generateHeader(castor.SPDZGf2n, &config)).To(Equal(expectedHeader))
 			})

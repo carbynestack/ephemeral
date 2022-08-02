@@ -27,14 +27,14 @@ var _ = Describe("Castor", func() {
 		Context("when url is invalid", func() {
 			It("responds with error", func() {
 				invalidURL := url.URL{Host: "host:8080", Scheme: "invalidScheme"}
-				_, err := NewCastorClient(invalidURL)
+				_, err := NewClient(invalidURL)
 				Expect(err).To(HaveOccurred())
 			})
 		})
 		Context("when url is valid", func() {
 			It("returns a new client", func() {
 				validURL := url.URL{Host: "host:8080", Scheme: "http"}
-				client, err := NewCastorClient(validURL)
+				client, err := NewClient(validURL)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(client).NotTo(BeNil())
 				Expect(client.HTTPClient).NotTo(BeNil())
@@ -50,10 +50,8 @@ var _ = Describe("Castor", func() {
 			myURL     url.URL
 		)
 		BeforeEach(func() {
-			var shares []Share
-			shares = append(shares, Share{Value: "val", Mac: "mac"})
-			var tuples []Tuple
-			tuples = append(tuples, Tuple{Shares: shares})
+			shares := []Share{Share{Value: "val", Mac: "mac"}}
+			tuples := []Tuple{Tuple{Shares: shares}}
 			tupleList = &TupleList{Tuples: tuples}
 			jsn, _ = json.Marshal(tupleList)
 			myURL = url.URL{Host: "host:8080", Scheme: "http"}

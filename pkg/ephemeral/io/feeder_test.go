@@ -78,7 +78,7 @@ var _ = Describe("Feeder", func() {
 					Expect(err).NotTo(HaveOccurred())
 					var response Result
 					json.Unmarshal(res, &response)
-					Expect(response.Response[0]).To(Equal("71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"))
+					Expect(response.Response[0]).To(Equal(act.GameID))
 					Expect(carrier.isBulk).To(BeTrue())
 				})
 			})
@@ -129,7 +129,7 @@ var _ = Describe("Feeder", func() {
 					Expect(err).NotTo(HaveOccurred())
 					var response Result
 					json.Unmarshal(res, &response)
-					Expect(response.Response[0]).To(Equal("71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"))
+					Expect(response.Response[0]).To(Equal(act.GameID))
 					Expect(carrier.isBulk).To(BeTrue())
 				})
 			})
