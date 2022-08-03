@@ -9,12 +9,21 @@ package io.carbynestack.ephemeral.client;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.powermock.api.mockito.PowerMockito.verifyNew;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 
+import io.carbynestack.httpclient.CsHttpClientException;
 import io.vavr.concurrent.Future;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -23,12 +32,19 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -68,12 +84,10 @@ public class EphemeralMultiClientTest {
   }
 
   @Test
-  public void givenSuccessful_whenExecuteProgram_thenReturnResult() {
+  public void givenSuccessful_whenExecuteProgram_thenReturnResult() throws CsHttpClientException {
     ActivationResult result = new ActivationResult(Collections.singletonList(UUID.randomUUID()));
-    when(client1Mock.execute(any(Activation.class)))
-        .thenReturn(Future.successful(Either.right(result)));
-    when(client2Mock.execute(any(Activation.class)))
-        .thenReturn(Future.successful(Either.right(result)));
+    when(client1Mock.execute(any(Activation.class))).thenReturn(Either.right(result));
+    when(client2Mock.execute(any(Activation.class))).thenReturn(Either.right(result));
     Future<Either<ActivationError, List<ActivationResult>>> results =
         client.execute(activation.getCode(), inputObjects);
     results.await();
@@ -87,15 +101,14 @@ public class EphemeralMultiClientTest {
   }
 
   @Test
-  public void givenServiceRespondsUnsuccessful_whenExecuteProgram_thenReturnFailureCode() {
+  public void givenServiceRespondsUnsuccessful_whenExecuteProgram_thenReturnFailureCode()
+      throws CsHttpClientException {
     int httpFailureCode = 404;
     String errMessage = "an unexpected error";
     ActivationError activationError =
         new ActivationError().setMessage(errMessage).setResponseCode(httpFailureCode);
-    when(client1Mock.execute(any(Activation.class)))
-        .thenReturn(Future.successful(Either.left(activationError)));
-    when(client2Mock.execute(any(Activation.class)))
-        .thenReturn(Future.successful(Either.left(activationError)));
+    when(client1Mock.execute(any(Activation.class))).thenReturn(Either.left(activationError));
+    when(client2Mock.execute(any(Activation.class))).thenReturn(Either.left(activationError));
     Future<Either<ActivationError, List<ActivationResult>>> results =
         client.execute(activation.getCode(), inputObjects);
     results.await();
@@ -106,10 +119,11 @@ public class EphemeralMultiClientTest {
   }
 
   @Test
-  public void givenServiceCommunicationFails_whenExecuteProgram_thenFutureFails() {
-    Exception failure = new Exception("an unexpected error");
-    when(client1Mock.execute(any(Activation.class))).thenReturn(Future.failed(failure));
-    when(client2Mock.execute(any(Activation.class))).thenReturn(Future.failed(failure));
+  public void givenServiceCommunicationFails_whenExecuteProgram_thenCallFails()
+      throws CsHttpClientException {
+    CsHttpClientException failure = new CsHttpClientException("error");
+    when(client1Mock.execute(any(Activation.class))).thenThrow(failure);
+    when(client2Mock.execute(any(Activation.class))).thenThrow(failure);
     Future<Either<ActivationError, List<ActivationResult>>> results =
         client.execute(activation.getCode(), inputObjects);
     results.await();
@@ -130,5 +144,34 @@ public class EphemeralMultiClientTest {
         .build();
     verifyNew(EphemeralClient.class, times(2))
         .withArguments(any(), any(), any(), eq(Option.some(token)), any());
+  }
+
+  @Test
+  public void givenMoreBackendsThanCores_whenExecuteProgram_thenReturnResult()
+      throws CsHttpClientException {
+    // This is the number of threads created by the thread pool backing the Vavr Future
+    // implementation
+    int cores = ForkJoinPool.commonPool().getParallelism();
+    int vcps = 2 * cores;
+    List<EphemeralClient> clientMocks =
+        IntStream.range(0, vcps)
+            .mapToObj(i -> Mockito.mock(EphemeralClient.class))
+            .collect(Collectors.toList());
+    CyclicBarrier barrier = new CyclicBarrier(vcps);
+    ActivationResult result = new ActivationResult(Collections.singletonList(UUID.randomUUID()));
+    for (EphemeralClient c : clientMocks) {
+      doAnswer(
+              (Answer<Either<ActivationError, ActivationResult>>)
+                  invocation -> {
+                    barrier.await();
+                    return Either.right(result);
+                  })
+          .when(c)
+          .execute(any(Activation.class));
+    }
+    EphemeralMultiClient client = new EphemeralMultiClient(clientMocks);
+    Future<Either<ActivationError, List<ActivationResult>>> results =
+        client.execute(activation.getCode(), inputObjects);
+    assertThat("activation timed out", results.await(5, TimeUnit.SECONDS).isSuccess());
   }
 }
