@@ -39,7 +39,7 @@ func generateTestsWithPlayerCount(playerCount int) {
 		done = make(chan struct{})
 		bus = mb.New(10000)
 		timeout = 10 * time.Second
-		gameID = "0"
+		gameID = "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"
 		game, _ = NewGame(ctx, gameID, bus, timeout, logger, playerCount)
 		pb = Publisher{
 			Bus: bus,

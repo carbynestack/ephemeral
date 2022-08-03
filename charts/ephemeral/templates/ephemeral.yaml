@@ -75,10 +75,21 @@ data:
       "retryTimeout": "1m",
       "prime": "{{ .Values.ephemeral.spdz.prime }}",
       "rInv": "{{ .Values.ephemeral.spdz.rInv }}",
+      "gfpMacKey": "{{ .Values.ephemeral.spdz.gfpMacKey }}",
+      "gf2nMacKey": "{{ .Values.ephemeral.spdz.gf2nMacKey }}",
+      "gf2nBitLength": {{ .Values.ephemeral.spdz.gf2nBitLength }},
+      "gf2nStorageSize": {{ .Values.ephemeral.spdz.gf2nStorageSize }},
+      "prepFolder": "{{ .Values.ephemeral.spdz.prepFolder }}",
       "amphoraConfig": {
         "host": "{{ .Values.ephemeral.amphora.host }}",
         "scheme": "{{ .Values.ephemeral.amphora.scheme }}",
         "path": "{{ .Values.ephemeral.amphora.path }}"
+      },
+      "castorConfig": {
+        "host": "{{ .Values.ephemeral.castor.host }}",
+        "scheme": "{{ .Values.ephemeral.castor.scheme }}",
+        "path": "{{ .Values.ephemeral.castor.path }}",
+        "tupleStock": {{ .Values.ephemeral.castor.tupleStock }}
       },
       "frontendURL": "{{ .Values.ephemeral.frontendUrl }}",
       "discoveryAddress": "{{ .Values.ephemeral.discoveryAddress }}",

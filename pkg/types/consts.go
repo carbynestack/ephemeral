@@ -38,6 +38,7 @@ const (
 	GameIsReady               = "GameIsReady"
 	GameError                 = "GameError"
 	GameID                    = "gameID"
+	TupleType                 = "TupleType"
 	PlayingError              = "PlayingError"
 	PlayerDone                = "PlayerDone"
 	ModeSlave                 = "slave"

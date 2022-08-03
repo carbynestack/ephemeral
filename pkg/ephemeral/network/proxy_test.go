@@ -29,7 +29,7 @@ var _ = Describe("Proxy", func() {
 			p := NewProxy(logger, spdzConfig, tcpChecker)
 			ctx := &CtxConfig{
 				Act: &Activation{
-					GameID: "a",
+					GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 				},
 				ProxyEntries: []*ProxyConfig{
 					{

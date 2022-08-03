@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -49,7 +50,32 @@ var _ = Describe("Main", func() {
 				})
 				Context("when it succeeds", func() {
 					It("initializes the config", func() {
-						data := []byte(`{"retrySleep":"50ms","retryTimeout":"1m","prime":"p","rInv":"r","amphoraConfig":{"host":"mock-server:1080","scheme":"http","path":"/amphora1"},"frontendURL":"apollo.test.specs.cloud","playerID":0,"maxBulkSize":32000,"discoveryAddress":"discovery.default.svc.cluster.local"}`)
+						data := []byte(
+							`{
+								"retrySleep":"50ms",
+								"retryTimeout":"1m",
+								"prime":"p",
+								"rInv":"r",
+								"gfpMacKey":"gfpKey",
+								"gf2nMacKey":"gf2nKey",
+								"gf2nBitLength":40,
+								"gf2nStorageSize":8,
+								"prepFolder":"Player-Data",
+								"amphoraConfig": {
+									"host":"mock-server:1080",
+									"scheme":"http","path":"/amphora1"
+								},
+								"castorConfig": {
+									"host":"mock-server:1081",
+									"scheme":"http",
+									"path":"/castor1",
+									"tupleStock":1000
+								},
+								"frontendURL":"apollo.test.specs.cloud",
+								"playerID":0,
+								"maxBulkSize":32000,
+								"discoveryAddress":"discovery.default.svc.cluster.local"
+							}`)
 						err := ioutil.WriteFile(path, data, 0644)
 						Expect(err).NotTo(HaveOccurred())
 						conf, err := ParseConfig(path)
@@ -79,14 +105,22 @@ var _ = Describe("Main", func() {
 		Context("when initializing typed config", func() {
 			It("succeeds when all parameters are specified", func() {
 				conf := &SPDZEngineConfig{
-					RetryTimeout: "2s",
-					RetrySleep:   "1s",
-					Prime:        "198766463529478683931867765928436695041",
-					RInv:         "133854242216446749056083838363708373830",
+					RetryTimeout:    "2s",
+					RetrySleep:      "1s",
+					Prime:           "198766463529478683931867765928436695041",
+					RInv:            "133854242216446749056083838363708373830",
+					GfpMacKey:       "1113507028231509545156335486838233835",
+					Gf2nBitLength:   40,
+					Gf2nStorageSize: 8,
 					AmphoraConfig: AmphoraConfig{
 						Host:   "localhost",
 						Scheme: "http",
-						Path:   "path",
+						Path:   "amphoraPath",
+					},
+					CastorConfig: CastorConfig{
+						Host:   "localhost",
+						Scheme: "http",
+						Path:   "castorPath",
 					},
 				}
 				typedConf, err := InitTypedConfig(conf)
@@ -143,15 +177,39 @@ var _ = Describe("Main", func() {
 						Expect(typedConf).To(BeNil())
 					})
 				})
-				Context("amphora URL is not specified", func() {
+				Context("gfpMacKey is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
 							RetryTimeout: "2s",
 							RetrySleep:   "1s",
 							Prime:        "123",
 							RInv:         "123",
+							GfpMacKey:    "",
+						}
+						typedConf, err := InitTypedConfig(conf)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("wrong gfpMacKey format"))
+						Expect(typedConf).To(BeNil())
+					})
+				})
+				Context("amphora URL is not specified", func() {
+					It("returns an error", func() {
+						conf := &SPDZEngineConfig{
+							RetryTimeout:    "2s",
+							RetrySleep:      "1s",
+							Prime:           "123",
+							RInv:            "123",
+							GfpMacKey:       "123",
+							Gf2nBitLength:   40,
+							Gf2nStorageSize: 8,
 							AmphoraConfig: AmphoraConfig{
 								Host: "",
+							},
+							CastorConfig: CastorConfig{
+								Host:       "localhost",
+								Scheme:     "http",
+								Path:       "castorPath",
+								TupleStock: 1000,
 							},
 						}
 						typedConf, err := InitTypedConfig(conf)
@@ -163,11 +221,71 @@ var _ = Describe("Main", func() {
 				Context("amphora scheme is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout: "2s",
-							RetrySleep:   "1s",
-							Prime:        "123",
-							RInv:         "123",
+							RetryTimeout:    "2s",
+							RetrySleep:      "1s",
+							Prime:           "123",
+							RInv:            "123",
+							GfpMacKey:       "123",
+							Gf2nBitLength:   40,
+							Gf2nStorageSize: 8,
 							AmphoraConfig: AmphoraConfig{
+								Host:   "localhost",
+								Scheme: "",
+							},
+							CastorConfig: CastorConfig{
+								Host:       "localhost",
+								Scheme:     "http",
+								Path:       "castorPath",
+								TupleStock: 1000,
+							},
+						}
+						typedConf, err := InitTypedConfig(conf)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("invalid Url"))
+						Expect(typedConf).To(BeNil())
+					})
+				})
+				Context("castor URL is not specified", func() {
+					It("returns an error", func() {
+						conf := &SPDZEngineConfig{
+							RetryTimeout:    "2s",
+							RetrySleep:      "1s",
+							Prime:           "123",
+							RInv:            "123",
+							GfpMacKey:       "123",
+							Gf2nBitLength:   40,
+							Gf2nStorageSize: 8,
+							AmphoraConfig: AmphoraConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "amphoraPath",
+							},
+							CastorConfig: CastorConfig{
+								Host: "",
+							},
+						}
+						typedConf, err := InitTypedConfig(conf)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("invalid Url"))
+						Expect(typedConf).To(BeNil())
+					})
+				})
+				Context("castor scheme is not specified", func() {
+					It("returns an error", func() {
+						conf := &SPDZEngineConfig{
+							RetryTimeout:    "2s",
+							RetrySleep:      "1s",
+							Prime:           "123",
+							RInv:            "123",
+							GfpMacKey:       "123",
+							Gf2nBitLength:   40,
+							Gf2nStorageSize: 8,
+							AmphoraConfig: AmphoraConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "amphoraPath",
+							},
+							CastorConfig: CastorConfig{
 								Host:   "localhost",
 								Scheme: "",
 							},
@@ -183,17 +301,31 @@ var _ = Describe("Main", func() {
 	})
 	Context("when retrieving the handler", func() {
 		Context("when no error happens", func() {
-			It("returns the handler chain", func() {
+			It("returns the handler chain and write mac keys", func() {
+				tmpPrepDir, _ := ioutil.TempDir("", "ephemeral_prep_folder_")
+				defer os.RemoveAll(tmpPrepDir)
 				logger := zap.NewNop().Sugar()
 				conf := &SPDZEngineConfig{
-					RetryTimeout: "2s",
-					RetrySleep:   "1s",
-					Prime:        "198766463529478683931867765928436695041",
-					RInv:         "133854242216446749056083838363708373830",
+					RetryTimeout:    "2s",
+					RetrySleep:      "1s",
+					Prime:           "198766463529478683931867765928436695041",
+					RInv:            "133854242216446749056083838363708373830",
+					GfpMacKey:       "1113507028231509545156335486838233835",
+					Gf2nMacKey:      "0xb660b323e6",
+					Gf2nBitLength:   40,
+					Gf2nStorageSize: 8,
+					PlayerCount:     2,
+					PrepFolder:      tmpPrepDir,
 					AmphoraConfig: AmphoraConfig{
 						Host:   "localhost",
 						Scheme: "http",
-						Path:   "path",
+						Path:   "amphoraPath",
+					},
+					CastorConfig: CastorConfig{
+						Host:       "localhost",
+						Scheme:     "http",
+						Path:       "castorPath",
+						TupleStock: 1000,
 					},
 				}
 				handler, err := GetHandlerChain(conf, logger)
@@ -205,12 +337,21 @@ var _ = Describe("Main", func() {
 			It("is returned", func() {
 				logger := zap.NewNop().Sugar()
 				conf := &SPDZEngineConfig{
-					RetryTimeout: "2s",
-					RetrySleep:   "1s",
-					Prime:        "198766463529478683931867765928436695041",
-					RInv:         "133854242216446749056083838363708373830",
+					RetryTimeout:    "2s",
+					RetrySleep:      "1s",
+					Prime:           "198766463529478683931867765928436695041",
+					RInv:            "133854242216446749056083838363708373830",
+					GfpMacKey:       "1113507028231509545156335486838233835",
+					Gf2nBitLength:   40,
+					Gf2nStorageSize: 8,
 					// an empty amphora config is given to provoke an error.
 					AmphoraConfig: AmphoraConfig{},
+					CastorConfig: CastorConfig{
+						Host:       "localhost",
+						Scheme:     "http",
+						Path:       "castorPath",
+						TupleStock: 1000,
+					},
 				}
 				handler, err := GetHandlerChain(conf, logger)
 				Expect(err).To(HaveOccurred())

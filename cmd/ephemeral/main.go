@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
+	"github.com/carbynestack/ephemeral/pkg/castor"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral"
 	l "github.com/carbynestack/ephemeral/pkg/logger"
 	"github.com/carbynestack/ephemeral/pkg/utils"
@@ -59,7 +60,10 @@ func GetHandlerChain(conf *SPDZEngineConfig, logger *zap.SugaredLogger) (http.Ha
 	if err != nil {
 		return nil, err
 	}
-	spdzClient := NewSPDZEngine(logger, utils.NewCommander(), typedConfig)
+	spdzClient, err := NewSPDZEngine(logger, utils.NewCommander(), typedConfig)
+	if err != nil {
+		return nil, err
+	}
 	server := NewServer(spdzClient.Compile, spdzClient.Activate, logger, typedConfig)
 	activationHandler := http.HandlerFunc(server.ActivationHandler)
 	// Apply in Order:
@@ -96,7 +100,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	var p, rInv big.Int
+	var p, rInv, gfpMacKey big.Int
 	_, ok := p.SetString(conf.Prime, 10)
 	if !ok {
 		return nil, errors.New("wrong prime number format")
@@ -105,13 +109,27 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	if !ok {
 		return nil, errors.New("wrong rInv format")
 	}
+	_, ok = gfpMacKey.SetString(conf.GfpMacKey, 10)
+	if !ok {
+		return nil, errors.New("wrong gfpMacKey format")
+	}
 
 	amphoraURL := url.URL{
 		Host:   conf.AmphoraConfig.Host,
 		Scheme: conf.AmphoraConfig.Scheme,
 		Path:   conf.AmphoraConfig.Path,
 	}
-	client, err := amphora.NewAmphoraClient(amphoraURL)
+	amphoraClient, err := amphora.NewClient(amphoraURL)
+	if err != nil {
+		return nil, err
+	}
+
+	castorURL := url.URL{
+		Host:   conf.CastorConfig.Host,
+		Scheme: conf.CastorConfig.Scheme,
+		Path:   conf.CastorConfig.Path,
+	}
+	castorClient, err := castor.NewClient(castorURL)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +139,14 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		RetrySleep:       retrySleep,
 		Prime:            p,
 		RInv:             rInv,
-		AmphoraClient:    client,
+		GfpMacKey:        gfpMacKey,
+		Gf2nMacKey:       conf.Gf2nMacKey,
+		Gf2nBitLength:    conf.Gf2nBitLength,
+		Gf2nStorageSize:  conf.Gf2nStorageSize,
+		PrepFolder:       conf.PrepFolder,
+		AmphoraClient:    amphoraClient,
+		CastorClient:     castorClient,
+		TupleStock:       conf.CastorConfig.TupleStock,
 		PlayerID:         conf.PlayerID,
 		PlayerCount:      conf.PlayerCount,
 		FrontendURL:      conf.FrontendURL,

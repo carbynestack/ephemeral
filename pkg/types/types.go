@@ -9,6 +9,7 @@ package types
 import (
 	"context"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
+	"github.com/carbynestack/ephemeral/pkg/castor"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	"math/big"
 	"time"
@@ -70,11 +71,19 @@ type CtxConfig struct {
 
 // SPDZEngineConfig is the VPC specific configuration.
 type SPDZEngineConfig struct {
-	RetrySleep       string        `json:"retrySleep"`
-	RetryTimeout     string        `json:"retryTimeout"`
-	Prime            string        `json:"prime"`
-	RInv             string        `json:"rInv"`
+	RetrySleep    string `json:"retrySleep"`
+	RetryTimeout  string `json:"retryTimeout"`
+	Prime         string `json:"prime"`
+	RInv          string `json:"rInv"`
+	GfpMacKey     string `json:"gfpMacKey"`
+	Gf2nMacKey    string `json:"gf2nMacKey"`
+	Gf2nBitLength int32  `json:"gf2nBitLength"`
+	// Gf2nStorageSize represents the size in bytes for each gf2n element e.g. depending on the 'USE_GF2N_LONG' flag
+	// being set when compiling SPDZ where storage size is 16 for USE_GF2N_LONG=1, or 8 if set to 0
+	Gf2nStorageSize  int32         `json:"gf2nStorageSize"`
+	PrepFolder       string        `json:"prepFolder"`
 	AmphoraConfig    AmphoraConfig `json:"amphoraConfig"`
+	CastorConfig     CastorConfig  `json:"castorConfig"`
 	FrontendURL      string        `json:"frontendURL"`
 	PlayerID         int32         `json:"playerID"`
 	PlayerCount      int32         `json:"playerCount"`
@@ -89,6 +98,14 @@ type AmphoraConfig struct {
 	Path   string `json:"path"`
 }
 
+// CastorConfig specifies the castor host and tuple stock parameters.
+type CastorConfig struct {
+	Host       string `json:"host"`
+	Scheme     string `json:"scheme"`
+	Path       string `json:"path"`
+	TupleStock int32  `json:"tupleStock"`
+}
+
 // OutputConfig defines how the output of the app execution is treated.
 type OutputConfig struct {
 	Type string `json:"type"`
@@ -101,7 +118,14 @@ type SPDZEngineTypedConfig struct {
 	RetryTimeout     time.Duration
 	Prime            big.Int
 	RInv             big.Int
+	GfpMacKey        big.Int
+	Gf2nMacKey       string
+	Gf2nBitLength    int32
+	Gf2nStorageSize  int32
+	PrepFolder       string
 	AmphoraClient    amphora.AbstractClient
+	CastorClient     castor.AbstractClient
+	TupleStock       int32
 	PlayerID         int32
 	PlayerCount      int32
 	FrontendURL      string

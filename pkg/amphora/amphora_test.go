@@ -8,6 +8,7 @@ package amphora_test
 
 import (
 	"encoding/json"
+	. "github.com/carbynestack/ephemeral/pkg/utils"
 	"net/http"
 	"net/url"
 
@@ -30,7 +31,7 @@ var _ = Describe("Amphora", func() {
 	})
 	Context("when retrieving a shared secret", func() {
 		It("returns a shared object when it exists in amphora", func() {
-			rt := MockedRoundTripper{ExpectedPath: "/intra-vcp/secret-shares/xyz", ReturnJson: js, ExpectedResponseCode: http.StatusOK}
+			rt := MockedRoundTripper{ExpectedPath: "/intra-vcp/secret-shares/xyz", ReturnJSON: js, ExpectedResponseCode: http.StatusOK}
 			HTTPClient := http.Client{Transport: &rt}
 			client := Client{HTTPClient: HTTPClient, URL: url.URL{Host: "test", Scheme: "http"}}
 
@@ -39,7 +40,7 @@ var _ = Describe("Amphora", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("returns an error when shared secret does not exist", func() {
-			rt := MockedRoundTripper{ExpectedPath: "/intra-vcp/secret-shares/xxx", ReturnJson: js, ExpectedResponseCode: http.StatusOK}
+			rt := MockedRoundTripper{ExpectedPath: "/intra-vcp/secret-shares/xxx", ReturnJSON: js, ExpectedResponseCode: http.StatusOK}
 			HTTPClient := http.Client{Transport: &rt}
 			client := Client{HTTPClient: HTTPClient, URL: url.URL{Host: "test", Scheme: "http"}}
 

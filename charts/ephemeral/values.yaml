@@ -43,12 +43,22 @@ ephemeral:
     host: "amphora"
     scheme: "http"
     path: "/"
+  castor:
+    host: "castor"
+    scheme: "http"
+    path: "/"
+    tupleStock: 1000
   frontendUrl:
   discoveryAddress: discovery.default.svc.cluster.local
   playerId:
   spdz:
     prime:
     rInv:
+    gfpMacKey:
+    gf2nMacKey:
+    gf2nBitLength:
+    gf2nStorageSize:
+    prepFolder: "Player-Data"
 
 networkController:
   image:

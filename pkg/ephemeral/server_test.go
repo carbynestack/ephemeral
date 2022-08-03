@@ -33,6 +33,7 @@ var _ = Describe("Server", func() {
 		l          *zap.SugaredLogger
 	)
 
+	const gameID = "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"
 	Context("when sending http requests", func() {
 		BeforeEach(func() {
 			act = &Activation{
@@ -74,7 +75,7 @@ var _ = Describe("Server", func() {
 			})
 			Context("when the game id is valid a UUID", func() {
 				It("responds 200 http code", func() {
-					act.GameID = "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"
+					act.GameID = gameID
 					body, _ := json.Marshal(&act)
 					req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
 					s.BodyFilter(handler200).ServeHTTP(rr, req)
@@ -131,7 +132,7 @@ var _ = Describe("Server", func() {
 			})
 			Context("when POST with application/json content type is provided", func() {
 				It("returns a 200", func() {
-					act.GameID = "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"
+					act.GameID = gameID
 					body, _ := json.Marshal(&act)
 					req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
 					req.Header.Add("Content-Type", "application/json")
@@ -220,7 +221,7 @@ var _ = Describe("Server", func() {
 							req := requestWithContext("/?compile=true&other_param=abc", act)
 							conf := &CtxConfig{
 								Act: &Activation{
-									GameID: "abc",
+									GameID: gameID,
 								},
 								Spdz: &SPDZEngineTypedConfig{},
 							}
@@ -263,7 +264,7 @@ var _ = Describe("Server", func() {
 				req, _ = http.NewRequest("POST", "/?compile=true", bytes.NewReader(body))
 				conf = &CtxConfig{
 					Act: &Activation{
-						GameID: "abc",
+						GameID: gameID,
 					},
 					Context: context.Background(),
 					Spdz:    &SPDZEngineTypedConfig{},
@@ -296,7 +297,7 @@ var _ = Describe("Server", func() {
 			Context("when execution finishes with error", func() {
 				Context("when ephemeral error happens", func() {
 					It("responds with a 500", func() {
-						errCh <- errors.New("some error")
+						s.errCh <- errors.New("some error")
 						s.ActivationHandler(rr, req)
 						code := rr.Code
 						respBody := rr.Body.String()
@@ -334,7 +335,7 @@ var _ = Describe("Server", func() {
 			}
 			ctx = &CtxConfig{
 				Act: &Activation{
-					GameID: "123",
+					GameID: gameID,
 				},
 				Context: context.TODO(),
 			}
@@ -397,7 +398,7 @@ var _ = Describe("Server", func() {
 						PlayerID: 0,
 					},
 					Act: &Activation{
-						GameID: "abc",
+						GameID: gameID,
 					},
 				}
 				conf := &io.Config{
@@ -430,7 +431,7 @@ func requestWithContext(path string, act *Activation) *http.Request {
 	req, _ := http.NewRequest("POST", path, bytes.NewReader(body))
 	conf := &CtxConfig{
 		Act: &Activation{
-			GameID: "abc",
+			GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
 		},
 		Spdz: &SPDZEngineTypedConfig{},
 	}
