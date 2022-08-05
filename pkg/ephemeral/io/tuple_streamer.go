@@ -141,7 +141,7 @@ func NewCastorTupleStreamerWithWriterFactory(l *zap.SugaredLogger, tt castor.Tup
 	if err != nil {
 		return nil, fmt.Errorf("error creating header: %v", err)
 	}
-	loggerWithContext.Debugw("Generated tuple file header %x", headerData)
+	loggerWithContext.Debugf("Generated tuple file header: %x", headerData)
 	return &CastorTupleStreamer{
 		logger:        loggerWithContext,
 		pipeWriter:    pipeWriter,
