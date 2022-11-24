@@ -1,6 +1,6 @@
 #
 # Copyright (c) 2022 - for information on the respective copyright owner
-# see the NOTICE file and/or the repository https://github.com/carbynestack/.github.
+# see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -19,5 +19,5 @@ on:
 jobs:
   
   # re-usable workflow @see https://docs.github.com/en/actions/using-workflows/reusing-workflows
-  stale-issue-cleanup:
-    uses: carbynestack/.github/.github/workflows/auto-labeler.yml@main
+  auto-labeling:
+    uses: carbynestack/.github/.github/workflows/auto-labeler.yml@master
