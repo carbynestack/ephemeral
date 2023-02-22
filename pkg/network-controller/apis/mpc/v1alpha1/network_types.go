@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2021 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
@@ -6,7 +5,6 @@
 //
 // The original file created by the Operator SDK has been modified to add Carbyne Stack Ephemeral network controller
 // logic.
-//
 package v1alpha1
 
 import (

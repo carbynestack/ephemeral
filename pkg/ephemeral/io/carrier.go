@@ -1,9 +1,7 @@
-//
 // Copyright (c) 2021 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
-//
 package io
 
 import (
@@ -72,9 +70,9 @@ func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port
 // https://github.com/data61/MP-SPDZ/issues/418#issuecomment-975424591
 //
 // It is made up as follows:
-//  - Careful: The other header parts are not part of this communication, they are only used when reading tuple files
-//  - length of the prime as 4-byte number little-endian (e.g. 16),
-//  - prime in big-endian (e.g. 170141183460469231731687303715885907969)
+//   - Careful: The other header parts are not part of this communication, they are only used when reading tuple files
+//   - length of the prime as 4-byte number little-endian (e.g. 16),
+//   - prime in big-endian (e.g. 170141183460469231731687303715885907969)
 func (c Carrier) readPrime() error {
 	const size = 4
 	readBytes := make([]byte, size)

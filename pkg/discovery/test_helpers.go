@@ -1,9 +1,7 @@
-//
 // Copyright (c) 2021 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
-//
 package discovery
 
 import (
@@ -126,7 +124,8 @@ func NewStatesAsserter(states []string) *StatesAsserter {
 }
 
 // ExpectNext returns an Assertion over the next element of the internal states slice.
-//  This method does not perform any bounds checking, so calling this one time too many will panic
+//
+//	This method does not perform any bounds checking, so calling this one time too many will panic
 func (s *StatesAsserter) ExpectNext() Assertion {
 	state := s.states[s.currentIndex]
 	s.currentIndex++

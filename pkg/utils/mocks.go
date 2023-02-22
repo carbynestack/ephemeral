@@ -134,7 +134,7 @@ func (mfio *MockedFileIO) OpenWritePipe(path string) (File, error) {
 }
 
 // ReadLine mocks reading a string from a file. Returns the attributes from
-//// MockedFileIO.ReadStringResponse.
+// // MockedFileIO.ReadStringResponse.
 func (mfio *MockedFileIO) ReadLine(file File) (string, error) {
 	mfio.ReadLineCalls = append(mfio.ReadLineCalls, file)
 	return mfio.ReadLineResponse.Line, mfio.ReadLineResponse.Error

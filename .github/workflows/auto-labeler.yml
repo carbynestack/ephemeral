@@ -17,7 +17,7 @@ on:
       - opened
 
 jobs:
-  
+
   # re-usable workflow @see https://docs.github.com/en/actions/using-workflows/reusing-workflows
   auto-labeling:
     uses: carbynestack/.github/.github/workflows/auto-labeler.yml@master
