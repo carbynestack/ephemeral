@@ -1,9 +1,7 @@
-//
 // Copyright (c) 2021 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
-//
 package server
 
 import (
@@ -409,7 +407,7 @@ func sendEvents(stream pb.Discovery_EventsClient, events ...string) {
 	}
 }
 
-//getContext creates a context with a timeout, connection id and event scope.
+// getContext creates a context with a timeout, connection id and event scope.
 func getContext(id, scope string, t time.Duration) (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), t)
 	ctx = metadata.AppendToOutgoingContext(ctx, ConnID, id, EventScope, scope)
