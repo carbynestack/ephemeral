@@ -124,7 +124,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Setup Ko
-        uses: imjasonh/setup-ko@v0.4
+        uses: imjasonh/setup-ko@v0.6
       - name: Publish Docker Images
         run: |
           ko publish -B --tags=${{ env.VERSION }} \
