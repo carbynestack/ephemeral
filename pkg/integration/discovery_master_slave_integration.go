@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -87,6 +87,7 @@ func getDiscovery(port string, logger *zap.SugaredLogger, bus mb.MessageBus, fro
 	tr := server.NewTransportServer(serverConf)
 	pb := d.NewPublisher(bus)
 	stateTimeout := 10 * time.Second
+	connectTimeout := 10 * time.Second
 	n := &d.FakeNetworker{
 		FreePorts: []int32{30000, 30001, 30002},
 	}
@@ -94,19 +95,19 @@ func getDiscovery(port string, logger *zap.SugaredLogger, bus mb.MessageBus, fro
 	outClient := make(chan *proto.Event)
 
 	clientConf := &c.TransportClientConfig{
-		In:         inClient,
-		Out:        outClient,
-		ErrCh:      errCh,
-		Host:       "localhost",
-		Port:       "8081",
-		Logger:     logger,
-		ConnID:     "abc",
-		EventScope: EventScopeAll,
-		Timeout:    10 * time.Second,
-		Context:    context.TODO(),
+		In:             inClient,
+		Out:            outClient,
+		ErrCh:          errCh,
+		Host:           "localhost",
+		Port:           "8081",
+		Logger:         logger,
+		ConnID:         "abc",
+		EventScope:     EventScopeAll,
+		ConnectTimeout: 10 * time.Second,
+		Context:        context.TODO(),
 	}
 	cl, _ := c.NewClient(clientConf)
 	playerCount := 2
-	s := d.NewServiceNG(bus, pb, stateTimeout, tr, n, frontend, logger, mode, cl, playerCount)
+	s := d.NewServiceNG(bus, pb, stateTimeout, connectTimeout, tr, n, frontend, logger, mode, cl, playerCount)
 	return s
 }

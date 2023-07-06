@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -35,8 +35,8 @@ type TransportClientConfig struct {
 	// ConnID is the ID of the connection. In case of pure discovery clients, it is equal the gameID.
 	ConnID string
 
-	// Timeout is the gRPC dial timeout.
-	Timeout time.Duration
+	// ConnectTimeout is the gRPC dial timeout.
+	ConnectTimeout time.Duration
 
 	Logger *zap.SugaredLogger
 
@@ -99,19 +99,24 @@ func (c *Client) GetOut() chan *pb.Event {
 
 // Connect dials the server and returns a connection.
 func (c *Client) Connect() (*grpc.ClientConn, error) {
-	conn, err := grpc.Dial(c.conf.Host+":"+c.conf.Port, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(c.conf.Timeout))
+	ctx, cancelConnect := context.WithTimeout(context.Background(), c.conf.ConnectTimeout)
+	defer cancelConnect()
+	conn, err := grpc.DialContext(ctx, c.conf.Host+":"+c.conf.Port, grpc.WithBlock(), grpc.WithInsecure())
 	if err != nil {
 		c.conf.Logger.Error("error establishing a gRPC connection")
 		return nil, err
 	}
 	c.conn = conn
+	c.conf.Logger.Debug("Client gRPC connection established")
 	return conn, nil
 }
 
-// Run starts forwarding of the events. It blocks until the gRPC channel is closed or an error occurs.
+// Run starts forwarding of the events. The functionality is started as separate go routines which run until the given
+// context is closed, or a communication error occurs.
 func (c *Client) Run(client pb.DiscoveryClient) {
 	ctx := c.conf.Context
 	ctx = metadata.AppendToOutgoingContext(ctx, ConnID, c.conf.ConnID, EventScope, c.conf.EventScope)
+	c.conf.Logger.Debug("Register client to events.", ConnID, c.conf.ConnID, EventScope, c.conf.EventScope)
 	stream, err := client.Events(ctx)
 	if err != nil {
 		c.conf.ErrCh <- err
@@ -119,13 +124,25 @@ func (c *Client) Run(client pb.DiscoveryClient) {
 	}
 	c.stream = stream
 
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				err := c.Stop()
+				if err != nil {
+					c.conf.Logger.Errorf("error stopping gRPC client %v", err)
+				}
+				return
+			}
+		}
+	}()
 	go c.streamIn()
 	go c.streamOut()
 }
 
 // Stop closes the underlying gRPC stream and its TCP connection.
 func (c *Client) Stop() error {
-	c.conf.Logger.Debug("Stopping the gRPC client")
+	c.conf.Logger.Debug("Stopping client connection")
 	err := c.stream.CloseSend()
 	if err != nil {
 		return err
@@ -140,14 +157,20 @@ func (c *Client) Stop() error {
 func (c *Client) streamOut() error {
 	for {
 		select {
+		case <-c.conf.Context.Done():
+			c.conf.Logger.Debug("Closing streamOut as context is done.")
+			return nil
 		case ev := <-c.conf.Out:
+			c.conf.Logger.Debugf("Sending event %v", ev)
 			err := c.stream.Send(ev)
 			if err != nil {
-				c.conf.ErrCh <- err
+				c.conf.Logger.Errorf("Closing streamOut as error occurred: %v", err)
+				select {
+				case c.conf.ErrCh <- err:
+				default:
+				}
 				return nil
 			}
-		case <-c.conf.Context.Done():
-			return nil
 		}
 	}
 }
@@ -164,21 +187,23 @@ func (c *Client) streamIn() error {
 		}
 	}()
 	for {
+		ev, err := c.stream.Recv()
 		select {
 		case <-c.conf.Context.Done():
-			return nil
-		case <-c.stream.Context().Done():
-			c.conf.Logger.Errorf("The gRPC stream was closed")
+			c.conf.Logger.Debugf("Closing streamIn as context is done. (err: %v)", err)
 			return nil
 		default:
-			ev, err := c.stream.Recv()
+			c.conf.Logger.Debugf("Received event via streamIn %v", ev)
 			if err == io.EOF {
 				c.conf.Logger.Debug("server closed the connection")
 				return nil
 			}
 			if err != nil {
 				c.conf.Logger.Errorf("error from the gRPC stream %s", err.Error())
-				c.conf.ErrCh <- err
+				select {
+				case c.conf.ErrCh <- err:
+				default:
+				}
 				return nil
 			}
 			c.conf.In <- ev

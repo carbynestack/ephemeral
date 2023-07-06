@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -23,16 +23,14 @@ import (
 
 var _ = Describe("Main", func() {
 	It("returns a new client", func() {
-		conf := &DiscoveryConfig{
-			Slave:       true,
-			FrontendURL: "abc",
-			MasterHost:  "abc",
-			MasterPort:  "8080",
-			PlayerCount: 2,
+		conf := &DiscoveryClientTypedConfig{
+			Host:           "abc",
+			Port:           "8080",
+			ConnectTimeout: time.Second,
 		}
 		logger := zap.NewNop().Sugar()
 		errCh := make(chan error)
-		cl, mode, err := NewClient(conf, time.Second, logger, errCh)
+		cl, mode, err := NewClient(conf, logger, errCh)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mode).To(Equal(ModeSlave))
 		Expect(cl).NotTo(BeNil())
@@ -62,7 +60,7 @@ var _ = Describe("Main", func() {
 			Context("parameters are plausible", func() {
 				It("succeeds", func() {
 					data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
-		"masterPort": "31400","slave": false, "playerCount": 2}`)
+		"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
 					err := ioutil.WriteFile(path, data, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					conf, err := ParseConfig(path)
@@ -78,7 +76,7 @@ var _ = Describe("Main", func() {
 				Context("playerCount is invalid", func() {
 					It("returns an error on PlayerCount == 1", func() {
 						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
-		"masterPort": "31400","slave": false, "playerCount": 1}`)
+		"masterPort": "31400","slave": false, "playerCount": 1, "stateTimeout": "1s", "connectTimeout": "2s"}`)
 						err := ioutil.WriteFile(path, data, 0644)
 						Expect(err).NotTo(HaveOccurred())
 						_, err = ParseConfig(path)
@@ -86,7 +84,7 @@ var _ = Describe("Main", func() {
 					})
 					It("returns an error on negative PlayerCount", func() {
 						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
-		"masterPort": "31400","slave": false, "playerCount": -2}`)
+		"masterPort": "31400","slave": false, "playerCount": -2, "stateTimeout": "1s", "connectTimeout": "2s"}`)
 						err := ioutil.WriteFile(path, data, 0644)
 						Expect(err).NotTo(HaveOccurred())
 						_, err = ParseConfig(path)
@@ -105,35 +103,47 @@ var _ = Describe("Main", func() {
 				It("returns an error", func() {
 					path := fmt.Sprintf("/tmp/test-%d", random)
 					noFrontendURLConfig := []byte(`{"masterHost": "apollo.test.specs.cloud",
-			"masterPort": "31400","slave": false, "playerCount": 2}`)
+			"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
 					err := ioutil.WriteFile(path, noFrontendURLConfig, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					_, err = ParseConfig(path)
 					Expect(err).To(HaveOccurred())
 
 					noMasterHostConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud",
-					"masterPort": "31400","slave": true, "playerCount": 2}`)
+					"masterPort": "31400","slave": true, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
 					err = ioutil.WriteFile(path, noMasterHostConfigSlave, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					_, err = ParseConfig(path)
 					Expect(err).To(HaveOccurred())
 
 					noMasterHostConfigMaster := []byte(`{"frontendURL": "apollo.test.specs.cloud",
-					"masterPort": "31400","slave": false, "playerCount": 2}`)
+					"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
 					err = ioutil.WriteFile(path, noMasterHostConfigMaster, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					conf, err := ParseConfig(path)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(conf).NotTo(BeNil())
 
-					noMasterPortConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "playerCount": 2}`)
+					noMasterPortConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
 					err = ioutil.WriteFile(path, noMasterPortConfigSlave, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					_, err = ParseConfig(path)
 					Expect(err).To(HaveOccurred())
 
-					noPlayerCountConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400"}`)
+					noPlayerCountConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
 					err = ioutil.WriteFile(path, noPlayerCountConfig, 0644)
+					Expect(err).NotTo(HaveOccurred())
+					_, err = ParseConfig(path)
+					Expect(err).To(HaveOccurred())
+
+					noStateTimeoutConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "playerCount": "2", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+					err = ioutil.WriteFile(path, noStateTimeoutConfig, 0644)
+					Expect(err).NotTo(HaveOccurred())
+					_, err = ParseConfig(path)
+					Expect(err).To(HaveOccurred())
+
+					noConnectTimeoutConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "playerCount": "2", "stateTimeout": "2s", "computationTimeout": "3s"}`)
+					err = ioutil.WriteFile(path, noConnectTimeoutConfig, 0644)
 					Expect(err).NotTo(HaveOccurred())
 					_, err = ParseConfig(path)
 					Expect(err).To(HaveOccurred())
@@ -141,7 +151,7 @@ var _ = Describe("Main", func() {
 			})
 			Context("when port|busSize|portRange|configLocation are not defined", func() {
 				It("sets the default values", func() {
-					conf := &DiscoveryConfig{}
+					conf := &DiscoveryTypedConfig{}
 					SetDefaults(conf)
 					Expect(conf.Port).To(Equal(DefaultPort))
 					Expect(conf.BusSize).To(Equal(DefaultBusSize))
@@ -175,40 +185,6 @@ var _ = Describe("Main", func() {
 					RunDeletion(doneCh, errCh, logger, s)
 				}
 				runDeletion()
-			})
-		})
-	})
-
-	Context("when getting the stateTimeout", func() {
-		Context("no stateTimeout was provided in the config", func() {
-			It("will use the defaultStateTimeout", func() {
-				var config = &DiscoveryConfig{}
-				timeout, err := getStateTimeout(config)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(timeout).To(Equal(defaultStateTimeout))
-			})
-		})
-		Context("an empty stateTimeout was provided in the config", func() {
-			It("will use the defaultStateTimeout", func() {
-				var config = &DiscoveryConfig{StateTimeout: ""}
-				timeout, err := getStateTimeout(config)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(timeout).To(Equal(defaultStateTimeout))
-			})
-		})
-		Context("a valid stateTimeout was provided in the config", func() {
-			It("will use the provided stateTimeout", func() {
-				var config = &DiscoveryConfig{StateTimeout: "5m"}
-				timeout, err := getStateTimeout(config)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(timeout).To(Equal(5 * time.Minute))
-			})
-		})
-		Context("an invalid stateTimeout was provided in the config", func() {
-			It("will return an error", func() {
-				var config = &DiscoveryConfig{StateTimeout: "invalid"}
-				_, err := getStateTimeout(config)
-				Expect(err).To(HaveOccurred())
 			})
 		})
 	})

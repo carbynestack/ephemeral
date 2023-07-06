@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -28,17 +28,18 @@ var _ = Describe("DiscoveryNG", func() {
 func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 
 	var (
-		bus             mb.MessageBus
-		timeout         = 1 * time.Second
-		done            chan struct{}
-		pb              *Publisher
-		s               *ServiceNG
-		g               *GamesWithBus
-		stateTimeout    time.Duration
-		tr              t.Transport
-		n               *FakeNetworker
-		frontendAddress string
-		logger          = zap.NewNop().Sugar()
+		bus                mb.MessageBus
+		timeout            = 1 * time.Second
+		done               chan struct{}
+		pb                 *Publisher
+		s                  *ServiceNG
+		g                  *GamesWithBus
+		stateTimeout       time.Duration
+		computationTimeout time.Duration
+		tr                 t.Transport
+		n                  *FakeNetworker
+		frontendAddress    string
+		logger             = zap.NewNop().Sugar()
 	)
 
 	BeforeEach(func() {
@@ -49,6 +50,7 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 			Fsm: &fsm.FSM{},
 		}
 		stateTimeout = 10 * time.Second
+		computationTimeout = 20 * time.Second
 		tr = &FakeTransport{}
 		n = &FakeNetworker{
 			FreePorts: make([]int32, playerCount),
@@ -59,7 +61,7 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 
 		frontendAddress = "192.168.0.1"
 		conf := &FakeDClient{}
-		s = NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, conf, playerCount)
+		s = NewServiceNG(bus, pb, stateTimeout, computationTimeout, tr, n, frontendAddress, logger, ModeMaster, conf, playerCount)
 		g = &GamesWithBus{
 			Games: s.games,
 			Bus:   bus,
@@ -212,7 +214,7 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 				assertExternalEvent(gameError[0], ClientOutgoingEventsTopic, g, done, func(states []string) {})
 				assertExternalEvent(gameError[1], ClientOutgoingEventsTopic, g, done, func(states []string) {})
 				// Make state timeout smaller to cause the error.
-				s.timeout = 100 * time.Millisecond
+				s.stateTimeout = 100 * time.Millisecond
 				go s.Start()
 				s.WaitUntilReady(timeout)
 				pb.PublishExternalEvent(ready[0], ClientIncomingEventsTopic)
@@ -258,26 +260,23 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 
 		var (
 			// Events sent by the clients to discovery service.
-			ready, tcpCheckSuccess *proto.Event
+			ready *proto.Event
 
 			// Events sent by discovery service to the clients
-			playersReady, tcpCheckSuccessAll, gameFinishedWithSuccess, gameProtocolError *proto.Event
+			playersReady, gameFinishedWithSuccess, gameProtocolError *proto.Event
 		)
 
 		BeforeEach(func() {
 			// Events sent by clients.
 			ready = GenerateEvents(PlayerReady, "0")[0]
-			tcpCheckSuccess = GenerateEvents(TCPCheckSuccess, "0")[0]
 			gameFinishedWithSuccess = GenerateEvents(GameFinishedWithSuccess, "0")[0]
 			playersReady = GenerateEvents(PlayersReady, "0")[0]
-			tcpCheckSuccessAll = GenerateEvents(TCPCheckSuccessAll, "0")[0]
 			gameProtocolError = GenerateEvents(GameProtocolError, "0")[0]
 		})
 
 		It("sends all required events to the clients", func() {
 			// Do not test the exact states after each events - it was already covered in the Game unit tests.
 			assertExternalEvent(playersReady, ClientOutgoingEventsTopic, g, done, func(states []string) {})
-			assertExternalEvent(tcpCheckSuccessAll, ClientOutgoingEventsTopic, g, done, func(states []string) {})
 
 			go s.Start()
 			s.WaitUntilReady(timeout)
@@ -286,13 +285,8 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 			}
 			time.Sleep(50 * time.Millisecond)
 			for i := 0; i < playerCount; i++ {
-				pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
-			}
-			time.Sleep(50 * time.Millisecond)
-			for i := 0; i < playerCount; i++ {
 				pb.PublishExternalEvent(gameFinishedWithSuccess, ClientIncomingEventsTopic)
 			}
-			WaitDoneOrTimeout(done)
 			WaitDoneOrTimeout(done)
 		})
 
@@ -311,10 +305,6 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 			s.WaitUntilReady(timeout)
 			for i := 0; i < playerCount; i++ {
 				pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
-			}
-			time.Sleep(50 * time.Millisecond)
-			for i := 0; i < playerCount; i++ {
-				pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
 			}
 			time.Sleep(50 * time.Millisecond)
 			for i := 0; i < playerCount; i++ {

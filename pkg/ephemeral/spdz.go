@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -34,7 +34,6 @@ const (
 	appName             = "mpc-program"
 	baseDir             = "/mp-spdz"
 	ipFile              = baseDir + "/ip-file"
-	timeout             = 20 * time.Second
 	tcpCheckerTimeout   = 50 * time.Millisecond
 	defaultPath         = baseDir + "/Programs/Source/" + appName + ".mpc"
 	defaultSchedulePath = baseDir + "/Programs/Schedules/" + appName + ".sch"
@@ -135,7 +134,7 @@ func DefaultCastorTupleStreamerFactory(l *zap.SugaredLogger, tt castor.TupleType
 func NewSPDZEngine(logger *zap.SugaredLogger, cmder Executor, config *SPDZEngineTypedConfig) (*SPDZEngine, error) {
 	c := &network.TCPCheckerConf{
 		DialTimeout:  tcpCheckerTimeout,
-		RetryTimeout: timeout,
+		RetryTimeout: config.NetworkEstablishTimeout,
 		Logger:       logger,
 	}
 	feeder := NewAmphoraFeeder(logger, config)
@@ -165,7 +164,6 @@ type SPDZEngine struct {
 	logger          *zap.SugaredLogger
 	cmder           Executor
 	config          *SPDZEngineTypedConfig
-	doneCh          chan struct{}
 	checker         network.NetworkChecker
 	feeder          Feeder
 	playerDataPaths map[castor.SPDZProtocol]string
@@ -179,22 +177,15 @@ type SPDZEngine struct {
 
 // Activate starts a proxy, writes an IP file, start SPDZ execution, unpacks inputs parameters, sends them to the runtime and waits for the response.
 func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
-	errCh := make(chan error, 1)
+	proxyErrCh := make(chan error, 1)
 	act := ctx.Act
-	err := s.proxy.Run(ctx, errCh)
+	err := s.proxy.Run(ctx, proxyErrCh)
+	defer s.proxy.Stop()
 	if err != nil {
 		msg := "error starting the tcp proxy"
 		s.logger.Errorw(msg, GameID, act.GameID)
 		return nil, fmt.Errorf("%s: %s", msg, err)
 	}
-	defer func() {
-		select {
-		case err := <-errCh:
-			s.logger.Errorw(err.Error(), GameID, act.GameID)
-		default:
-			s.proxy.Stop()
-		}
-	}()
 	err = s.writeIPFile(s.ipFile, proxyAddress, ctx.Spdz.PlayerCount)
 	if err != nil {
 		msg := "error due to writing to the ip file"
@@ -202,27 +193,37 @@ func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
 		return nil, fmt.Errorf("%s: %s", msg, err)
 	}
 	go s.startMPC(ctx)
-
+	defer s.feeder.Close()
 	feedPort := s.getFeedPort()
+	doneCh := make(chan struct{})
+	var activationResult []byte = nil
+	var activationErr error = nil
 	go func() {
-		select {
-		case <-ctx.Context.Done():
-			s.logger.Debug("Closing the TCP socket connection - context cancelled")
-			_ = s.feeder.Close()
-		case <-time.After(s.config.RetryTimeout):
-			s.logger.Debug("Closing the TCP socket connection - retry timeout exceeded")
-			_ = s.feeder.Close()
+		defer close(doneCh)
+		// Read the secret shares either from Amphora or from the http request.
+		if len(act.AmphoraParams) > 0 {
+			activationResult, activationErr = s.feeder.LoadFromSecretStoreAndFeed(act, feedPort, ctx)
+		} else if len(act.SecretParams) > 0 {
+			activationResult, activationErr = s.feeder.LoadFromRequestAndFeed(act, feedPort, ctx)
+		} else {
+			activationErr = errors.New("no MPC parameters specified")
 		}
 	}()
-	// Read the secret shares either from Amphora or from the http request.
-	if len(act.AmphoraParams) > 0 {
-		return s.feeder.LoadFromSecretStoreAndFeed(act, feedPort, ctx)
+	select {
+	case <-doneCh:
+		if activationErr == nil {
+			s.logger.Debugw("Activation finished successful", GameID, act.GameID)
+		} else {
+			s.logger.Errorw("Activation finished with error", GameID, act.GameID, "Error", activationErr)
+		}
+		return activationResult, activationErr
+	case err := <-proxyErrCh:
+		s.logger.Errorw("Activation finished with proxy error", GameID, act.GameID, "ProxyError", err)
+		return nil, err
+	case <-ctx.Context.Done():
+		s.logger.Debug("Stopping SPDZ activation - context closed")
+		return nil, errors.New("SPDZ activation cancelled due to closed context")
 	}
-	if len(act.SecretParams) > 0 {
-		return s.feeder.LoadFromRequestAndFeed(act, feedPort, ctx)
-	}
-	// The line below should be never reached, since we check activations parameters in the request handlers. However, leaving it here for completeness.
-	return nil, errors.New("no MPC parameters specified")
 }
 
 func (s *SPDZEngine) getNumberOfThreads() (int, error) {
@@ -306,6 +307,7 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 	}
 	computationFinished := make(chan struct{})
 	terminateStreams := make(chan struct{})
+	defer close(terminateStreams)
 	streamErrCh := make(chan error, len(castor.SupportedTupleTypes))
 	for _, s := range tupleStreamers {
 		wg.Add(1)
@@ -331,7 +333,6 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 		s.logger.Error(error)
 		ctx.ErrCh <- error
 	}
-	close(terminateStreams)
 }
 
 func (s *SPDZEngine) writeIPFile(path string, addr string, parties int32) error {

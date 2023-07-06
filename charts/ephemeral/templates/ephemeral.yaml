@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 - for information on the respective copyright owner
+# Copyright (c) 2021-2023 - for information on the respective copyright owner
 # see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -18,6 +18,7 @@ spec:
       {{- end}}
         autoscaling.knative.dev/minScale: "{{ .Values.ephemeral.minScale }}"
     spec:
+      timeoutSeconds: {{ .Values.ephemeral.knative.activation.timeoutSeconds }}
       {{- if .Values.ephemeral.image.pullSecrets }}
       imagePullSecrets:
         {{- range .Values.ephemeral.image.pullSecrets }}
@@ -72,7 +73,7 @@ data:
   config.json: |-
     {
       "retrySleep": "50ms",
-      "retryTimeout": "1m",
+      "networkEstablishTimeout": "{{ .Values.ephemeral.networkEstablishTimeout }}",
       "prime": "{{ .Values.ephemeral.spdz.prime }}",
       "rInv": "{{ .Values.ephemeral.spdz.rInv }}",
       "gfpMacKey": "{{ .Values.ephemeral.spdz.gfpMacKey }}",
@@ -92,7 +93,13 @@ data:
         "tupleStock": {{ .Values.ephemeral.castor.tupleStock }}
       },
       "frontendURL": "{{ .Values.ephemeral.frontendUrl }}",
-      "discoveryAddress": "{{ .Values.ephemeral.discoveryAddress }}",
+      "discoveryConfig": {
+        "host": "{{ .Values.ephemeral.discovery.host }}",
+        "port": "{{ .Values.ephemeral.discovery.port }}",
+        "connectTimeout": "{{ .Values.ephemeral.discovery.connectTimeout }}"
+      },
       "playerID": {{ .Values.ephemeral.playerId }},
-      "playerCount": {{ .Values.playerCount }}
+      "playerCount": {{ .Values.playerCount }},
+      "stateTimeout": "{{ .Values.ephemeral.player.stateTimeout }}",
+      "computationTimeout": "{{ .Values.ephemeral.player.computationTimeout }}"
     }

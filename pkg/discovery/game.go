@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -24,11 +24,10 @@ type FSMWithBus interface {
 
 // Game is a single execution of MPC.
 type Game struct {
-	id     string
-	fsm    *fsm.FSM
-	bus    mb.MessageBus
-	pb     *Publisher
-	logger *zap.SugaredLogger
+	id  string
+	fsm *fsm.FSM
+	bus mb.MessageBus
+	pb  *Publisher
 }
 
 // Init starts the fsm of the Game with its initial state.
@@ -49,18 +48,18 @@ func (g *Game) Bus() mb.MessageBus {
 }
 
 // NewGame returns an instance of Game.
-func NewGame(ctx context.Context, id string, bus mb.MessageBus, timeout time.Duration, logger *zap.SugaredLogger, playerCount int) (*Game, error) {
+func NewGame(ctx context.Context, id string, bus mb.MessageBus, stateTimeout time.Duration, computationTimeout time.Duration, logger *zap.SugaredLogger, playerCount int) (*Game, error) {
 	publisher := &Publisher{
 		Bus: bus,
 	}
 	callbacker := GameCallbacker{
 		pb:     publisher,
 		gameID: id,
+		logger: logger.With("gameID", id),
 	}
 	cb := []*fsm.Callback{
 		fsm.AfterEnter(WaitPlayersReady).Do(callbacker.sendRegistered()),
 		fsm.AfterEnter(WaitPlayersReady).Do(callbacker.checkSomethingReady(playerCount, PlayerReady, PlayersReady)),
-		fsm.AfterEnter(WaitTCPCheck).Do(callbacker.checkSomethingReady(playerCount, TCPCheckSuccess, TCPCheckSuccessAll)),
 		fsm.AfterEnter(Playing).Do(callbacker.checkSomethingReady(playerCount, GameFinishedWithSuccess, GameSuccess)),
 		fsm.AfterEnter(GameDone).Do(callbacker.gameDone()),
 		fsm.AfterEnter(GameError).Do(callbacker.gameError()),
@@ -69,10 +68,7 @@ func NewGame(ctx context.Context, id string, bus mb.MessageBus, timeout time.Dur
 	trs := []*fsm.Transition{
 		fsm.WhenIn(Init).GotEvent(PlayerReady).GoTo(WaitPlayersReady),
 		fsm.WhenIn(WaitPlayersReady).GotEvent(PlayerReady).Stay(),
-		fsm.WhenIn(WaitPlayersReady).GotEvent(PlayersReady).GoTo(WaitTCPCheck),
-		fsm.WhenIn(WaitTCPCheck).GotEvent(TCPCheckSuccess).Stay(),
-		fsm.WhenIn(WaitTCPCheck).GotEvent(TCPCheckSuccessAll).GoTo(Playing),
-		fsm.WhenIn(WaitTCPCheck).GotEvent(TCPCheckFailure).GoTo(GameError),
+		fsm.WhenIn(WaitPlayersReady).GotEvent(PlayersReady).GoTo(Playing).WithTimeout(computationTimeout),
 		fsm.WhenIn(Playing).GotEvent(GameFinishedWithSuccess).Stay(),
 		fsm.WhenIn(Playing).GotEvent(GameFinishedWithError).GoTo(GameError),
 		fsm.WhenIn(Playing).GotEvent(GameSuccess).GoTo(GameDone),
@@ -81,7 +77,7 @@ func NewGame(ctx context.Context, id string, bus mb.MessageBus, timeout time.Dur
 		fsm.WhenInAnyState().GotEvent(GameDone).GoTo(GameDone),
 	}
 	callbacks, transitions := fsm.InitCallbacksAndTransitions(cb, trs)
-	f, err := fsm.NewFSM(ctx, Init, transitions, callbacks, timeout, logger)
+	f, err := fsm.NewFSM(ctx, Init, transitions, callbacks, stateTimeout, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -104,12 +100,14 @@ func NewGame(ctx context.Context, id string, bus mb.MessageBus, timeout time.Dur
 type GameCallbacker struct {
 	pb     *Publisher
 	gameID string
+	logger *zap.SugaredLogger
 }
 
 // sendRegistered notifies the client that it was registered for the game.
 func (c *GameCallbacker) sendRegistered() func(e interface{}) error {
 	return func(e interface{}) error {
 		meta := e.(*fsm.Event).Meta
+		c.logger.Debugw("Client registered.", "meta", meta)
 		c.pb.Publish(Registered, ServiceEventsTopic, meta.TargetTopic)
 		return nil
 	}
@@ -119,6 +117,7 @@ func (c *GameCallbacker) sendRegistered() func(e interface{}) error {
 func (c *GameCallbacker) gameDone() func(e interface{}) error {
 	return func(e interface{}) error {
 		meta := e.(*fsm.Event).Meta
+		c.logger.Debugw("Game done.", "meta", meta)
 		c.pb.Publish(GameDone, ServiceEventsTopic, meta.TargetTopic)
 		meta.FSM.Stop()
 		return nil
@@ -129,6 +128,11 @@ func (c *GameCallbacker) gameDone() func(e interface{}) error {
 func (c *GameCallbacker) gameError() func(e interface{}) error {
 	return func(e interface{}) error {
 		meta := e.(*fsm.Event).Meta
+		var history *fsm.History
+		if meta.FSM != nil {
+			history = meta.FSM.History()
+		}
+		c.logger.Debugw("Game failed.", "meta", meta, "event history", history)
 		c.pb.Publish(GameError, DiscoveryTopic, meta.TargetTopic)
 		c.pb.Publish(GameDone, c.gameID)
 		return nil
@@ -138,6 +142,7 @@ func (c *GameCallbacker) gameError() func(e interface{}) error {
 // stateTimeout sends out a StateTimeoutError.
 func (c *GameCallbacker) stateTimeout() func(e interface{}) error {
 	return func(e interface{}) error {
+		c.logger.Debug("Send state timeout.")
 		c.pb.Publish(StateTimeoutError, c.gameID)
 		return nil
 	}
@@ -147,6 +152,7 @@ func (c *GameCallbacker) stateTimeout() func(e interface{}) error {
 // And if it is the case, it sends out the state "out" to discovery and to itself.
 func (c *GameCallbacker) checkSomethingReady(players int, in string, out string) func(e interface{}) error {
 	return func(e interface{}) error {
+		c.logger.Debugw("Check readiness.", "Players", players, "Event", in)
 		meta := e.(*fsm.Event).Meta
 		f := meta.FSM
 		if f == nil {
@@ -156,6 +162,7 @@ func (c *GameCallbacker) checkSomethingReady(players int, in string, out string)
 		events := f.History().GetEvents()
 		readyPlayers := countEvents(events, in)
 		if readyPlayers == players {
+			c.logger.Debugf("Players ready - sending message %v", out)
 			// the targetTopic of previous event includes the game id we would need for further event forwarding.
 			c.pb.Publish(out, DiscoveryTopic, meta.TargetTopic)
 			c.pb.Publish(out, c.gameID)

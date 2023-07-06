@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -24,15 +24,14 @@ type Feeder interface {
 
 // NewAmphoraFeeder returns a new instance of amphora feeder.
 func NewAmphoraFeeder(l *zap.SugaredLogger, conf *SPDZEngineTypedConfig) *AmphoraFeeder {
-	dialer := network.RetryingDialerWithContext(conf.RetrySleep, conf.RetryTimeout, func() {
-		l.Debug(fmt.Sprintf("retrying to connect to SPDZ socket after %s", conf.RetrySleep))
-	})
+	dialer := network.RetryingDialerWithContext(conf.RetrySleep, l)
 
 	carrier := &Carrier{
 		Dialer: dialer,
 		Packer: &SPDZPacker{
 			MaxBulkSize: conf.MaxBulkSize,
 		},
+		Logger: l,
 	}
 	return &AmphoraFeeder{
 		logger:  l,
@@ -93,13 +92,14 @@ func (f *AmphoraFeeder) LoadFromRequestAndFeed(act *Activation, feedPort string,
 
 // Close closes the underlying socket connection.
 func (f *AmphoraFeeder) Close() error {
+	f.logger.Debug("Close connections.")
 	return f.carrier.Close()
 }
 
 // feedAndRead takes a slice of base64 encoded secret shared parameters along with the port where SPDZ runtime is listening for the input. The base64 input params are converted into a form digestable by SPDZ and sent to the socket. The runtime must send back a response for this function to finish without an error.
-func (f *AmphoraFeeder) feedAndRead(params []string, port string, ctx *CtxConfig) (*Result, error) {
+func (f *AmphoraFeeder) feedAndRead(params []string, feedPort string, ctx *CtxConfig) (*Result, error) {
 	var conv ResponseConverter
-	f.logger.Debugw(fmt.Sprintf("Received secret shared parameters %s", params), GameID, ctx.Act.GameID)
+	f.logger.Debugw(fmt.Sprintf("Received secret shared parameters \"%.10s...\" (len: %d)", params, len(params)), GameID, ctx.Act.GameID)
 	isBulk := false
 	// It must be defined in the Activation whether plaintext or secret shared output is expected.
 	switch strings.ToUpper(ctx.Act.Output.Type) {
@@ -116,12 +116,13 @@ func (f *AmphoraFeeder) feedAndRead(params []string, port string, ctx *CtxConfig
 	default:
 		return nil, fmt.Errorf("no output config is given, either %s, %s or %s must be defined", PlainText, SecretShare, AmphoraSecret)
 	}
-	err := f.carrier.Connect(ctx.Context, ctx.Spdz.PlayerID, "localhost", port)
+	err := f.carrier.Connect(ctx.Context, ctx.Spdz.PlayerID, "localhost", feedPort, f.conf.NetworkEstablishTimeout)
 	defer f.carrier.Close()
 	if err != nil {
 		return nil, err
 	}
-	secrets := []amphora.SecretShare{}
+	f.logger.Debug("Carrier connected")
+	var secrets []amphora.SecretShare
 	for i := range params {
 		secret := amphora.SecretShare{
 			Data: params[i],
@@ -132,6 +133,7 @@ func (f *AmphoraFeeder) feedAndRead(params []string, port string, ctx *CtxConfig
 	if err != nil {
 		return nil, err
 	}
+	f.logger.Debug("Parameters written to carrier")
 	return f.carrier.Read(conv, isBulk)
 }
 

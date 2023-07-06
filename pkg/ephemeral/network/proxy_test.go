@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -20,9 +20,9 @@ var _ = Describe("Proxy", func() {
 			logger := zap.NewNop().Sugar()
 			tcpChecker := &NoopChecker{}
 			spdzConfig := &SPDZEngineTypedConfig{
-				PlayerID:     0,
-				RetrySleep:   50 * time.Millisecond,
-				RetryTimeout: 10 * time.Second,
+				PlayerID:                0,
+				RetrySleep:              50 * time.Millisecond,
+				NetworkEstablishTimeout: 10 * time.Second,
 			}
 			p := NewProxy(logger, spdzConfig, tcpChecker)
 			ctx := &CtxConfig{

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -7,10 +7,9 @@ package server
 import (
 	"context"
 	"errors"
+	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	"io"
 	"net"
-
-	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 
 	. "github.com/carbynestack/ephemeral/pkg/types"
 
@@ -47,6 +46,7 @@ type Transport interface {
 
 // NewTransportServer returns a new transport server.
 func NewTransportServer(conf *TransportConfig) *TransportServer {
+	conf.Logger.Debug("Creating new TransportServer.")
 	tr := &TransportServer{
 		conf:       conf,
 		mb:         mb.New(10000),
@@ -78,6 +78,7 @@ func (d *TransportServer) Run(cb func()) error {
 	if err != nil {
 		return err
 	}
+	d.conf.Logger.Debugf("Started TransportServer listening on %s.", lis.Addr())
 	pb.RegisterDiscoveryServer(d.grpcServer, d)
 	done := make(chan struct{}, 1)
 	go d.broadcast(done)
@@ -88,23 +89,27 @@ func (d *TransportServer) Run(cb func()) error {
 
 // Stop stops the transport server.
 func (d *TransportServer) Stop() {
+	d.conf.Logger.Debug("Stopping the gRPC Server")
 	d.grpcServer.Stop()
 }
 
-// Events is a Remote Procedure that is executed by GRPC clietns. it instantiates the communication with the server. The messages are sent and read from In and Out channels instead of manipulating the GRPC stream directly.
+// Events is a Remote Procedure that is executed by GRPC clients. it instantiates the communication with the server.
+// The messages are sent and read from In and Out channels instead of manipulating the GRPC stream directly.
 func (d *TransportServer) Events(stream pb.Discovery_EventsServer) error {
 	ctx := stream.Context()
 	connID, scope, err := d.extractMeta(ctx)
 	if err != nil {
 		return err
 	}
+	d.conf.Logger.Debugw("Start handling events", ConnID, connID, EventScope, scope)
 	// Read all outgoing events from the broadcast topic.
-	d.mb.Subscribe(broadcastTopic, d.forwardToStream(stream, scope, connID))
+	_ = d.mb.Subscribe(broadcastTopic, d.forwardToStream(stream, scope, connID))
 	errCh := make(chan error)
 	go d.forwardFromStream(stream, errCh)
 	// Block until we receive an error.
 	err = <-errCh
-	d.mb.Unsubscribe(broadcastTopic, d.forwardToStream(stream, scope, connID))
+	d.conf.Logger.Debugw("Event handling received error.", "Error", err, ConnID, connID, EventScope, scope)
+	_ = d.mb.Unsubscribe(broadcastTopic, d.forwardToStream(stream, scope, connID))
 	d.conf.Logger.Debug("Unsubscribed forwardToStream from the broadcast topic")
 	return err
 }
@@ -122,8 +127,10 @@ func (d *TransportServer) broadcast(done chan struct{}) {
 	for {
 		select {
 		case ev := <-d.conf.Out:
+			d.conf.Logger.Debugw("Broadcast outgoing event.", "Event", ev)
 			d.mb.Publish(broadcastTopic, ev)
 		case <-done:
+			d.conf.Logger.Debug("Stopped broadcasting.")
 			return
 		}
 	}
@@ -170,6 +177,7 @@ func (d *TransportServer) forwardToStream(stream pb.Discovery_EventsServer, scop
 
 // sendEvent sents out an event and potentially prints an error.
 func (d *TransportServer) sendEvent(stream pb.Discovery_EventsServer, ev *pb.Event) {
+	d.conf.Logger.Debugw("Broadcasting event.", "Event", ev)
 	err := stream.Send(ev)
 	if err != nil {
 		d.conf.Logger.Errorf("error broadcasting the event %s", ev.Name)
@@ -191,9 +199,11 @@ func (d *TransportServer) forwardFromStream(stream pb.Discovery_EventsServer, er
 				return
 			}
 			if err != nil {
+				d.conf.Logger.Errorw("Received error from stream.", "Error", err)
 				errCh <- err
 				return
 			}
+			d.conf.Logger.Debugw("Received event from stream.", "Event", ev)
 			d.conf.In <- ev
 		}
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -22,16 +22,18 @@ import (
 var _ = Describe("Forwarder", func() {
 	Context("when forwarding events to player", func() {
 		var (
-			inCh       chan *pb.Event
-			outCh      chan *pb.Event
-			doneCh     chan struct{}
-			bus        mb.MessageBus
-			spdz       MPCEngine
-			params     *PlayerParams
-			logger     *zap.SugaredLogger
-			forwarder  *Forwarder
-			playerName = "0"
-			timeout    = 10 * time.Second
+			inCh               chan *pb.Event
+			outCh              chan *pb.Event
+			doneCh             chan struct{}
+			errCh              chan error
+			bus                mb.MessageBus
+			spdz               MPCEngine
+			params             *PlayerParams
+			logger             *zap.SugaredLogger
+			forwarder          *Forwarder
+			playerName         = "0"
+			stateTimeout       = 10 * time.Second
+			computationTimeout = 20 * time.Second
 		)
 
 		BeforeEach(func() {
@@ -55,7 +57,7 @@ var _ = Describe("Forwarder", func() {
 		It("forwards events in both directions", func() {
 			ctx := context.TODO()
 			testEvent := "test"
-			pl, _ := NewPlayer(ctx, bus, timeout, spdz, params, logger)
+			pl, _ := NewPlayer(ctx, bus, stateTimeout, computationTimeout, spdz, params, errCh, logger)
 			event := &pb.Event{
 				Name: testEvent,
 			}
@@ -77,7 +79,7 @@ var _ = Describe("Forwarder", func() {
 		Context("when the context is canceled", func() {
 			It("stops the player", func() {
 				ctx, cancel := context.WithCancel(context.Background())
-				pl, _ := NewPlayer(ctx, bus, timeout, spdz, params, logger)
+				pl, _ := NewPlayer(ctx, bus, stateTimeout, computationTimeout, spdz, params, errCh, logger)
 				cancel()
 				forwarder.conf.Ctx = ctx
 				forwarder.conf.Player = pl

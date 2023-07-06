@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -6,11 +6,14 @@ package ephemeral
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	d "github.com/carbynestack/ephemeral/pkg/discovery"
 	"github.com/carbynestack/ephemeral/pkg/discovery/fsm"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
 	. "github.com/carbynestack/ephemeral/pkg/types"
+	"strings"
 	"time"
 
 	mb "github.com/vardius/message-bus"
@@ -32,25 +35,27 @@ type PlayerParams struct {
 }
 
 // NewPlayer returns an fsm based model of the MPC player.
-func NewPlayer(ctx context.Context, bus mb.MessageBus, timeout time.Duration, me MPCEngine, playerParams *PlayerParams, logger *zap.SugaredLogger) (*Player1, error) {
-	call := NewCallbacker(bus, playerParams, logger)
+func NewPlayer(ctx context.Context, bus mb.MessageBus, stateTimeout time.Duration, computationTimeout time.Duration, me MPCEngine, playerParams *PlayerParams, errCh chan error, logger *zap.SugaredLogger) (*Player1, error) {
+	call := NewCallbacker(bus, playerParams, errCh, logger)
 	cbs := []*fsm.Callback{
 		fsm.AfterEnter(Registering).Do(call.sendPlayerReady()),
 		fsm.AfterEnter(Playing).Do(call.playing(playerParams.Name, me)),
 		fsm.AfterEnter(PlayerFinishedWithError).Do(call.finishWithError(playerParams.Name)),
 		fsm.AfterEnter(PlayerFinishedWithSuccess).Do(call.finishWithSuccess(playerParams.Name)),
 		fsm.AfterEnter(PlayerDone).Do(call.done()),
+		fsm.WhenStateTimeout().Do(call.finishWithError(playerParams.Name)),
 	}
 	trs := []*fsm.Transition{
 		fsm.WhenIn(Init).GotEvent(Register).GoTo(Registering),
-		fsm.WhenIn(Registering).GotEvent(PlayersReady).GoTo(Playing),
+		fsm.WhenIn(Registering).GotEvent(PlayersReady).GoTo(Playing).WithTimeout(computationTimeout),
 		fsm.WhenIn(Playing).GotEvent(PlayerFinishedWithSuccess).GoTo(PlayerFinishedWithSuccess),
 		fsm.WhenIn(Playing).GotEvent(PlayingError).GoTo(PlayerFinishedWithError),
 		fsm.WhenInAnyState().GotEvent(GameError).GoTo(PlayerFinishedWithError),
 		fsm.WhenInAnyState().GotEvent(PlayerDone).GoTo(PlayerDone),
+		fsm.WhenInAnyState().GotEvent(StateTimeoutError).GoTo(PlayerFinishedWithError),
 	}
 	callbacks, transitions := fsm.InitCallbacksAndTransitions(cbs, trs)
-	f, err := fsm.NewFSM(ctx, "Init", transitions, callbacks, timeout, logger)
+	f, err := fsm.NewFSM(ctx, "Init", transitions, callbacks, stateTimeout, logger)
 	// We can only update publisher's FSM after fsm is created.
 	call.pb.Fsm = f
 	if err != nil {
@@ -74,6 +79,7 @@ func NewPlayer(ctx context.Context, bus mb.MessageBus, timeout time.Duration, me
 		me:         me,
 		params:     playerParams,
 		call:       call,
+		errCh:      errCh,
 		logger:     logger,
 		ctx:        ctx,
 	}, nil
@@ -81,7 +87,7 @@ func NewPlayer(ctx context.Context, bus mb.MessageBus, timeout time.Duration, me
 
 // AbstractPlayer is an interface of a player.
 type AbstractPlayer interface {
-	Init(errCh chan error)
+	Init()
 	Stop()
 	History() *fsm.History
 	Bus() mb.MessageBus
@@ -102,13 +108,13 @@ type Player1 struct {
 	me         MPCEngine
 	params     *PlayerParams
 	call       *Callbacker
+	errCh      chan error
 	ctx        context.Context
 }
 
 // Init starts FSM and triggers the registration of the player.
-func (p *Player1) Init(errCh chan error) {
-	go p.fsm.Run(errCh)
-	time.Sleep(500 * time.Millisecond)
+func (p *Player1) Init() {
+	go p.fsm.Run(p.errCh)
 	p.call.sendEvent(Register, p.name, struct{}{})
 }
 
@@ -134,10 +140,11 @@ func (p *Player1) PublishEvent(name, topic string, event *pb.Event) {
 }
 
 // NewCallbacker returns a new instance of callbacker
-func NewCallbacker(bus mb.MessageBus, playerParams *PlayerParams, logger *zap.SugaredLogger) *Callbacker {
+func NewCallbacker(bus mb.MessageBus, playerParams *PlayerParams, errCh chan error, logger *zap.SugaredLogger) *Callbacker {
 	return &Callbacker{
 		pb:           d.NewPublisher(bus),
 		playerParams: playerParams,
+		errCh:        errCh,
 		logger:       logger,
 	}
 }
@@ -146,6 +153,7 @@ func NewCallbacker(bus mb.MessageBus, playerParams *PlayerParams, logger *zap.Su
 type Callbacker struct {
 	pb           *d.Publisher
 	playerParams *PlayerParams
+	errCh        chan error
 	logger       *zap.SugaredLogger
 }
 
@@ -165,17 +173,19 @@ func (c *Callbacker) sendPlayerReady() func(e interface{}) error {
 	}
 }
 
-// playing signals itself the state of the execution.
+// playing triggers the MPC computation and signals itself the state of the execution.
 func (c *Callbacker) playing(id string, me MPCEngine) func(e interface{}) error {
 	return func(e interface{}) error {
-		ev := e.(*fsm.Event)
-		err := me.Execute(ev.Meta.TransportMsg)
-		if err != nil {
-			c.logger.Errorf("error during code execution: %v", err)
-			c.sendEvent(PlayingError, id, e)
-			return nil
-		}
-		c.sendEvent(PlayerFinishedWithSuccess, id, e)
+		go func() {
+			ev := e.(*fsm.Event)
+			err := me.Execute(ev.Meta.TransportMsg)
+			if err != nil {
+				c.logger.Errorf("error during code execution: %v", err)
+				c.sendEvent(PlayingError, id, e)
+				return
+			}
+			c.sendEvent(PlayerFinishedWithSuccess, id, e)
+		}()
 		return nil
 	}
 }
@@ -185,6 +195,21 @@ func (c *Callbacker) finishWithError(id string) func(e interface{}) error {
 	return func(e interface{}) error {
 		c.sendEvent(GameFinishedWithError, DiscoveryTopic, e)
 		c.sendEvent(PlayerDone, id, e)
+		event := e.(*fsm.Event)
+		msg := fmt.Sprintf("game failed with error: %s", event.Name)
+		if event.Meta != nil && event.Meta.FSM != nil && event.Meta.FSM.History() != nil {
+			eventDetails := make([]string, len(event.Meta.FSM.History().GetEvents()))
+			for _, s := range event.Meta.FSM.History().GetStates() {
+				eventDetails = append(eventDetails, s)
+			}
+			msg = fmt.Sprintf("%s\n\tHistory: %s", msg, strings.Join(eventDetails, " -> "))
+		}
+		err := errors.New(msg)
+		c.logger.Debugf("player finished with error: %v", err)
+		select {
+		case c.errCh <- err:
+		default:
+		}
 		return nil
 	}
 }

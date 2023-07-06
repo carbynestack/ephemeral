@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -9,13 +9,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/carbynestack/ephemeral/pkg/discovery/fsm"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
 
-	"github.com/carbynestack/ephemeral/pkg/ephemeral/io"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	"net/http"
 	"net/http/httptest"
@@ -27,6 +27,7 @@ var _ = Describe("Server", func() {
 		act        *Activation
 		handler200 http.Handler
 		rr         *httptest.ResponseRecorder
+		config     *SPDZEngineTypedConfig
 		s          *Server
 		l          *zap.SugaredLogger
 	)
@@ -43,7 +44,12 @@ var _ = Describe("Server", func() {
 			rr = httptest.NewRecorder()
 
 			l = zap.NewNop().Sugar()
-			s = NewServer(func(*CtxConfig) error { return nil }, func(*CtxConfig) ([]byte, error) { return nil, nil }, l, &SPDZEngineTypedConfig{})
+			config = &SPDZEngineTypedConfig{
+				ComputationTimeout:      10 * time.Second,
+				StateTimeout:            10 * time.Second,
+				NetworkEstablishTimeout: 10 * time.Second,
+			}
+			s = NewServer(func(*CtxConfig) error { return nil }, func(*CtxConfig) ([]byte, error) { return nil, nil }, l, config)
 		})
 
 		Context("when going through body filter", func() {
@@ -265,7 +271,11 @@ var _ = Describe("Server", func() {
 						GameID: gameID,
 					},
 					Context: context.Background(),
-					Spdz:    &SPDZEngineTypedConfig{},
+					Spdz: &SPDZEngineTypedConfig{
+						ComputationTimeout:      10 * time.Second,
+						StateTimeout:            10 * time.Second,
+						NetworkEstablishTimeout: 10 * time.Second,
+					},
 				}
 				ctx := context.Background()
 				ctx = context.WithValue(ctx, ctxConf, conf)
@@ -306,13 +316,13 @@ var _ = Describe("Server", func() {
 				Context("when the timeout is reached during the execution", func() {
 					It("responds with a 500", func() {
 						conf.Spdz = &SPDZEngineTypedConfig{
-							RetryTimeout: 1 * time.Millisecond,
+							NetworkEstablishTimeout: 1 * time.Millisecond,
 						}
 						s.ActivationHandler(rr, req)
 						code := rr.Code
 						respBody := rr.Body.String()
 						Expect(code).To(Equal(http.StatusInternalServerError))
-						Expect(respBody).To(Equal("timeout during MPC execution"))
+						Expect(respBody).To(Equal("timeout during activation procedure"))
 					})
 				})
 			})
@@ -320,16 +330,16 @@ var _ = Describe("Server", func() {
 	})
 	Context("when getting the discovery client", func() {
 		var (
-			ioConf  *io.Config
-			ctx     *CtxConfig
-			timeout time.Duration
-			logger  *zap.SugaredLogger
-			wr      *Wires
+			dcConfig *DiscoveryClientTypedConfig
+			ctx      *CtxConfig
+			logger   *zap.SugaredLogger
+			wr       *Wires
 		)
 		BeforeEach(func() {
-			ioConf = &io.Config{
-				Host: "host",
-				Port: "port",
+			dcConfig = &DiscoveryClientTypedConfig{
+				Host:           "host",
+				Port:           "port",
+				ConnectTimeout: time.Second,
 			}
 			ctx = &CtxConfig{
 				Act: &Activation{
@@ -337,18 +347,17 @@ var _ = Describe("Server", func() {
 				},
 				Context: context.TODO(),
 			}
-			timeout = time.Second
 			logger = zap.NewNop().Sugar()
 			wr = &Wires{}
 		})
 		It("succeeds when all required properties are set", func() {
-			cl, err := NewTransportClientFromDiverseConfigs(ioConf, ctx, timeout, logger, wr)
+			cl, err := NewTransportClientFromDiverseConfigs(dcConfig, ctx, logger, wr)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cl).NotTo(BeNil())
 		})
 		It("returns an error when some client properties are missing", func() {
-			ioConf.Host = ""
-			cl, err := NewTransportClientFromDiverseConfigs(ioConf, ctx, timeout, logger, wr)
+			dcConfig.Host = ""
+			cl, err := NewTransportClientFromDiverseConfigs(dcConfig, ctx, logger, wr)
 			Expect(err).To(HaveOccurred())
 			Expect(cl).To(BeNil())
 		})
@@ -399,15 +408,18 @@ var _ = Describe("Server", func() {
 						GameID: gameID,
 					},
 				}
-				conf := &io.Config{
-					Host: "host",
-					Port: "port",
+				conf := &DiscoveryClientTypedConfig{
+					Host:           "host",
+					Port:           "port",
+					ConnectTimeout: 0,
 				}
 				pod := "somePod"
 				spdz := &SPDZWrapper{}
-				errCh := make(chan error)
+				stateTimeout := time.Second
+				computationTimeout := time.Second
+				errCh := make(chan error, 1)
 				logger := zap.NewNop().Sugar()
-				pl, err := NewPlayerWithIO(ctx, conf, pod, spdz, errCh, logger)
+				pl, err := NewPlayerWithIO(ctx, conf, pod, spdz, stateTimeout, computationTimeout, errCh, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(pl).NotTo(BeNil())
 			})
@@ -422,6 +434,10 @@ type FakePlayerWithIO struct {
 
 func (f *FakePlayerWithIO) Start() {
 	return
+}
+
+func (f *FakePlayerWithIO) History() *fsm.History {
+	return nil
 }
 
 func requestWithContext(path string, act *Activation) *http.Request {

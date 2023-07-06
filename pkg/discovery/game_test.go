@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -38,7 +38,7 @@ func generateTestsWithPlayerCount(playerCount int) {
 		bus = mb.New(10000)
 		timeout = 10 * time.Second
 		gameID = "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"
-		game, _ = NewGame(ctx, gameID, bus, timeout, logger, playerCount)
+		game, _ = NewGame(ctx, gameID, bus, timeout, timeout, logger, playerCount)
 		pb = Publisher{
 			Bus: bus,
 			Fsm: game.fsm,
@@ -54,21 +54,12 @@ func generateTestsWithPlayerCount(playerCount int) {
 				pb.Publish(PlayerReady, gameID)
 			}
 			WaitDoneOrTimeout(done)
-			Assert(TCPCheckSuccessAll, game, done, func(states []string) {})
-			for i := 0; i < playerCount; i++ {
-				pb.Publish(TCPCheckSuccess, gameID)
-			}
-			WaitDoneOrTimeout(done)
 			Assert(GameDone, game, done, func(states []string) {
 				statesAsserter := NewStatesAsserter(states)
 
 				statesAsserter.ExpectNext().To(Equal(Init))
 				for i := 0; i < playerCount; i++ {
 					statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
-				}
-				statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
-				for i := 0; i < playerCount; i++ {
-					statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
 				}
 				statesAsserter.ExpectNext().To(Equal(Playing))
 				for i := 0; i < playerCount; i++ {
@@ -91,11 +82,6 @@ func generateTestsWithPlayerCount(playerCount int) {
 					pb.Publish(PlayerReady, gameID)
 				}
 				WaitDoneOrTimeout(done)
-				Assert(TCPCheckSuccessAll, game, done, func(states []string) {})
-				for i := 0; i < playerCount; i++ {
-					pb.Publish(TCPCheckSuccess, gameID)
-				}
-				WaitDoneOrTimeout(done)
 				Assert(GameError, game, done, func(states []string) {})
 				Assert(GameDone, game, done, func(states []string) {
 					statesAsserter := NewStatesAsserter(states)
@@ -104,17 +90,13 @@ func generateTestsWithPlayerCount(playerCount int) {
 					for i := 0; i < playerCount; i++ {
 						statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
 					}
-					statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
-					for i := 0; i < playerCount; i++ {
-						statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
-					}
 					for i := 0; i < playerCount; i++ {
 						statesAsserter.ExpectNext().To(Equal(Playing))
 					}
 					statesAsserter.ExpectNext().To(Equal(GameError))
 					statesAsserter.ExpectNext().To(Equal(GameDone))
 
-					Expect(len(states)).To(Equal(3*playerCount + 4))
+					Expect(len(states)).To(Equal(2*playerCount + 3))
 				}, ServiceEventsTopic)
 
 				for i := 0; i < playerCount-1; i++ {
@@ -125,37 +107,11 @@ func generateTestsWithPlayerCount(playerCount int) {
 				WaitDoneOrTimeout(done)
 			})
 		})
-		Context("at TCP check", func() {
-			It("transitions to the GameError state", func() {
-				game.Init(errCh)
-				Assert(PlayersReady, game, done, func(states []string) {})
-				for i := 0; i < playerCount; i++ {
-					pb.Publish(PlayerReady, gameID)
-				}
-				WaitDoneOrTimeout(done)
-				Assert(GameDone, game, done, func(states []string) {
-					statesAsserter := NewStatesAsserter(states)
-					statesAsserter.ExpectNext().To(Equal(Init))
-					for i := 0; i < playerCount; i++ {
-						statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
-					}
-					for i := 0; i < playerCount; i++ {
-						statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
-					}
-					statesAsserter.ExpectNext().To(Equal(GameError))
-				}, ServiceEventsTopic)
-				for i := 0; i < playerCount-1; i++ {
-					pb.Publish(TCPCheckSuccess, gameID)
-				}
-				pb.Publish(TCPCheckFailure, gameID)
-				WaitDoneOrTimeout(done)
-			})
-		})
 	})
 	Context("state timeout occurs", func() {
 		It("transitions to the GameError state", func() {
 			timeout := 10 * time.Millisecond
-			game, _ := NewGame(ctx, gameID, bus, timeout, logger, playerCount)
+			game, _ := NewGame(ctx, gameID, bus, timeout, timeout, logger, playerCount)
 			// No player publishes an event, simulate a state timeout.
 			Assert(GameDone, game, done, func(states []string) {
 				Expect(states[0]).To(Equal(Init))

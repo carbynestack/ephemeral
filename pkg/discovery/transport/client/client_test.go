@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -8,16 +8,15 @@ import (
 	"context"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	. "github.com/carbynestack/ephemeral/pkg/discovery/transport/server"
-	"time"
-
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
+	"time"
 
 	. "github.com/carbynestack/ephemeral/pkg/types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
 )
 
 var _ = Describe("Client", func() {
@@ -33,11 +32,11 @@ var _ = Describe("Client", func() {
 	)
 	Context("when using the client", func() {
 		BeforeEach(func() {
-			serverIn = make(chan *pb.Event)
-			serverOut = make(chan *pb.Event)
-			clientIn = make(chan *pb.Event)
-			clientOut = make(chan *pb.Event)
-			errCh = make(chan error)
+			serverIn = make(chan *pb.Event, 1)
+			serverOut = make(chan *pb.Event, 1)
+			clientIn = make(chan *pb.Event, 1)
+			clientOut = make(chan *pb.Event, 1)
+			errCh = make(chan error, 1)
 			logger := zap.NewNop().Sugar()
 			serverConf := &TransportConfig{
 				In:     serverIn,
@@ -49,16 +48,16 @@ var _ = Describe("Client", func() {
 			gameID = "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"
 			tr = NewTransportServer(serverConf)
 			conf := &TransportClientConfig{
-				In:         clientIn,
-				Out:        clientOut,
-				ErrCh:      errCh,
-				Host:       "localhost",
-				Port:       port,
-				EventScope: EventScopeAll,
-				ConnID:     gameID,
-				Logger:     logger,
-				Timeout:    10 * time.Second,
-				Context:    context.TODO(),
+				In:             clientIn,
+				Out:            clientOut,
+				ErrCh:          errCh,
+				Host:           "localhost",
+				Port:           port,
+				EventScope:     EventScopeAll,
+				ConnID:         gameID,
+				Logger:         logger,
+				ConnectTimeout: 10 * time.Second,
+				Context:        context.TODO(),
 			}
 			client, _ = NewClient(conf)
 		})
@@ -151,19 +150,20 @@ var _ = Describe("Client", func() {
 			cancel context.CancelFunc
 		)
 		BeforeEach(func() {
-			outCh = make(chan *pb.Event)
-			errCh = make(chan error)
+			outCh = make(chan *pb.Event, 1)
+			errCh = make(chan error, 1)
 			ctx, cancel = context.WithCancel(context.Background())
 			conf = &TransportClientConfig{
 				Out:     outCh,
 				ErrCh:   errCh,
 				Context: ctx,
+				Logger:  zap.NewNop().Sugar(),
 			}
 		})
 		Context("when no error occurs", func() {
 			It("sends an event to the stream", func() {
 				st := &FakeStream{
-					sendCh: make(chan struct{}),
+					sendCh: make(chan struct{}, 1),
 				}
 				cl := Client{
 					conf:   conf,
@@ -212,8 +212,8 @@ var _ = Describe("Client", func() {
 			cancel context.CancelFunc
 		)
 		BeforeEach(func() {
-			outCh = make(chan *pb.Event)
-			errCh = make(chan error)
+			outCh = make(chan *pb.Event, 1)
+			errCh = make(chan error, 1)
 			ctx, cancel = context.WithCancel(context.Background())
 			conf = &TransportClientConfig{
 				Out:     outCh,
@@ -266,14 +266,14 @@ var _ = Describe("Client", func() {
 				}
 				err := cl.streamIn()
 				Expect(err).To(BeNil())
-				Expect(recorded.Len()).To(Equal(3))
-				Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("server closed the connection"))
+				Expect(recorded.Len()).To(Equal(4))
+				Expect(recorded.AllUntimed()[1].Entry.Message).To(Equal("server closed the connection"))
 			})
 		})
 	})
 	Context("when using client interfaces", func() {
 		It("returns In channel", func() {
-			inCh := make(chan *pb.Event)
+			inCh := make(chan *pb.Event, 1)
 			conf := &TransportClientConfig{
 				In: inCh,
 			}
@@ -283,7 +283,7 @@ var _ = Describe("Client", func() {
 			Expect(cl.GetIn()).To(Equal(inCh))
 		})
 		It("returns Out channel", func() {
-			outCh := make(chan *pb.Event)
+			outCh := make(chan *pb.Event, 1)
 			conf := &TransportClientConfig{
 				Out: outCh,
 			}
@@ -296,8 +296,8 @@ var _ = Describe("Client", func() {
 	Context("when establishing a connection fails", func() {
 		It("sends a message to the error channel", func() {
 			conf := &TransportClientConfig{
-				Timeout: 1 * time.Millisecond,
-				Logger:  zap.NewNop().Sugar(),
+				ConnectTimeout: 1 * time.Millisecond,
+				Logger:         zap.NewNop().Sugar(),
 			}
 			cl := Client{
 				conf: conf,
@@ -313,6 +313,7 @@ var _ = Describe("Client", func() {
 			conf := &TransportClientConfig{
 				ErrCh:   errCh,
 				Context: context.TODO(),
+				Logger:  zap.NewNop().Sugar(),
 			}
 			client := Client{
 				conf: conf,

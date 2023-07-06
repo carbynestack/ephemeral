@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -39,7 +39,7 @@ type Event struct {
 type PlayerID int32
 
 // NewServiceNG returns a new instance of discovery service.
-func NewServiceNG(bus mb.MessageBus, pub *Publisher, timeout time.Duration, tr t.Transport, n Networker, frontendAddress string, logger *zap.SugaredLogger, mode string, client DiscoveryClient, playerCount int) *ServiceNG {
+func NewServiceNG(bus mb.MessageBus, pub *Publisher, stateTimeout time.Duration, computationTimeout time.Duration, tr t.Transport, n Networker, frontendAddress string, logger *zap.SugaredLogger, mode string, client DiscoveryClient, playerCount int) *ServiceNG {
 	games := map[string]*Game{}
 	players := map[string]map[PlayerID]*pb.Player{}
 	pods := map[string]int32{}
@@ -50,7 +50,8 @@ func NewServiceNG(bus mb.MessageBus, pub *Publisher, timeout time.Duration, tr t
 		games:               games,
 		errCh:               errCh,
 		pb:                  pub,
-		timeout:             timeout,
+		stateTimeout:        stateTimeout,
+		computationTimeout:  computationTimeout,
 		transport:           tr,
 		players:             players,
 		playerCount:         playerCount,
@@ -76,7 +77,8 @@ type ServiceNG struct {
 	networks            map[string]int32
 	mux                 sync.Mutex
 	errCh               chan error
-	timeout             time.Duration
+	stateTimeout        time.Duration
+	computationTimeout  time.Duration
 	transport           t.Transport
 	networker           Networker
 	homeFrontendAddress string
@@ -156,6 +158,7 @@ func (s *ServiceNG) writeToWire() {
 	outCh := s.transport.GetOut()
 	s.bus.Subscribe(ClientOutgoingEventsTopic, func(e interface{}) {
 		ev := e.(*pb.Event)
+		s.logger.Debugw("Forwarding message from wire to clients", "Event", ev)
 		// TODO: do not broadcast to all current games.
 		outCh <- ev
 	})
@@ -186,9 +189,11 @@ func (s *ServiceNG) registerPlayer(pl *pb.Player, gameID string) error {
 		// Set the port of the player every time this message is called.
 		pl.Port = s.networks[pl.Pod]
 	}()
+	s.logger.Debug("Register PLayer", "player", pl, "gameId", gameID)
 	p, ok := s.players[gameID]
 	// Create a new map for the GameID
 	if !ok {
+		s.logger.Debug("Create new PLayer map")
 		players := map[PlayerID]*pb.Player{}
 		s.players[gameID] = players
 	}
@@ -203,6 +208,7 @@ func (s *ServiceNG) registerPlayer(pl *pb.Player, gameID string) error {
 	// Create a new network if it doesn't exist yet.
 	_, ok = s.networks[pl.Pod]
 	if !ok {
+		s.logger.Debug("create new network")
 		port, err := s.createNetwork(pl)
 		if err != nil {
 			s.logger.Errorf("error creating network %v", err)
@@ -249,7 +255,7 @@ func (s *ServiceNG) processIn(e interface{}) {
 	s.registerPlayer(player, ev.GameID)
 	g, ok := s.games[ev.GameID]
 	if !ok { // If game does not exist, create it
-		g, err := NewGame(ctx, ev.GameID, s.bus, s.timeout, s.logger, s.playerCount)
+		g, err := NewGame(ctx, ev.GameID, s.bus, s.stateTimeout, s.computationTimeout, s.logger, s.playerCount)
 		if err != nil {
 			s.errCh <- err
 		}

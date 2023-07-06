@@ -1,8 +1,8 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
-package main_test
+package main
 
 import (
 	"context"
@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/carbynestack/ephemeral/cmd/ephemeral"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	"github.com/carbynestack/ephemeral/pkg/utils"
 
@@ -51,7 +50,7 @@ var _ = Describe("Main", func() {
 						data := []byte(
 							`{
 								"retrySleep":"50ms",
-								"retryTimeout":"1m",
+								"networkEstablishTimeout":"1m",
 								"prime":"p",
 								"rInv":"r",
 								"gfpMacKey":"gfpKey",
@@ -72,7 +71,12 @@ var _ = Describe("Main", func() {
 								"frontendURL":"apollo.test.specs.cloud",
 								"playerID":0,
 								"maxBulkSize":32000,
-								"discoveryAddress":"discovery.default.svc.cluster.local"
+								"discoveryConfig": {
+									"Host":"discovery.default.svc.cluster.local",
+									"Port":"8080",
+									"connectTimeout":"2s"
+								},
+								"stateTimeout":"5s"
 							}`)
 						err := ioutil.WriteFile(path, data, 0644)
 						Expect(err).NotTo(HaveOccurred())
@@ -103,13 +107,13 @@ var _ = Describe("Main", func() {
 		Context("when initializing typed config", func() {
 			It("succeeds when all parameters are specified", func() {
 				conf := &SPDZEngineConfig{
-					RetryTimeout:    "2s",
-					RetrySleep:      "1s",
-					Prime:           "198766463529478683931867765928436695041",
-					RInv:            "133854242216446749056083838363708373830",
-					GfpMacKey:       "1113507028231509545156335486838233835",
-					Gf2nBitLength:   40,
-					Gf2nStorageSize: 8,
+					NetworkEstablishTimeout: "2s",
+					RetrySleep:              "1s",
+					Prime:                   "198766463529478683931867765928436695041",
+					RInv:                    "133854242216446749056083838363708373830",
+					GfpMacKey:               "1113507028231509545156335486838233835",
+					Gf2nBitLength:           40,
+					Gf2nStorageSize:         8,
 					AmphoraConfig: AmphoraConfig{
 						Host:   "localhost",
 						Scheme: "http",
@@ -120,17 +124,26 @@ var _ = Describe("Main", func() {
 						Scheme: "http",
 						Path:   "castorPath",
 					},
+					DiscoveryConfig: DiscoveryClientConfig{
+						Host:           "localhost",
+						Port:           "8080",
+						ConnectTimeout: "0s",
+					},
+					StateTimeout:       "5s",
+					ComputationTimeout: "10s",
 				}
 				typedConf, err := InitTypedConfig(conf)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(typedConf.RetryTimeout).To(Equal(2 * time.Second))
+				Expect(typedConf.NetworkEstablishTimeout).To(Equal(2 * time.Second))
 				Expect(typedConf.RetrySleep).To(Equal(1 * time.Second))
+				Expect(typedConf.StateTimeout).To(Equal(5 * time.Second))
+				Expect(typedConf.ComputationTimeout).To(Equal(10 * time.Second))
 			})
 			Context("when non-valid parameters are specified", func() {
 				Context("retry timeout format is corrupt", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout: "2",
+							NetworkEstablishTimeout: "2",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
@@ -140,8 +153,8 @@ var _ = Describe("Main", func() {
 				Context("retry sleep format is corrupt", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout: "2s",
-							RetrySleep:   "1",
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
@@ -151,9 +164,9 @@ var _ = Describe("Main", func() {
 				Context("prime number is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout: "2s",
-							RetrySleep:   "1s",
-							Prime:        "",
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
@@ -164,10 +177,10 @@ var _ = Describe("Main", func() {
 				Context("inverse R is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout: "2s",
-							RetrySleep:   "1s",
-							Prime:        "123",
-							RInv:         "",
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "123",
+							RInv:                    "",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
@@ -178,11 +191,11 @@ var _ = Describe("Main", func() {
 				Context("gfpMacKey is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout: "2s",
-							RetrySleep:   "1s",
-							Prime:        "123",
-							RInv:         "123",
-							GfpMacKey:    "",
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "123",
+							RInv:                    "123",
+							GfpMacKey:               "",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
@@ -193,13 +206,13 @@ var _ = Describe("Main", func() {
 				Context("amphora URL is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout:    "2s",
-							RetrySleep:      "1s",
-							Prime:           "123",
-							RInv:            "123",
-							GfpMacKey:       "123",
-							Gf2nBitLength:   40,
-							Gf2nStorageSize: 8,
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "123",
+							RInv:                    "123",
+							GfpMacKey:               "123",
+							Gf2nBitLength:           40,
+							Gf2nStorageSize:         8,
 							AmphoraConfig: AmphoraConfig{
 								Host: "",
 							},
@@ -209,6 +222,13 @@ var _ = Describe("Main", func() {
 								Path:       "castorPath",
 								TupleStock: 1000,
 							},
+							DiscoveryConfig: DiscoveryClientConfig{
+								Host:           "localhost",
+								Port:           "8080",
+								ConnectTimeout: "0s",
+							},
+							StateTimeout:       "0s",
+							ComputationTimeout: "0s",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
@@ -219,13 +239,13 @@ var _ = Describe("Main", func() {
 				Context("amphora scheme is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout:    "2s",
-							RetrySleep:      "1s",
-							Prime:           "123",
-							RInv:            "123",
-							GfpMacKey:       "123",
-							Gf2nBitLength:   40,
-							Gf2nStorageSize: 8,
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "123",
+							RInv:                    "123",
+							GfpMacKey:               "123",
+							Gf2nBitLength:           40,
+							Gf2nStorageSize:         8,
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "",
@@ -236,6 +256,13 @@ var _ = Describe("Main", func() {
 								Path:       "castorPath",
 								TupleStock: 1000,
 							},
+							DiscoveryConfig: DiscoveryClientConfig{
+								Host:           "localhost",
+								Port:           "8080",
+								ConnectTimeout: "0s",
+							},
+							StateTimeout:       "0s",
+							ComputationTimeout: "0s",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
@@ -246,13 +273,13 @@ var _ = Describe("Main", func() {
 				Context("castor URL is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout:    "2s",
-							RetrySleep:      "1s",
-							Prime:           "123",
-							RInv:            "123",
-							GfpMacKey:       "123",
-							Gf2nBitLength:   40,
-							Gf2nStorageSize: 8,
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "123",
+							RInv:                    "123",
+							GfpMacKey:               "123",
+							Gf2nBitLength:           40,
+							Gf2nStorageSize:         8,
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -261,6 +288,13 @@ var _ = Describe("Main", func() {
 							CastorConfig: CastorConfig{
 								Host: "",
 							},
+							DiscoveryConfig: DiscoveryClientConfig{
+								Host:           "localhost",
+								Port:           "8080",
+								ConnectTimeout: "0s",
+							},
+							StateTimeout:       "0s",
+							ComputationTimeout: "0s",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
@@ -271,13 +305,13 @@ var _ = Describe("Main", func() {
 				Context("castor scheme is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
-							RetryTimeout:    "2s",
-							RetrySleep:      "1s",
-							Prime:           "123",
-							RInv:            "123",
-							GfpMacKey:       "123",
-							Gf2nBitLength:   40,
-							Gf2nStorageSize: 8,
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "123",
+							RInv:                    "123",
+							GfpMacKey:               "123",
+							Gf2nBitLength:           40,
+							Gf2nStorageSize:         8,
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -287,10 +321,84 @@ var _ = Describe("Main", func() {
 								Host:   "localhost",
 								Scheme: "",
 							},
+							DiscoveryConfig: DiscoveryClientConfig{
+								Host:           "localhost",
+								Port:           "8080",
+								ConnectTimeout: "0s",
+							},
+							StateTimeout:       "0s",
+							ComputationTimeout: "0s",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("invalid Url"))
+						Expect(typedConf).To(BeNil())
+					})
+				})
+				Context("stateTimeout format is corrupt", func() {
+					It("returns an error", func() {
+						conf := &SPDZEngineConfig{
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "198766463529478683931867765928436695041",
+							RInv:                    "133854242216446749056083838363708373830",
+							GfpMacKey:               "1113507028231509545156335486838233835",
+							Gf2nBitLength:           40,
+							Gf2nStorageSize:         8,
+							AmphoraConfig: AmphoraConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "amphoraPath",
+							},
+							CastorConfig: CastorConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "castorPath",
+							},
+							DiscoveryConfig: DiscoveryClientConfig{
+								Host:           "localhost",
+								Port:           "8080",
+								ConnectTimeout: "0s",
+							},
+							StateTimeout: "corrupt",
+						}
+						typedConf, err := InitTypedConfig(conf)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("time: invalid duration \"corrupt\""))
+						Expect(typedConf).To(BeNil())
+					})
+				})
+				Context("computationTimeout format is corrupt", func() {
+					It("returns an error", func() {
+						conf := &SPDZEngineConfig{
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "198766463529478683931867765928436695041",
+							RInv:                    "133854242216446749056083838363708373830",
+							GfpMacKey:               "1113507028231509545156335486838233835",
+							Gf2nBitLength:           40,
+							Gf2nStorageSize:         8,
+							AmphoraConfig: AmphoraConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "amphoraPath",
+							},
+							CastorConfig: CastorConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "castorPath",
+							},
+							DiscoveryConfig: DiscoveryClientConfig{
+								Host:           "localhost",
+								Port:           "8080",
+								ConnectTimeout: "0s",
+							},
+							StateTimeout:       "0s",
+							ComputationTimeout: "corrupt",
+						}
+						typedConf, err := InitTypedConfig(conf)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("time: invalid duration \"corrupt\""))
 						Expect(typedConf).To(BeNil())
 					})
 				})
@@ -304,16 +412,16 @@ var _ = Describe("Main", func() {
 				defer os.RemoveAll(tmpPrepDir)
 				logger := zap.NewNop().Sugar()
 				conf := &SPDZEngineConfig{
-					RetryTimeout:    "2s",
-					RetrySleep:      "1s",
-					Prime:           "198766463529478683931867765928436695041",
-					RInv:            "133854242216446749056083838363708373830",
-					GfpMacKey:       "1113507028231509545156335486838233835",
-					Gf2nMacKey:      "0xb660b323e6",
-					Gf2nBitLength:   40,
-					Gf2nStorageSize: 8,
-					PlayerCount:     2,
-					PrepFolder:      tmpPrepDir,
+					NetworkEstablishTimeout: "2s",
+					RetrySleep:              "1s",
+					Prime:                   "198766463529478683931867765928436695041",
+					RInv:                    "133854242216446749056083838363708373830",
+					GfpMacKey:               "1113507028231509545156335486838233835",
+					Gf2nMacKey:              "0xb660b323e6",
+					Gf2nBitLength:           40,
+					Gf2nStorageSize:         8,
+					PlayerCount:             2,
+					PrepFolder:              tmpPrepDir,
 					AmphoraConfig: AmphoraConfig{
 						Host:   "localhost",
 						Scheme: "http",
@@ -325,6 +433,13 @@ var _ = Describe("Main", func() {
 						Path:       "castorPath",
 						TupleStock: 1000,
 					},
+					DiscoveryConfig: DiscoveryClientConfig{
+						Host:           "localhost",
+						Port:           "8080",
+						ConnectTimeout: "0s",
+					},
+					StateTimeout:       "0s",
+					ComputationTimeout: "0s",
 				}
 				handler, err := GetHandlerChain(conf, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -335,13 +450,13 @@ var _ = Describe("Main", func() {
 			It("is returned", func() {
 				logger := zap.NewNop().Sugar()
 				conf := &SPDZEngineConfig{
-					RetryTimeout:    "2s",
-					RetrySleep:      "1s",
-					Prime:           "198766463529478683931867765928436695041",
-					RInv:            "133854242216446749056083838363708373830",
-					GfpMacKey:       "1113507028231509545156335486838233835",
-					Gf2nBitLength:   40,
-					Gf2nStorageSize: 8,
+					NetworkEstablishTimeout: "2s",
+					RetrySleep:              "1s",
+					Prime:                   "198766463529478683931867765928436695041",
+					RInv:                    "133854242216446749056083838363708373830",
+					GfpMacKey:               "1113507028231509545156335486838233835",
+					Gf2nBitLength:           40,
+					Gf2nStorageSize:         8,
 					// an empty amphora config is given to provoke an error.
 					AmphoraConfig: AmphoraConfig{},
 					CastorConfig: CastorConfig{
@@ -350,6 +465,13 @@ var _ = Describe("Main", func() {
 						Path:       "castorPath",
 						TupleStock: 1000,
 					},
+					DiscoveryConfig: DiscoveryClientConfig{
+						Host:           "localhost",
+						Port:           "8080",
+						ConnectTimeout: "0s",
+					},
+					StateTimeout:       "0s",
+					ComputationTimeout: "0s",
 				}
 				handler, err := GetHandlerChain(conf, logger)
 				Expect(err).To(HaveOccurred())

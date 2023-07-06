@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -10,9 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
+	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
 	"net"
+	"sync"
+	"time"
 )
 
 // Result contains the response from SPDZ runtime computation.
@@ -20,9 +23,16 @@ type Result struct {
 	Response []string `json:"response"`
 }
 
+var connectionInfo = "ConnectionInfo"
+
+type ConnectionInfo struct {
+	Host string
+	Port string
+}
+
 // AbstractCarrier is the carriers interface.
 type AbstractCarrier interface {
-	Connect(context.Context, int32, string, string) error
+	Connect(context.Context, int32, string, string, time.Duration) error
 	Close() error
 	Send([]amphora.SecretShare) error
 	Read(ResponseConverter, bool) (*Result, error)
@@ -30,25 +40,29 @@ type AbstractCarrier interface {
 
 // Carrier is a TCP client for TCP sockets.
 type Carrier struct {
-	Dialer    func(ctx context.Context, addr, port string) (net.Conn, error)
-	Conn      net.Conn
-	Packer    Packer
-	connected bool
-}
-
-// Config contains TCP connection properties of Carrier.
-type Config struct {
-	Port string
-	Host string
+	Dialer     func(ctx context.Context, addr, port string, timeout time.Duration) (net.Conn, error)
+	Conn       net.Conn
+	Packer     Packer
+	connection *ConnectionInfo
+	Logger     *zap.SugaredLogger
+	mux        sync.Mutex
 }
 
 // Connect establishes a TCP connection to a socket on a given host and port.
-func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port string) error {
-	conn, err := c.Dialer(ctx, host, port)
-	c.Conn = conn
+func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port string, timeout time.Duration) error {
+	c.Logger.Debugf("Connecting to %s:%s", host, port)
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	if c.Conn != nil {
+		c.Logger.Debugw("Cancel connection attempt as carrier already has an active connection.", connectionInfo, c.connection)
+		return nil
+	}
+	conn, err := c.Dialer(ctx, host, port, timeout)
 	if err != nil {
 		return err
 	}
+	c.connection = &ConnectionInfo{host, port}
+	c.Conn = conn
 	_, err = conn.Write(c.buildHeader(playerID))
 	if err != nil {
 		return err
@@ -59,7 +73,6 @@ func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port
 			return err
 		}
 	}
-	c.connected = true
 	return nil
 }
 
@@ -93,10 +106,17 @@ func (c Carrier) readPrime() error {
 
 // Close closes the underlying TCP connection.
 func (c *Carrier) Close() error {
-	if c.connected {
-		c.Conn.Close()
+	c.Logger.Debugw("Closing connection.", connectionInfo, c.connection)
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	var err error
+	if c.connection != nil {
+		err = c.Conn.Close()
+		c.Logger.Debug("Carrier connection closed")
 	}
-	return nil
+	c.connection = nil
+	c.Conn = nil
+	return err
 }
 
 // Send transmits Amphora secret shares to a TCP socket opened by an MPC runtime.
@@ -114,6 +134,7 @@ func (c *Carrier) Send(secret []amphora.SecretShare) error {
 	if err != nil {
 		return err
 	}
+	c.Logger.Debugw("Secret data written to socket.", connectionInfo, c.connection)
 	return nil
 }
 
@@ -133,6 +154,7 @@ func (c *Carrier) Read(conv ResponseConverter, bulkObjects bool) (*Result, error
 	resp := []byte{}
 	resp, err := ioutil.ReadAll(c.Conn)
 	if len(resp) == 0 {
+		c.Logger.Errorw("Carrier read closed with empty response.", connectionInfo, c.connection)
 		return nil, errors.New("empty result from socket")
 	}
 	if err != nil {
