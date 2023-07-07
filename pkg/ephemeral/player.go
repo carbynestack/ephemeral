@@ -176,16 +176,14 @@ func (c *Callbacker) sendPlayerReady() func(e interface{}) error {
 // playing triggers the MPC computation and signals itself the state of the execution.
 func (c *Callbacker) playing(id string, me MPCEngine) func(e interface{}) error {
 	return func(e interface{}) error {
-		go func() {
-			ev := e.(*fsm.Event)
-			err := me.Execute(ev.Meta.TransportMsg)
-			if err != nil {
-				c.logger.Errorf("error during code execution: %v", err)
-				c.sendEvent(PlayingError, id, e)
-				return
-			}
-			c.sendEvent(PlayerFinishedWithSuccess, id, e)
-		}()
+		ev := e.(*fsm.Event)
+		err := me.Execute(ev.Meta.TransportMsg)
+		if err != nil {
+			c.logger.Errorf("Error during code execution: %v", err)
+			c.sendEvent(PlayingError, id, e)
+			return nil
+		}
+		c.sendEvent(PlayerFinishedWithSuccess, id, e)
 		return nil
 	}
 }
@@ -205,7 +203,7 @@ func (c *Callbacker) finishWithError(id string) func(e interface{}) error {
 			msg = fmt.Sprintf("%s\n\tHistory: %s", msg, strings.Join(eventDetails, " -> "))
 		}
 		err := errors.New(msg)
-		c.logger.Debugf("player finished with error: %v", err)
+		c.logger.Debugf("Player finished with error: %v", err)
 		select {
 		case c.errCh <- err:
 		default:

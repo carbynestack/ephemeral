@@ -165,9 +165,9 @@ type CastorTupleStreamer struct {
 	streamerDoneCh chan struct{}
 	tupleBufferCh  chan []byte
 	fetchTuplesCh  chan struct{}
-	// bufferLckCh is used as a synchronization lock, where on routine can lock the channel by writing to it. Each
+	// bufferLckCh is used as a synchronization lock, where one routine can lock the channel by writing to it. Each
 	// consecutive write will block the writing routine until the channel has been unlocked by reading from it. In
-	// combination with es "select" statement, the channel can be used as a "timeout-able" lock.
+	// combination with a "select" statement, the channel can be used as a "timeout-able" lock.
 	//
 	// Reading is supposed to be performed by the initial routine which wrote to the channel.
 	bufferLckCh   chan struct{}
@@ -188,8 +188,12 @@ func (ts *CastorTupleStreamer) StartStreamTuples(terminateCh chan struct{}, errC
 			close(ts.streamerDoneCh)
 			select {
 			case ts.bufferLckCh <- struct{}{}:
-			// wait for buffer routine and block
+				// Lock the buffer routine or wait in case the channel is currently "locked". A blocking write indicates
+				// that the bufferData routine is currently fetching new tuples from castor. As we want the information
+				// on discarded bytes to be as accurate as possible, we will wait some time for the tuples to be fetched
+				// before computing discardedTupleBytes.
 			case <-time.After(10 * time.Second):
+				// However, we will not wait for too long for the bufferData routine to finish
 			}
 			discardedTupleBytes := 0
 			select {
@@ -206,7 +210,7 @@ func (ts *CastorTupleStreamer) StartStreamTuples(terminateCh chan struct{}, errC
 			} else {
 				discardedTupleBytes += len(ts.streamData) - len(ts.headerData) + ts.streamedBytes
 			}
-			ts.logger.Debugw("Terminate tuple streamer.",
+			ts.logger.Debugw("Terminate tuple streamer",
 				"Provided bytes", streamedTupleBytes, "Discarded bytes", discardedTupleBytes)
 			_ = ts.pipeWriter.Close()
 			wg.Done()
@@ -241,7 +245,7 @@ func (ts *CastorTupleStreamer) StartStreamTuples(terminateCh chan struct{}, errC
 
 func (ts *CastorTupleStreamer) bufferData(terminateCh chan struct{}, streamerErrorCh chan error, doneCh chan struct{}) {
 	defer func() {
-		ts.logger.Debug("Buffer job done.")
+		ts.logger.Debug("Buffer job done")
 		doneCh <- struct{}{}
 	}()
 	for {
@@ -258,7 +262,7 @@ func (ts *CastorTupleStreamer) bufferData(terminateCh chan struct{}, streamerErr
 			}
 			<-ts.bufferLckCh
 			if err != nil {
-				ts.logger.Debugf("error fetching tuples: %v", err)
+				ts.logger.Debugf("Error fetching tuples: %v", err)
 				streamerErrorCh <- err
 				return
 			}
@@ -281,10 +285,10 @@ func (ts *CastorTupleStreamer) getTupleData() ([]byte, error) {
 	return tupleData, nil
 }
 
-// writeDataToPipe pulls more tuples from Castor if required and the data to the pipe
+// writeDataToPipe pulls more tuples from Castor if required and writes the data to the pipe
 func (ts *CastorTupleStreamer) writeDataToPipe(terminateCh chan struct{}, doneCh chan struct{}) {
 	defer func() {
-		ts.logger.Debug("Write job done.")
+		ts.logger.Debug("Write job done")
 		doneCh <- struct{}{}
 	}()
 	for {
@@ -315,7 +319,7 @@ func (ts *CastorTupleStreamer) writeDataToPipe(terminateCh chan struct{}, doneCh
 				// the MPC execution itself
 				// in all other cases the tuple streamer will retry
 				if errors.Is(err, syscall.EPIPE) {
-					ts.logger.Debugw("received pipe error for tuple stream", "Error", err)
+					ts.logger.Debugw("Received pipe error for tuple stream", "Error", err)
 					return
 				}
 				ts.logger.Debugf("Pipe broke while streaming: %v", err.Error())

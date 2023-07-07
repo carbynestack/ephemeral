@@ -92,7 +92,7 @@ func (f *AmphoraFeeder) LoadFromRequestAndFeed(act *Activation, feedPort string,
 
 // Close closes the underlying socket connection.
 func (f *AmphoraFeeder) Close() error {
-	f.logger.Debug("Close connections.")
+	f.logger.Debug("Close connections")
 	return f.carrier.Close()
 }
 

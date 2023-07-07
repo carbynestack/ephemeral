@@ -80,7 +80,7 @@ func (p *Proxy) Run(ctx *CtxConfig, errCh chan error) error {
 		errCh <- err
 	}()
 	dialer := RetryingDialer(p.retrySleep, p.retryTimeout, func() {
-		p.logger.Debugw(fmt.Sprintf("retrying to ping after %s", p.retrySleep), GameID, p.ctx.Act.GameID)
+		p.logger.Debugw(fmt.Sprintf("Retrying to ping after %s", p.retrySleep), GameID, p.ctx.Act.GameID)
 	})
 
 	for i, pat := range pats {
@@ -197,9 +197,9 @@ func RetryingDialerWithContext(sleep time.Duration, l *zap.SugaredLogger) func(c
 		for {
 			select {
 			case <-ctx.Done():
-				return conn, errors.New("cancelled connection attempt for %s:%s - context done")
+				return conn, errors.New(fmt.Sprintf("cancelled connection attempt for %s:%s - context done", addr, port))
 			case <-logTicker.C:
-				l.Debugf("connection attempt to %s:%s active for %s", addr, port, time.Now().Sub(started))
+				l.Debugf("Connection attempt to %s:%s active for %s", addr, port, time.Now().Sub(started))
 			case <-connectTimer.C:
 				var tcpAddr *net.TCPAddr
 				tcpAddr, err = net.ResolveTCPAddr("tcp", addr+":"+port)

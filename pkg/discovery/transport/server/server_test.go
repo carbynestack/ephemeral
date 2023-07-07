@@ -309,7 +309,7 @@ var _ = Describe("Server", func() {
 				ev := &pb.Event{}
 				f(ev)
 				Expect(recorded.Len()).To(Equal(1))
-				Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("unknown event scope " + invalidScope))
+				Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("Unknown event scope " + invalidScope))
 			})
 		})
 	})
@@ -326,7 +326,7 @@ var _ = Describe("Server", func() {
 				st := &BrokenStream{}
 				ts.sendEvent(st, &pb.Event{Name: "abc"})
 				Expect(recorded.Len()).To(Equal(1))
-				Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("error broadcasting the event abc"))
+				Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("Error broadcasting the event abc"))
 			})
 		})
 	})
@@ -356,7 +356,7 @@ var _ = Describe("Server", func() {
 			// The command below should not block.
 			ts.broadcast(done)
 			Expect(recorded.Len()).To(Equal(1))
-			Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("Stopped broadcasting."))
+			Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("Stopped broadcasting"))
 		})
 	})
 

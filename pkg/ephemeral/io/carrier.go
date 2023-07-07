@@ -54,7 +54,7 @@ func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	if c.Conn != nil {
-		c.Logger.Debugw("Cancel connection attempt as carrier already has an active connection.", connectionInfo, c.connection)
+		c.Logger.Debugw("Cancel connection attempt as carrier already has an active connection", connectionInfo, c.connection)
 		return nil
 	}
 	conn, err := c.Dialer(ctx, host, port, timeout)
@@ -106,7 +106,7 @@ func (c Carrier) readPrime() error {
 
 // Close closes the underlying TCP connection.
 func (c *Carrier) Close() error {
-	c.Logger.Debugw("Closing connection.", connectionInfo, c.connection)
+	c.Logger.Debugw("Closing connection", connectionInfo, c.connection)
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	var err error
@@ -134,7 +134,7 @@ func (c *Carrier) Send(secret []amphora.SecretShare) error {
 	if err != nil {
 		return err
 	}
-	c.Logger.Debugw("Secret data written to socket.", connectionInfo, c.connection)
+	c.Logger.Debugw("Secret data written to socket", connectionInfo, c.connection)
 	return nil
 }
 
@@ -154,7 +154,7 @@ func (c *Carrier) Read(conv ResponseConverter, bulkObjects bool) (*Result, error
 	resp := []byte{}
 	resp, err := ioutil.ReadAll(c.Conn)
 	if len(resp) == 0 {
-		c.Logger.Errorw("Carrier read closed with empty response.", connectionInfo, c.connection)
+		c.Logger.Errorw("Carrier read closed with empty response", connectionInfo, c.connection)
 		return nil, errors.New("empty result from socket")
 	}
 	if err != nil {

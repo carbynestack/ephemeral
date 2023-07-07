@@ -163,7 +163,7 @@ func (s *Server) CompilationHandler(next http.Handler) http.Handler {
 		conf, ok := req.Context().Value(ctxConf).(*CtxConfig)
 		if !ok {
 			writer.WriteHeader(http.StatusBadRequest)
-			s.logger.Error("no context config provided")
+			s.logger.Error("No context config provided")
 			return
 		}
 		s.logger.Debugf("Executing Compilation Handler: %v", conf.Act)
@@ -185,7 +185,7 @@ func (s *Server) CompilationHandler(next http.Handler) http.Handler {
 				return
 			}
 			if compile {
-				s.logger.Infow("Compiling the application.", GameID, conf.Act.GameID)
+				s.logger.Infow("Compiling the application", GameID, conf.Act.GameID)
 				err := s.compile(conf)
 				if err != nil {
 					msg := fmt.Sprintf("error compiling the code: %s\n", err)
@@ -214,7 +214,7 @@ func (s *Server) ActivationHandler(writer http.ResponseWriter, req *http.Request
 	pod, err := s.getPodName()
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
-		s.logger.Errorw(fmt.Sprintf("error retrieving pod name: %s", err), GameID, ctxConfig.Act.GameID)
+		s.logger.Errorw(fmt.Sprintf("Error retrieving pod name: %s", err), GameID, ctxConfig.Act.GameID)
 	}
 	s.logger.Debugf("Retrieved pod name %v", pod)
 
@@ -249,7 +249,7 @@ func (s *Server) ActivationHandler(writer http.ResponseWriter, req *http.Request
 		writer.Write([]byte(msg))
 		s.logger.Errorw(msg, GameID, ctxConfig.Act.GameID, "FSM History", plIO.History())
 	}
-	s.logger.Debug("Activation finalized.")
+	s.logger.Debug("Activation finalized")
 }
 
 // getPlayer is main purpose to test activation handler using a custom PlayerWithIO

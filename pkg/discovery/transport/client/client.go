@@ -23,7 +23,7 @@ type TransportClientConfig struct {
 	// In, Out is the external interface for the libraries that would like to use this client. Events received from "In" are forwarded to the server. The responses are sent back to "Out"
 	In, Out chan *pb.Event
 
-	// ErrCh is the sink for all errors from the client.
+	// ErrCh is the sink for all errors from the client. It is supposed to be a buffered channel with a minimum capacity of `1`.
 	ErrCh chan error
 
 	// Host, Port - the server endpoint to connect to.
@@ -103,7 +103,7 @@ func (c *Client) Connect() (*grpc.ClientConn, error) {
 	defer cancelConnect()
 	conn, err := grpc.DialContext(ctx, c.conf.Host+":"+c.conf.Port, grpc.WithBlock(), grpc.WithInsecure())
 	if err != nil {
-		c.conf.Logger.Error("error establishing a gRPC connection")
+		c.conf.Logger.Errorf("Error establishing a gRPC connection: %v", err)
 		return nil, err
 	}
 	c.conn = conn
@@ -116,7 +116,7 @@ func (c *Client) Connect() (*grpc.ClientConn, error) {
 func (c *Client) Run(client pb.DiscoveryClient) {
 	ctx := c.conf.Context
 	ctx = metadata.AppendToOutgoingContext(ctx, ConnID, c.conf.ConnID, EventScope, c.conf.EventScope)
-	c.conf.Logger.Debug("Register client to events.", ConnID, c.conf.ConnID, EventScope, c.conf.EventScope)
+	c.conf.Logger.Debug("Register client to events", ConnID, c.conf.ConnID, EventScope, c.conf.EventScope)
 	stream, err := client.Events(ctx)
 	if err != nil {
 		c.conf.ErrCh <- err
@@ -130,7 +130,7 @@ func (c *Client) Run(client pb.DiscoveryClient) {
 			case <-ctx.Done():
 				err := c.Stop()
 				if err != nil {
-					c.conf.Logger.Errorf("error stopping gRPC client %v", err)
+					c.conf.Logger.Errorf("Error stopping gRPC client %v", err)
 				}
 				return
 			}
@@ -158,16 +158,21 @@ func (c *Client) streamOut() error {
 	for {
 		select {
 		case <-c.conf.Context.Done():
-			c.conf.Logger.Debug("Closing streamOut as context is done.")
+			c.conf.Logger.Debug("Close the event forwarding as context is done")
 			return nil
 		case ev := <-c.conf.Out:
 			c.conf.Logger.Debugf("Sending event %v", ev)
 			err := c.stream.Send(ev)
 			if err != nil {
-				c.conf.Logger.Errorf("Closing streamOut as error occurred: %v", err)
+				c.conf.Logger.Errorf("Close the event forwarding as an error occurred: %v", err)
 				select {
 				case c.conf.ErrCh <- err:
 				default:
+					// The ErrCh is a buffered channel shared by multiple subroutines. Any error written to the channel
+					// indicates that the current procedure has failed.
+					// While the "root" error is sufficient to indicate that the routine failed, it may cause further
+					// errors in other routines. If write to ErrCh fails, err is classified as a consequent error. In
+					// this case, "err" is discarded to prevent the routine from blocking.
 				}
 				return nil
 			}
@@ -183,26 +188,31 @@ func (c *Client) streamIn() error {
 	defer func() {
 		err := c.Stop()
 		if err != nil {
-			c.conf.Logger.Errorf("error stopping gRPC client %v", err)
+			c.conf.Logger.Errorf("Error stopping gRPC client %v", err)
 		}
 	}()
 	for {
 		ev, err := c.stream.Recv()
 		select {
 		case <-c.conf.Context.Done():
-			c.conf.Logger.Debugf("Closing streamIn as context is done. (err: %v)", err)
+			c.conf.Logger.Debugf("Stop receiiving events as context is done. (err: %v)", err)
 			return nil
 		default:
-			c.conf.Logger.Debugf("Received event via streamIn %v", ev)
+			c.conf.Logger.Debugf("Received event %v", ev)
 			if err == io.EOF {
-				c.conf.Logger.Debug("server closed the connection")
+				c.conf.Logger.Debug("Server closed the connection")
 				return nil
 			}
 			if err != nil {
-				c.conf.Logger.Errorf("error from the gRPC stream %s", err.Error())
+				c.conf.Logger.Errorf("Error from the gRPC stream %s", err.Error())
 				select {
 				case c.conf.ErrCh <- err:
 				default:
+					// The ErrCh is a buffered channel shared by multiple subroutines. Any error written to the channel
+					// indicates that the current procedure has failed.
+					// While the "root" error is sufficient to indicate that the routine failed, it may cause further
+					// errors in other routines. If write to ErrCh fails, err is classified as a consequent error. In
+					// this case, "err" is discarded to prevent the routine from blocking.
 				}
 				return nil
 			}

@@ -31,6 +31,8 @@ type Game struct {
 }
 
 // Init starts the fsm of the Game with its initial state.
+//
+// `errChan` is expected to be a buffered channel with minimum capacity of "1".
 func (g *Game) Init(errCh chan error) {
 	// TODO: Think of another option how to assign the fsm to the publisher.
 	g.pb.Fsm = g.fsm
@@ -60,6 +62,7 @@ func NewGame(ctx context.Context, id string, bus mb.MessageBus, stateTimeout tim
 	cb := []*fsm.Callback{
 		fsm.AfterEnter(WaitPlayersReady).Do(callbacker.sendRegistered()),
 		fsm.AfterEnter(WaitPlayersReady).Do(callbacker.checkSomethingReady(playerCount, PlayerReady, PlayersReady)),
+		fsm.AfterEnter(WaitTCPCheck).Do(callbacker.checkSomethingReady(playerCount, TCPCheckSuccess, TCPCheckSuccessAll)),
 		fsm.AfterEnter(Playing).Do(callbacker.checkSomethingReady(playerCount, GameFinishedWithSuccess, GameSuccess)),
 		fsm.AfterEnter(GameDone).Do(callbacker.gameDone()),
 		fsm.AfterEnter(GameError).Do(callbacker.gameError()),
@@ -68,7 +71,10 @@ func NewGame(ctx context.Context, id string, bus mb.MessageBus, stateTimeout tim
 	trs := []*fsm.Transition{
 		fsm.WhenIn(Init).GotEvent(PlayerReady).GoTo(WaitPlayersReady),
 		fsm.WhenIn(WaitPlayersReady).GotEvent(PlayerReady).Stay(),
-		fsm.WhenIn(WaitPlayersReady).GotEvent(PlayersReady).GoTo(Playing).WithTimeout(computationTimeout),
+		fsm.WhenIn(WaitPlayersReady).GotEvent(PlayersReady).GoTo(WaitTCPCheck),
+		fsm.WhenIn(WaitTCPCheck).GotEvent(TCPCheckSuccess).Stay(),
+		fsm.WhenIn(WaitTCPCheck).GotEvent(TCPCheckSuccessAll).GoTo(Playing).WithTimeout(computationTimeout),
+		fsm.WhenIn(WaitTCPCheck).GotEvent(TCPCheckFailure).GoTo(GameError),
 		fsm.WhenIn(Playing).GotEvent(GameFinishedWithSuccess).Stay(),
 		fsm.WhenIn(Playing).GotEvent(GameFinishedWithError).GoTo(GameError),
 		fsm.WhenIn(Playing).GotEvent(GameSuccess).GoTo(GameDone),
@@ -107,7 +113,7 @@ type GameCallbacker struct {
 func (c *GameCallbacker) sendRegistered() func(e interface{}) error {
 	return func(e interface{}) error {
 		meta := e.(*fsm.Event).Meta
-		c.logger.Debugw("Client registered.", "meta", meta)
+		c.logger.Debugw("Client registered", "meta", meta)
 		c.pb.Publish(Registered, ServiceEventsTopic, meta.TargetTopic)
 		return nil
 	}
@@ -117,7 +123,7 @@ func (c *GameCallbacker) sendRegistered() func(e interface{}) error {
 func (c *GameCallbacker) gameDone() func(e interface{}) error {
 	return func(e interface{}) error {
 		meta := e.(*fsm.Event).Meta
-		c.logger.Debugw("Game done.", "meta", meta)
+		c.logger.Debugw("Game done", "meta", meta)
 		c.pb.Publish(GameDone, ServiceEventsTopic, meta.TargetTopic)
 		meta.FSM.Stop()
 		return nil
@@ -132,7 +138,7 @@ func (c *GameCallbacker) gameError() func(e interface{}) error {
 		if meta.FSM != nil {
 			history = meta.FSM.History()
 		}
-		c.logger.Debugw("Game failed.", "meta", meta, "event history", history)
+		c.logger.Debugw("Game failed", "meta", meta, "event history", history)
 		c.pb.Publish(GameError, DiscoveryTopic, meta.TargetTopic)
 		c.pb.Publish(GameDone, c.gameID)
 		return nil
@@ -142,7 +148,7 @@ func (c *GameCallbacker) gameError() func(e interface{}) error {
 // stateTimeout sends out a StateTimeoutError.
 func (c *GameCallbacker) stateTimeout() func(e interface{}) error {
 	return func(e interface{}) error {
-		c.logger.Debug("Send state timeout.")
+		c.logger.Debug("Send state timeout")
 		c.pb.Publish(StateTimeoutError, c.gameID)
 		return nil
 	}
@@ -152,7 +158,7 @@ func (c *GameCallbacker) stateTimeout() func(e interface{}) error {
 // And if it is the case, it sends out the state "out" to discovery and to itself.
 func (c *GameCallbacker) checkSomethingReady(players int, in string, out string) func(e interface{}) error {
 	return func(e interface{}) error {
-		c.logger.Debugw("Check readiness.", "Players", players, "Event", in)
+		c.logger.Debugw("Check readiness", "Players", players, "Event", in)
 		meta := e.(*fsm.Event).Meta
 		f := meta.FSM
 		if f == nil {

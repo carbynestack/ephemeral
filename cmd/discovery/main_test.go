@@ -95,68 +95,66 @@ var _ = Describe("Main", func() {
 
 		})
 		Context("one of the required parameters is missing", func() {
-			Context("when no frontendURL is defined", func() {
-				AfterEach(func() {
-					_, _, err := cmder.CallCMD(context.TODO(), []string{fmt.Sprintf("rm %s", path)}, "./")
-					Expect(err).NotTo(HaveOccurred())
-				})
-				It("returns an error", func() {
-					path := fmt.Sprintf("/tmp/test-%d", random)
-					noFrontendURLConfig := []byte(`{"masterHost": "apollo.test.specs.cloud",
-			"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
-					err := ioutil.WriteFile(path, noFrontendURLConfig, 0644)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = ParseConfig(path)
-					Expect(err).To(HaveOccurred())
-
-					noMasterHostConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud",
-					"masterPort": "31400","slave": true, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
-					err = ioutil.WriteFile(path, noMasterHostConfigSlave, 0644)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = ParseConfig(path)
-					Expect(err).To(HaveOccurred())
-
-					noMasterHostConfigMaster := []byte(`{"frontendURL": "apollo.test.specs.cloud",
-					"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
-					err = ioutil.WriteFile(path, noMasterHostConfigMaster, 0644)
-					Expect(err).NotTo(HaveOccurred())
-					conf, err := ParseConfig(path)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(conf).NotTo(BeNil())
-
-					noMasterPortConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
-					err = ioutil.WriteFile(path, noMasterPortConfigSlave, 0644)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = ParseConfig(path)
-					Expect(err).To(HaveOccurred())
-
-					noPlayerCountConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
-					err = ioutil.WriteFile(path, noPlayerCountConfig, 0644)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = ParseConfig(path)
-					Expect(err).To(HaveOccurred())
-
-					noStateTimeoutConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "playerCount": "2", "connectTimeout": "2s", "computationTimeout": "3s"}`)
-					err = ioutil.WriteFile(path, noStateTimeoutConfig, 0644)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = ParseConfig(path)
-					Expect(err).To(HaveOccurred())
-
-					noConnectTimeoutConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "playerCount": "2", "stateTimeout": "2s", "computationTimeout": "3s"}`)
-					err = ioutil.WriteFile(path, noConnectTimeoutConfig, 0644)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = ParseConfig(path)
-					Expect(err).To(HaveOccurred())
-				})
+			AfterEach(func() {
+				_, _, err := cmder.CallCMD(context.TODO(), []string{fmt.Sprintf("rm %s", path)}, "./")
+				Expect(err).NotTo(HaveOccurred())
 			})
-			Context("when port|busSize|portRange|configLocation are not defined", func() {
-				It("sets the default values", func() {
-					conf := &DiscoveryTypedConfig{}
-					SetDefaults(conf)
-					Expect(conf.Port).To(Equal(DefaultPort))
-					Expect(conf.BusSize).To(Equal(DefaultBusSize))
-					Expect(conf.PortRange).To(Equal(DefaultPortRange))
-				})
+			It("returns an error", func() {
+				path := fmt.Sprintf("/tmp/test-%d", random)
+				noFrontendURLConfig := []byte(`{"masterHost": "apollo.test.specs.cloud",
+			"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+				err := ioutil.WriteFile(path, noFrontendURLConfig, 0644)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = ParseConfig(path)
+				Expect(err).To(HaveOccurred())
+
+				noMasterHostConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud",
+					"masterPort": "31400","slave": true, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+				err = ioutil.WriteFile(path, noMasterHostConfigSlave, 0644)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = ParseConfig(path)
+				Expect(err).To(HaveOccurred())
+
+				noMasterHostConfigMaster := []byte(`{"frontendURL": "apollo.test.specs.cloud",
+					"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+				err = ioutil.WriteFile(path, noMasterHostConfigMaster, 0644)
+				Expect(err).NotTo(HaveOccurred())
+				conf, err := ParseConfig(path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(conf).NotTo(BeNil())
+
+				noMasterPortConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+				err = ioutil.WriteFile(path, noMasterPortConfigSlave, 0644)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = ParseConfig(path)
+				Expect(err).To(HaveOccurred())
+
+				noPlayerCountConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+				err = ioutil.WriteFile(path, noPlayerCountConfig, 0644)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = ParseConfig(path)
+				Expect(err).To(HaveOccurred())
+
+				noStateTimeoutConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "playerCount": "2", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+				err = ioutil.WriteFile(path, noStateTimeoutConfig, 0644)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = ParseConfig(path)
+				Expect(err).To(HaveOccurred())
+
+				noConnectTimeoutConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "playerCount": "2", "stateTimeout": "2s", "computationTimeout": "3s"}`)
+				err = ioutil.WriteFile(path, noConnectTimeoutConfig, 0644)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = ParseConfig(path)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+		Context("when port|busSize|portRange|configLocation are not defined", func() {
+			It("sets the default values", func() {
+				conf := &DiscoveryTypedConfig{}
+				SetDefaults(conf)
+				Expect(conf.Port).To(Equal(DefaultPort))
+				Expect(conf.BusSize).To(Equal(DefaultBusSize))
+				Expect(conf.PortRange).To(Equal(DefaultPortRange))
 			})
 		})
 		Context("when initializing the gRPC server", func() {

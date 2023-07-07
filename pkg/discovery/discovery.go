@@ -193,7 +193,7 @@ func (s *ServiceNG) registerPlayer(pl *pb.Player, gameID string) error {
 	p, ok := s.players[gameID]
 	// Create a new map for the GameID
 	if !ok {
-		s.logger.Debug("Create new PLayer map")
+		s.logger.Debug("Create new Player map")
 		players := map[PlayerID]*pb.Player{}
 		s.players[gameID] = players
 	}
@@ -208,10 +208,10 @@ func (s *ServiceNG) registerPlayer(pl *pb.Player, gameID string) error {
 	// Create a new network if it doesn't exist yet.
 	_, ok = s.networks[pl.Pod]
 	if !ok {
-		s.logger.Debug("create new network")
+		s.logger.Debug("Create new network")
 		port, err := s.createNetwork(pl)
 		if err != nil {
-			s.logger.Errorf("error creating network %v", err)
+			s.logger.Errorf("Error creating network %v", err)
 			return err
 		}
 		s.networks[pl.Pod] = port
@@ -230,7 +230,7 @@ func (s *ServiceNG) createNetwork(pl *pb.Player) (int32, error) {
 		}
 		return port, err
 	}
-	s.logger.Debug("Do not create the network for the foreign player.")
+	s.logger.Debug("Do not create the network for the foreign player")
 	return pl.Port, nil
 }
 
@@ -259,7 +259,7 @@ func (s *ServiceNG) processIn(e interface{}) {
 		if err != nil {
 			s.errCh <- err
 		}
-		gameErrCh := make(chan error)
+		gameErrCh := make(chan error, 1)
 		go func() {
 			// Do not propagate this error to the client.
 			// Since should not be related to the client code, but would indicate a bug in the Game FSM.

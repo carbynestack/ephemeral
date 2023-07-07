@@ -49,7 +49,7 @@ func main() {
 	tr := NewTransportServer(logger, config.Port)
 	pb := discovery.NewPublisher(bus)
 	doneCh := make(chan string)
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 
 	n, err := discovery.NewIstioNetworker(logger, config.PortRange, doneCh)
 	if err != nil {
@@ -87,7 +87,7 @@ func main() {
 // will be configured to forward incoming events to an upstream master server. With upstreamClient set to nil, the
 // service is considered to be the master service.
 func NewClient(upstreamConfig *types.DiscoveryClientTypedConfig, logger *zap.SugaredLogger, errCh chan error) (*cl.Client, string, error) {
-	logger.Debug("Creating new discovery client.")
+	logger.Debug("Creating new discovery client")
 	mode := ModeMaster
 	client := &cl.Client{}
 	var err error

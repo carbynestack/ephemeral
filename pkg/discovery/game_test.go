@@ -54,12 +54,21 @@ func generateTestsWithPlayerCount(playerCount int) {
 				pb.Publish(PlayerReady, gameID)
 			}
 			WaitDoneOrTimeout(done)
+			Assert(TCPCheckSuccessAll, game, done, func(states []string) {})
+			for i := 0; i < playerCount; i++ {
+				pb.Publish(TCPCheckSuccess, gameID)
+			}
+			WaitDoneOrTimeout(done)
 			Assert(GameDone, game, done, func(states []string) {
 				statesAsserter := NewStatesAsserter(states)
 
 				statesAsserter.ExpectNext().To(Equal(Init))
 				for i := 0; i < playerCount; i++ {
 					statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
+				}
+				statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+				for i := 0; i < playerCount; i++ {
+					statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
 				}
 				statesAsserter.ExpectNext().To(Equal(Playing))
 				for i := 0; i < playerCount; i++ {
@@ -82,6 +91,11 @@ func generateTestsWithPlayerCount(playerCount int) {
 					pb.Publish(PlayerReady, gameID)
 				}
 				WaitDoneOrTimeout(done)
+				Assert(TCPCheckSuccessAll, game, done, func(states []string) {})
+				for i := 0; i < playerCount; i++ {
+					pb.Publish(TCPCheckSuccess, gameID)
+				}
+				WaitDoneOrTimeout(done)
 				Assert(GameError, game, done, func(states []string) {})
 				Assert(GameDone, game, done, func(states []string) {
 					statesAsserter := NewStatesAsserter(states)
@@ -90,13 +104,17 @@ func generateTestsWithPlayerCount(playerCount int) {
 					for i := 0; i < playerCount; i++ {
 						statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
 					}
+					statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+					}
 					for i := 0; i < playerCount; i++ {
 						statesAsserter.ExpectNext().To(Equal(Playing))
 					}
 					statesAsserter.ExpectNext().To(Equal(GameError))
 					statesAsserter.ExpectNext().To(Equal(GameDone))
 
-					Expect(len(states)).To(Equal(2*playerCount + 3))
+					Expect(len(states)).To(Equal(3*playerCount + 4))
 				}, ServiceEventsTopic)
 
 				for i := 0; i < playerCount-1; i++ {
@@ -104,6 +122,32 @@ func generateTestsWithPlayerCount(playerCount int) {
 				}
 				pb.Publish(GameFinishedWithError, gameID)
 				WaitDoneOrTimeout(done)
+				WaitDoneOrTimeout(done)
+			})
+		})
+		Context("at TCP check", func() {
+			It("transitions to the GameError state", func() {
+				game.Init(errCh)
+				Assert(PlayersReady, game, done, func(states []string) {})
+				for i := 0; i < playerCount; i++ {
+					pb.Publish(PlayerReady, gameID)
+				}
+				WaitDoneOrTimeout(done)
+				Assert(GameDone, game, done, func(states []string) {
+					statesAsserter := NewStatesAsserter(states)
+					statesAsserter.ExpectNext().To(Equal(Init))
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(WaitPlayersReady))
+					}
+					for i := 0; i < playerCount; i++ {
+						statesAsserter.ExpectNext().To(Equal(WaitTCPCheck))
+					}
+					statesAsserter.ExpectNext().To(Equal(GameError))
+				}, ServiceEventsTopic)
+				for i := 0; i < playerCount-1; i++ {
+					pb.Publish(TCPCheckSuccess, gameID)
+				}
+				pb.Publish(TCPCheckFailure, gameID)
 				WaitDoneOrTimeout(done)
 			})
 		})

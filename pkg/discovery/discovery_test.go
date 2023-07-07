@@ -260,23 +260,26 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 
 		var (
 			// Events sent by the clients to discovery service.
-			ready *proto.Event
+			ready, tcpCheckSuccess *proto.Event
 
 			// Events sent by discovery service to the clients
-			playersReady, gameFinishedWithSuccess, gameProtocolError *proto.Event
+			playersReady, tcpCheckSuccessAll, gameFinishedWithSuccess, gameProtocolError *proto.Event
 		)
 
 		BeforeEach(func() {
 			// Events sent by clients.
 			ready = GenerateEvents(PlayerReady, "0")[0]
+			tcpCheckSuccess = GenerateEvents(TCPCheckSuccess, "0")[0]
 			gameFinishedWithSuccess = GenerateEvents(GameFinishedWithSuccess, "0")[0]
 			playersReady = GenerateEvents(PlayersReady, "0")[0]
+			tcpCheckSuccessAll = GenerateEvents(TCPCheckSuccessAll, "0")[0]
 			gameProtocolError = GenerateEvents(GameProtocolError, "0")[0]
 		})
 
 		It("sends all required events to the clients", func() {
 			// Do not test the exact states after each events - it was already covered in the Game unit tests.
 			assertExternalEvent(playersReady, ClientOutgoingEventsTopic, g, done, func(states []string) {})
+			assertExternalEvent(tcpCheckSuccessAll, ClientOutgoingEventsTopic, g, done, func(states []string) {})
 
 			go s.Start()
 			s.WaitUntilReady(timeout)
@@ -285,8 +288,13 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 			}
 			time.Sleep(50 * time.Millisecond)
 			for i := 0; i < playerCount; i++ {
+				pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
+			}
+			time.Sleep(50 * time.Millisecond)
+			for i := 0; i < playerCount; i++ {
 				pb.PublishExternalEvent(gameFinishedWithSuccess, ClientIncomingEventsTopic)
 			}
+			WaitDoneOrTimeout(done)
 			WaitDoneOrTimeout(done)
 		})
 
@@ -305,6 +313,10 @@ func generateDiscoveryNGTestsWithPlayerCount(playerCount int) {
 			s.WaitUntilReady(timeout)
 			for i := 0; i < playerCount; i++ {
 				pb.PublishExternalEvent(ready, ClientIncomingEventsTopic)
+			}
+			time.Sleep(50 * time.Millisecond)
+			for i := 0; i < playerCount; i++ {
+				pb.PublishExternalEvent(tcpCheckSuccess, ClientIncomingEventsTopic)
 			}
 			time.Sleep(50 * time.Millisecond)
 			for i := 0; i < playerCount; i++ {

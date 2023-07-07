@@ -78,12 +78,12 @@ func (t *TCPChecker) tryToConnect(host, port string) bool {
 	}()
 	conn, err = net.DialTimeout("tcp", host+":"+port, t.conf.DialTimeout)
 	if err != nil {
-		t.conf.Logger.Debugf("error getting tcp connection %s", err.Error())
+		t.conf.Logger.Debugf("Error getting tcp connection %s", err.Error())
 		return false
 	}
 	err = conn.SetReadDeadline(time.Now().Add(t.conf.DialTimeout))
 	if err != nil {
-		t.conf.Logger.Errorf("error setting read deadline, %s\n", err.Error())
+		t.conf.Logger.Errorf("Error setting read deadline, %s\n", err.Error())
 
 		return false
 	}
@@ -113,5 +113,5 @@ func (t *TCPChecker) tryToConnect(host, port string) bool {
 func (t *TCPChecker) sleepAndIncrement() {
 	t.retries++
 	time.Sleep(t.conf.DialTimeout)
-	t.conf.Logger.Debugf("retrying TCPCheck after %s", t.conf.DialTimeout)
+	t.conf.Logger.Debugf("Retrying TCPCheck after %s", t.conf.DialTimeout)
 }

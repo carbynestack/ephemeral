@@ -46,7 +46,7 @@ type Transport interface {
 
 // NewTransportServer returns a new transport server.
 func NewTransportServer(conf *TransportConfig) *TransportServer {
-	conf.Logger.Debug("Creating new TransportServer.")
+	conf.Logger.Debug("Creating new TransportServer")
 	tr := &TransportServer{
 		conf:       conf,
 		mb:         mb.New(10000),
@@ -78,7 +78,7 @@ func (d *TransportServer) Run(cb func()) error {
 	if err != nil {
 		return err
 	}
-	d.conf.Logger.Debugf("Started TransportServer listening on %s.", lis.Addr())
+	d.conf.Logger.Debugf("Started TransportServer listening on %s", lis.Addr())
 	pb.RegisterDiscoveryServer(d.grpcServer, d)
 	done := make(chan struct{}, 1)
 	go d.broadcast(done)
@@ -108,7 +108,7 @@ func (d *TransportServer) Events(stream pb.Discovery_EventsServer) error {
 	go d.forwardFromStream(stream, errCh)
 	// Block until we receive an error.
 	err = <-errCh
-	d.conf.Logger.Debugw("Event handling received error.", "Error", err, ConnID, connID, EventScope, scope)
+	d.conf.Logger.Debugw("Event handling received error", "Error", err, ConnID, connID, EventScope, scope)
 	_ = d.mb.Unsubscribe(broadcastTopic, d.forwardToStream(stream, scope, connID))
 	d.conf.Logger.Debug("Unsubscribed forwardToStream from the broadcast topic")
 	return err
@@ -127,10 +127,10 @@ func (d *TransportServer) broadcast(done chan struct{}) {
 	for {
 		select {
 		case ev := <-d.conf.Out:
-			d.conf.Logger.Debugw("Broadcast outgoing event.", "Event", ev)
+			d.conf.Logger.Debugw("Broadcast outgoing event", "Event", ev)
 			d.mb.Publish(broadcastTopic, ev)
 		case <-done:
-			d.conf.Logger.Debug("Stopped broadcasting.")
+			d.conf.Logger.Debug("Stopped broadcasting")
 			return
 		}
 	}
@@ -170,17 +170,17 @@ func (d *TransportServer) forwardToStream(stream pb.Discovery_EventsServer, scop
 				d.sendEvent(stream, ev)
 			}
 		default:
-			d.conf.Logger.Errorf("unknown event scope %v", scope)
+			d.conf.Logger.Errorf("Unknown event scope %v", scope)
 		}
 	}
 }
 
 // sendEvent sents out an event and potentially prints an error.
 func (d *TransportServer) sendEvent(stream pb.Discovery_EventsServer, ev *pb.Event) {
-	d.conf.Logger.Debugw("Broadcasting event.", "Event", ev)
+	d.conf.Logger.Debugw("Broadcasting event", "Event", ev)
 	err := stream.Send(ev)
 	if err != nil {
-		d.conf.Logger.Errorf("error broadcasting the event %s", ev.Name)
+		d.conf.Logger.Errorf("Error broadcasting the event %s", ev.Name)
 	}
 }
 
@@ -195,15 +195,15 @@ func (d *TransportServer) forwardFromStream(stream pb.Discovery_EventsServer, er
 		default:
 			ev, err := stream.Recv()
 			if err == io.EOF {
-				d.conf.Logger.Debugf("server is exiting due to an EOF")
+				d.conf.Logger.Debugf("Server is exiting due to an EOF")
 				return
 			}
 			if err != nil {
-				d.conf.Logger.Errorw("Received error from stream.", "Error", err)
+				d.conf.Logger.Errorw("Received error from stream", "Error", err)
 				errCh <- err
 				return
 			}
-			d.conf.Logger.Debugw("Received event from stream.", "Event", ev)
+			d.conf.Logger.Debugw("Received event from stream", "Event", ev)
 			d.conf.In <- ev
 		}
 	}

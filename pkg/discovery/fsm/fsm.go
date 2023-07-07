@@ -107,6 +107,8 @@ func (f *FSM) Current() string {
 // The error is caused either by an unregistered event or by the callback itself.
 // If the FSM was stopped its state is updated, the timer is stopped and the error channel is closed.
 // The method is blocking and must be started exactly once.
+//
+// `errChan` is expected to be a buffered channel with minimum capacity of "1".
 func (f *FSM) Run(errChan chan error) {
 	for {
 		select {
@@ -124,6 +126,11 @@ func (f *FSM) Run(errChan chan error) {
 				select {
 				case errChan <- err:
 				default:
+					// The ErrCh is a buffered channel potentially shared by multiple subroutines. Any error written to
+					// the channel indicates that the current procedure has failed.
+					// While the "root" error is sufficient to indicate that the routine failed, it may cause further
+					// errors in other routines. If write to ErrCh fails, err is classified as a consequent error. In
+					// this case, "err" is discarded to prevent the routine from blocking.
 				}
 				return
 			}
@@ -149,7 +156,7 @@ func (f *FSM) process() error {
 		return errors.New("the number of events is out of sync with received pings")
 	}
 	event := f.queue[0]
-	f.logger.Debugf("FSM process event %v\n", event)
+	f.logger.Debugf("FSM process event %v", event)
 	f.queue = f.queue[1:]
 	f.history.AddEvent(event)
 	trID := TransitionID{
@@ -353,7 +360,7 @@ func (i *Transition) Stay() *Transition {
 	return i
 }
 
-// WithTimeout defines an individual timeout within the transition to the next state is to be expected.
+// WithTimeout defines an individual timeout within the transition to the next state is expected.
 func (i *Transition) WithTimeout(d time.Duration) *Transition {
 	i.Timeout = d
 	return i
