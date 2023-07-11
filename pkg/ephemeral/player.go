@@ -157,7 +157,7 @@ type Callbacker struct {
 	logger       *zap.SugaredLogger
 }
 
-// registration forwards registeration request to the discovery service.
+// registration forwards registration request to the discovery service.
 func (c *Callbacker) registration() func(e interface{}) error {
 	return func(e interface{}) error {
 		c.sendEvent(Register, DiscoveryTopic, e)

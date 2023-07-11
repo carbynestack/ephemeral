@@ -187,10 +187,17 @@ func RetryingDialer(sleep, timeout time.Duration, sideEffect func()) func(addr, 
 }
 
 // RetryingDialerWithContext tries to establish a TCP connection to a socket until the timeout is reached or the context is cancelled.
-func RetryingDialerWithContext(sleep time.Duration, l *zap.SugaredLogger) func(ctx context.Context, addr, port string, timeout time.Duration) (conn net.Conn, err error) {
-	return func(ctx context.Context, addr, port string, timeout time.Duration) (conn net.Conn, err error) {
+func RetryingDialerWithContext(sleep time.Duration, timeout time.Duration, l *zap.SugaredLogger) func(ctx context.Context, addr, port string) (conn net.Conn, err error) {
+	return RetryingDialerWithContextAndLogTimeout(sleep, timeout, l, 5*time.Second)
+}
+
+// RetryingDialerWithContextAndLogTimeout uses an individual log message timer.
+//
+// Used for testing
+func RetryingDialerWithContextAndLogTimeout(sleep time.Duration, timeout time.Duration, l *zap.SugaredLogger, logPeriod time.Duration) func(ctx context.Context, addr, port string) (conn net.Conn, err error) {
+	return func(ctx context.Context, addr, port string) (conn net.Conn, err error) {
 		started := time.Now()
-		logTicker := time.NewTicker(5 * time.Second)
+		logTicker := time.NewTicker(logPeriod)
 		connectTimer := time.NewTimer(0)
 		defer logTicker.Stop()
 		defer connectTimer.Stop()
@@ -211,7 +218,7 @@ func RetryingDialerWithContext(sleep time.Duration, l *zap.SugaredLogger) func(c
 					connectTimer.Reset(sleep)
 					continue
 				}
-				if conn != nil {
+				if conn.(*net.TCPConn) != nil {
 					if err := conn.(*net.TCPConn).SetKeepAlive(true); err != nil {
 						return nil, err
 					}

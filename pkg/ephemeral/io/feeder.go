@@ -24,7 +24,7 @@ type Feeder interface {
 
 // NewAmphoraFeeder returns a new instance of amphora feeder.
 func NewAmphoraFeeder(l *zap.SugaredLogger, conf *SPDZEngineTypedConfig) *AmphoraFeeder {
-	dialer := network.RetryingDialerWithContext(conf.RetrySleep, l)
+	dialer := network.RetryingDialerWithContext(conf.RetrySleep, conf.NetworkEstablishTimeout, l)
 
 	carrier := &Carrier{
 		Dialer: dialer,
@@ -116,7 +116,7 @@ func (f *AmphoraFeeder) feedAndRead(params []string, feedPort string, ctx *CtxCo
 	default:
 		return nil, fmt.Errorf("no output config is given, either %s, %s or %s must be defined", PlainText, SecretShare, AmphoraSecret)
 	}
-	err := f.carrier.Connect(ctx.Context, ctx.Spdz.PlayerID, "localhost", feedPort, f.conf.NetworkEstablishTimeout)
+	err := f.carrier.Connect(ctx.Context, ctx.Spdz.PlayerID, "localhost", feedPort)
 	defer f.carrier.Close()
 	if err != nil {
 		return nil, err

@@ -368,6 +368,40 @@ var _ = Describe("Main", func() {
 						Expect(typedConf).To(BeNil())
 					})
 				})
+				Context("discovery config's connect timeout format is corrupt", func() {
+					It("returns an error", func() {
+						conf := &SPDZEngineConfig{
+							NetworkEstablishTimeout: "2s",
+							RetrySleep:              "1s",
+							Prime:                   "198766463529478683931867765928436695041",
+							RInv:                    "133854242216446749056083838363708373830",
+							GfpMacKey:               "1113507028231509545156335486838233835",
+							Gf2nBitLength:           40,
+							Gf2nStorageSize:         8,
+							AmphoraConfig: AmphoraConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "amphoraPath",
+							},
+							CastorConfig: CastorConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "castorPath",
+							},
+							DiscoveryConfig: DiscoveryClientConfig{
+								Host:           "localhost",
+								Port:           "8080",
+								ConnectTimeout: "corrupt",
+							},
+							StateTimeout:       "0s",
+							ComputationTimeout: "0s",
+						}
+						typedConf, err := InitTypedConfig(conf)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("time: invalid duration \"corrupt\""))
+						Expect(typedConf).To(BeNil())
+					})
+				})
 				Context("computationTimeout format is corrupt", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
@@ -395,6 +429,40 @@ var _ = Describe("Main", func() {
 							},
 							StateTimeout:       "0s",
 							ComputationTimeout: "corrupt",
+						}
+						typedConf, err := InitTypedConfig(conf)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("time: invalid duration \"corrupt\""))
+						Expect(typedConf).To(BeNil())
+					})
+				})
+				Context("networkEstablishTimeout format is corrupt", func() {
+					It("returns an error", func() {
+						conf := &SPDZEngineConfig{
+							NetworkEstablishTimeout: "corrupt",
+							RetrySleep:              "1s",
+							Prime:                   "198766463529478683931867765928436695041",
+							RInv:                    "133854242216446749056083838363708373830",
+							GfpMacKey:               "1113507028231509545156335486838233835",
+							Gf2nBitLength:           40,
+							Gf2nStorageSize:         8,
+							AmphoraConfig: AmphoraConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "amphoraPath",
+							},
+							CastorConfig: CastorConfig{
+								Host:   "localhost",
+								Scheme: "http",
+								Path:   "castorPath",
+							},
+							DiscoveryConfig: DiscoveryClientConfig{
+								Host:           "localhost",
+								Port:           "8080",
+								ConnectTimeout: "0s",
+							},
+							StateTimeout:       "0s",
+							ComputationTimeout: "0s",
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
@@ -446,7 +514,7 @@ var _ = Describe("Main", func() {
 				Expect(handler).NotTo(BeNil())
 			})
 		})
-		Context("when an error in config convertion happens", func() {
+		Context("when an error in config conversion happens", func() {
 			It("is returned", func() {
 				logger := zap.NewNop().Sugar()
 				conf := &SPDZEngineConfig{

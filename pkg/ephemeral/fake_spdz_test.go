@@ -69,6 +69,7 @@ func (f *BrokenFakeTransportClient) Stop() error {
 
 type FakePlayer struct {
 	Initialized bool
+	history     *fsm.History
 }
 
 func (f *FakePlayer) Init() {
@@ -79,7 +80,7 @@ func (f *FakePlayer) Stop() {
 	return
 }
 func (f *FakePlayer) History() *fsm.History {
-	return nil
+	return f.history
 }
 func (f *FakePlayer) Bus() mb.MessageBus {
 	return nil

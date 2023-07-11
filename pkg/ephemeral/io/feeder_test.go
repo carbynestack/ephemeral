@@ -10,8 +10,6 @@ import (
 	"errors"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	. "github.com/carbynestack/ephemeral/pkg/types"
-	time "time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
@@ -211,7 +209,7 @@ type FakeCarrier struct {
 	isBulk bool
 }
 
-func (f *FakeCarrier) Connect(context.Context, int32, string, string, time.Duration) error {
+func (f *FakeCarrier) Connect(context.Context, int32, string, string) error {
 	return nil
 }
 
@@ -232,7 +230,7 @@ type BrokenConnectFakeCarrier struct {
 	isBulk bool
 }
 
-func (f *BrokenConnectFakeCarrier) Connect(context.Context, int32, string, string, time.Duration) error {
+func (f *BrokenConnectFakeCarrier) Connect(context.Context, int32, string, string) error {
 	return errors.New("carrier connect error")
 }
 
@@ -253,7 +251,7 @@ type BrokenSendFakeCarrier struct {
 	isBulk bool
 }
 
-func (f *BrokenSendFakeCarrier) Connect(context.Context, int32, string, string, time.Duration) error {
+func (f *BrokenSendFakeCarrier) Connect(context.Context, int32, string, string) error {
 	return nil
 }
 

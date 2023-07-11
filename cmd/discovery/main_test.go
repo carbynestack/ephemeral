@@ -91,6 +91,42 @@ var _ = Describe("Main", func() {
 						Expect(err).To(HaveOccurred())
 					})
 				})
+				Context("stateTimeout is invalid", func() {
+					It("return an error on invalid format", func() {
+						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
+		"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+						err := ioutil.WriteFile(path, data, 0644)
+						Expect(err).NotTo(HaveOccurred())
+						conf, err := ParseConfig(path)
+						Expect(conf).To(BeNil())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("invalid state timeout format: time: missing unit in duration \"1\""))
+					})
+				})
+				Context("connectTimeout is invalid", func() {
+					It("return an error on invalid format", func() {
+						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
+		"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2", "computationTimeout": "3s"}`)
+						err := ioutil.WriteFile(path, data, 0644)
+						Expect(err).NotTo(HaveOccurred())
+						conf, err := ParseConfig(path)
+						Expect(conf).To(BeNil())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("invalid connection timeout format: time: missing unit in duration \"2\""))
+					})
+				})
+				Context("computationTimeout is invalid", func() {
+					It("return an error on invalid format", func() {
+						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
+		"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3"}`)
+						err := ioutil.WriteFile(path, data, 0644)
+						Expect(err).NotTo(HaveOccurred())
+						conf, err := ParseConfig(path)
+						Expect(conf).To(BeNil())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("invalid computation timeout format: time: missing unit in duration \"3\""))
+					})
+				})
 			})
 
 		})

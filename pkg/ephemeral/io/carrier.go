@@ -15,7 +15,6 @@ import (
 	"io/ioutil"
 	"net"
 	"sync"
-	"time"
 )
 
 // Result contains the response from SPDZ runtime computation.
@@ -32,7 +31,7 @@ type ConnectionInfo struct {
 
 // AbstractCarrier is the carriers interface.
 type AbstractCarrier interface {
-	Connect(context.Context, int32, string, string, time.Duration) error
+	Connect(context.Context, int32, string, string) error
 	Close() error
 	Send([]amphora.SecretShare) error
 	Read(ResponseConverter, bool) (*Result, error)
@@ -40,7 +39,7 @@ type AbstractCarrier interface {
 
 // Carrier is a TCP client for TCP sockets.
 type Carrier struct {
-	Dialer     func(ctx context.Context, addr, port string, timeout time.Duration) (net.Conn, error)
+	Dialer     func(ctx context.Context, addr, port string) (net.Conn, error)
 	Conn       net.Conn
 	Packer     Packer
 	connection *ConnectionInfo
@@ -49,7 +48,7 @@ type Carrier struct {
 }
 
 // Connect establishes a TCP connection to a socket on a given host and port.
-func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port string, timeout time.Duration) error {
+func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port string) error {
 	c.Logger.Debugf("Connecting to %s:%s", host, port)
 	c.mux.Lock()
 	defer c.mux.Unlock()
@@ -57,7 +56,7 @@ func (c *Carrier) Connect(ctx context.Context, playerID int32, host string, port
 		c.Logger.Debugw("Cancel connection attempt as carrier already has an active connection", connectionInfo, c.connection)
 		return nil
 	}
-	conn, err := c.Dialer(ctx, host, port, timeout)
+	conn, err := c.Dialer(ctx, host, port)
 	if err != nil {
 		return err
 	}

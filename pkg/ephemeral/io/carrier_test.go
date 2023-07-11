@@ -14,7 +14,6 @@ import (
 	"go.uber.org/zap"
 	"net"
 	"sync"
-	"time"
 )
 
 var _ = Describe("Carrier", func() {
@@ -24,7 +23,7 @@ var _ = Describe("Carrier", func() {
 	It("connects to a socket", func() {
 		var connected bool
 		conn := FakeNetConnection{}
-		fakeDialer := func(ctx context.Context, addr, port string, timout time.Duration) (net.Conn, error) {
+		fakeDialer := func(ctx context.Context, addr, port string) (net.Conn, error) {
 			connected = true
 			return &conn, nil
 		}
@@ -32,20 +31,20 @@ var _ = Describe("Carrier", func() {
 			Dialer: fakeDialer,
 			Logger: zap.NewNop().Sugar(),
 		}
-		err := carrier.Connect(context.TODO(), playerID, "", "", 0)
+		err := carrier.Connect(context.TODO(), playerID, "", "")
 		Expect(connected).To(BeTrue())
 		Expect(err).NotTo(HaveOccurred())
 	})
 	It("closes socket connection", func() {
 		conn := FakeNetConnection{}
-		fakeDialer := func(ctx context.Context, addr, port string, timout time.Duration) (net.Conn, error) {
+		fakeDialer := func(ctx context.Context, addr, port string) (net.Conn, error) {
 			return &conn, nil
 		}
 		carrier := Carrier{
 			Dialer: fakeDialer,
 			Logger: zap.NewNop().Sugar(),
 		}
-		err := carrier.Connect(context.TODO(), playerID, "", "", 0)
+		err := carrier.Connect(context.TODO(), playerID, "", "")
 		Expect(err).NotTo(HaveOccurred())
 		err = carrier.Close()
 		Expect(err).NotTo(HaveOccurred())
@@ -57,7 +56,7 @@ var _ = Describe("Carrier", func() {
 		output           []byte
 		connectionOutput []byte //Will contain (length 4 byte, playerID 1 byte)
 		client, server   net.Conn
-		dialer           func(ctx context.Context, addr, port string, timout time.Duration) (net.Conn, error)
+		dialer           func(ctx context.Context, addr, port string) (net.Conn, error)
 	)
 	BeforeEach(func() {
 		secret = []amphora.SecretShare{
@@ -66,7 +65,7 @@ var _ = Describe("Carrier", func() {
 		output = make([]byte, 1)
 		connectionOutput = make([]byte, 5)
 		client, server = net.Pipe()
-		dialer = func(ctx context.Context, addr, port string, timout time.Duration) (net.Conn, error) {
+		dialer = func(ctx context.Context, addr, port string) (net.Conn, error) {
 			return client, nil
 		}
 	})
@@ -82,7 +81,7 @@ var _ = Describe("Carrier", func() {
 				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(ctx, playerID, "", "", 0)
+			carrier.Connect(ctx, playerID, "", "")
 			go server.Read(output)
 			err := carrier.Send(secret)
 			carrier.Close()
@@ -98,7 +97,7 @@ var _ = Describe("Carrier", func() {
 				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(ctx, playerID, "", "", 0)
+			carrier.Connect(ctx, playerID, "", "")
 			go server.Read(output)
 			err := carrier.Send(secret)
 			carrier.Close()
@@ -115,7 +114,7 @@ var _ = Describe("Carrier", func() {
 				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(ctx, playerID, "", "", 0)
+			carrier.Connect(ctx, playerID, "", "")
 			// Closing the connection to trigger a failure due to writing into the closed socket.
 			server.Close()
 			err := carrier.Send(secret)
@@ -137,7 +136,7 @@ var _ = Describe("Carrier", func() {
 				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(ctx, playerID, "", "", 0)
+			carrier.Connect(ctx, playerID, "", "")
 			go func() {
 				server.Write(serverResponse)
 				server.Close()
@@ -159,7 +158,7 @@ var _ = Describe("Carrier", func() {
 				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(ctx, playerID, "", "", 0)
+			carrier.Connect(ctx, playerID, "", "")
 			server.Close()
 			anyConverter := &PlaintextConverter{}
 			_, err := carrier.Read(anyConverter, false)
@@ -174,7 +173,7 @@ var _ = Describe("Carrier", func() {
 				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
-			carrier.Connect(ctx, playerID, "", "", 0)
+			carrier.Connect(ctx, playerID, "", "")
 			go func() {
 				server.Write(serverResponse)
 				server.Close()
@@ -204,7 +203,7 @@ var _ = Describe("Carrier", func() {
 			// Act
 			var errConnecting error
 			go func() {
-				errConnecting = carrier.Connect(ctx, playerID, "", "", 0)
+				errConnecting = carrier.Connect(ctx, playerID, "", "")
 				waitGroup.Done()
 			}()
 

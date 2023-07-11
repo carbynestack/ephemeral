@@ -427,6 +427,23 @@ var _ = Describe("Server", func() {
 	})
 })
 
+var _ = Describe("PlayerWithIO", func() {
+	Context("when fetching state machine history", func() {
+		It("returns the player's state machine history", func() {
+			history := &fsm.History{}
+			history.AddEvent(&fsm.Event{
+				GameID: "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4",
+				Name:   "DummyEvent",
+			})
+			fakePlayer := &FakePlayer{
+				history: history,
+			}
+			p := &PlayerWithIO{Player: fakePlayer}
+			Expect(p.History()).To(Equal(history))
+		})
+	})
+})
+
 type FakePlayerWithIO struct {
 	respCh chan []byte
 	errCh  chan error
