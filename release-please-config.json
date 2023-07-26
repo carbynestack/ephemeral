@@ -3,6 +3,7 @@
   "separate-pull-requests": true,
   "pull-request-title-pattern": "chore: release ${component} ${version}",
   "pull-request-header": ":package: Staging a new release",
+  "skip-snapshot": true,
   "packages": {
     ".": {
       "package-name": "service",
