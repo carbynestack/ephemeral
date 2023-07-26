@@ -3,6 +3,7 @@
 [![codecov](https://codecov.io/gh/carbynestack/ephemeral/branch/master/graph/badge.svg?token=6QJMZ3MFUm)](https://codecov.io/gh/carbynestack/ephemeral)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/dde89cf6ed0d447292f2765c459b594c)](https://www.codacy.com?utm_source=github.com&utm_medium=referral&utm_content=carbynestack/ephemeral&utm_campaign=Badge_Grade)
 [![Known Vulnerabilities](https://snyk.io/test/github/carbynestack/ephemeral/badge.svg)](https://snyk.io/test/github/carbynestack/ephemeral)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
