@@ -38,7 +38,7 @@ Ephemeral is composed of these components:
 
 ## Namesake
 
-> *ephemeral* (plural ephemerals): Something which lasts for a short period of
+> *Ephemeral* (plural ephemerals): Something which lasts for a short period of
 > time.
 
 As of [Wikipedia](https://en.wikipedia.org/wiki/Ephemerality):
