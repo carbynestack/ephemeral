@@ -31,7 +31,7 @@ package manager.
 
 ## Installing the Chart
 
-To install the chart with the release name `my-release`:
+To install the chart with the release name `my-release`, invoke
 
 ```bash
 helm install --name my-release ephemeral
