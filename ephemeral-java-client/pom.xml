@@ -9,7 +9,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>ephemeral-java-client</artifactId>
     <groupId>io.carbynestack</groupId>
-    <version>0.1.1-SNAPSHOT</version>
+    <version>0.1.1</version>
     <name>Carbyne Stack Ephemeral Java Client</name>
     <description>Java client for the Carbyne Stack Ephemeral service.</description>
     <licenses>
