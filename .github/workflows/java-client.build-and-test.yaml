@@ -1,0 +1,70 @@
+#
+# Copyright (c) 2023 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+name: Build and test Java Client
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - 'master'
+jobs:
+  changes:
+    runs-on: ubuntu-22.04
+    permissions:
+      pull-requests: read
+    outputs:
+      operator: ${{ steps.filter.outputs.operator }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Check whether Java client codebase is affected
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            java-client:
+              - 'ephemeral-java-client/**'
+  test:
+    runs-on: ubuntu-22.04
+    needs: changes
+    if: ${{ needs.changes.outputs.operator == 'true' }}
+    defaults:
+      run:
+        working-directory: ephemeral-java-client
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Setting up Github Package Repository as Maven Repository
+        uses: s4u/maven-settings-action@v2
+        with:
+          githubServer: false
+          servers: |
+            [{
+              "id": "github",
+              "username": "${{ github.actor }}",
+              "password": "${{ secrets.GITHUB_TOKEN }}"
+            }]
+      - name: Build with Maven
+        run: mvn install -Dskip.tests --batch-mode --update-snapshots --no-transfer-progress
+      - name: Run Tests
+        run: mvn verify --activate-profiles coverage --batch-mode --no-transfer-progress
+      - name: Collect Jacoco reports
+        run: echo ::set-output name=reports::$(find . -regex '.*/target/site/jacoco/jacoco.xml' | tr '\n' ',' | sed 's/.$//')
+        id: jacoco
+      - uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ${{ steps.jacoco.outputs.reports }}
+          name: codecov
