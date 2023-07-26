@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/carbynestack/ephemeral/compare/java-client-v0.1.1...java-client-v0.1.2) (2023-07-26)
+
+
+### Bug Fixes
+
+* **service/chart/java-client:** test release logic with some minor fixes ([#46](https://github.com/carbynestack/ephemeral/issues/46)) ([a215b6b](https://github.com/carbynestack/ephemeral/commit/a215b6b884ea73fc69f4283aca849dbc8bf520d4))
+
 ## [0.1.1](https://github.com/carbynestack/ephemeral/compare/java-client-v0.1.0...java-client-v0.1.1) (2023-07-26)
 
 
