@@ -1,0 +1,20 @@
+{
+  "bump-minor-pre-major": true,
+  "separate-pull-requests": true,
+  "pull-request-title-pattern": "chore: release ${component} ${version}",
+  "pull-request-header": ":package: Staging a new release",
+  "packages": {
+    ".": {
+      "package-name": "service",
+      "release-type": "go"
+    },
+    "charts/ephemeral": {
+      "package-name": "chart",
+      "release-type": "helm"
+    },
+    "ephemeral-java-client": {
+      "package-name": "java-client",
+      "release-type": "maven"
+    }
+  }
+}
