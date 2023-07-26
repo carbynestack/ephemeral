@@ -19,7 +19,7 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      operator: ${{ steps.filter.outputs.operator }}
+      service: ${{ steps.filter.outputs.service }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -33,7 +33,7 @@ jobs:
   test:
     runs-on: ubuntu-22.04
     needs: changes
-    if: ${{ needs.changes.outputs.operator == 'true' }}
+    if: ${{ needs.changes.outputs.service == 'true' }}
     env:
       GOPATH: ${{ github.workspace }}
       GO111MODULE: on
