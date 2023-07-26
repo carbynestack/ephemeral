@@ -1,0 +1,61 @@
+#
+# Copyright (c) 2023 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+name: Publish Java Client
+on:
+  push:
+    tags:
+      - "java-client-v[0-9]+.[0-9]+.[0-9]+"
+defaults:
+  run:
+    working-directory: ephemeral-java-client
+env:
+  WORKING_DIRECTORY: ephemeral-java-client
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Retrieve license obligation resources
+        run: |
+          cd 3RD-PARTY-LICENSES
+          find . -maxdepth 1 -type d -not -path . | zip -r@ 3rd-party-copyrights
+          find . -iname origin.src | \
+          awk '{ \
+          split($0,b,"/"); \
+          system("xargs < " $0 " curl --create-dirs -Lo ./sources/" b[2] ".zip " $2)}' && \
+          find -regex './sources$' | awk '{system("zip -jr ./3rd-party-sources.zip " $0)}'
+          mkdir -p ../license-obligations && mv `find . -regex "^./3rd-party-.*.zip$"` ../license-obligations/
+      - name: Update Release with license obligations resources
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: ${{ env.WORKING_DIRECTORY }}/license-obligations/*
+          artifactErrorsFailBuild: true
+          makeLatest: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Setting up Github Package Repository as Maven Repository
+        uses: s4u/maven-settings-action@v2
+        with:
+          githubServer: false
+          servers: |
+            [{
+              "id": "github",
+              "username": "${{ secrets.GHPR_USERNAME }}",
+              "password": "${{ secrets.GHPR_TOKEN }}"
+            }]
+      - name: Publish version to GitHub Packages
+        run: mvn deploy -Dskip.tests --batch-mode --no-transfer-progress
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

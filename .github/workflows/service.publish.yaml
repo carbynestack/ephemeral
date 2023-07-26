@@ -1,0 +1,69 @@
+#
+# Copyright (c) 2023 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+name: Publish Service
+on:
+  push:
+    tags:
+      - "service-v[0-9]+.[0-9]+.[0-9]+"
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: carbynestack/ephemeral
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          path: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}
+      - name: Retrieve license obligation resources
+        run: |
+          cd 3RD-PARTY-LICENSES
+          find . -maxdepth 1 -type d -not -path . | zip -r@ 3rd-party-copyrights
+          find . -iname origin.src | \
+          awk '{ \
+          split($0,b,"/"); \
+          system("xargs < " $0 " curl --create-dirs -Lo ./sources/" b[2] ".zip " $2)}' && \
+          find -regex './sources$' | awk '{system("zip -jr ./3rd-party-sources.zip " $0)}'
+          mkdir -p ../license-obligations && mv `find . -regex "^./3rd-party-.*.zip$"` ../license-obligations/
+      - name: Update Release with license obligations resources
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: ${{ env.WORKING_DIRECTORY }}/license-obligations/*
+          artifactErrorsFailBuild: true
+          makeLatest: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+      - name: Log in to container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=match,pattern=service-v(\d+.\d+.\d+),group=1
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}/go.mod
+          cache-dependency-path: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}/go.sum
+      - name: Setup Ko
+        uses: imjasonh/setup-ko@v0.6
+      - name: Publish Docker Images
+        run: |
+          ko publish -B \
+            --tags=${{ steps.meta.outputs.tags }} \
+            --image-label ${{ steps.meta.outputs.labels }} \
+            github.com/carbynestack/ephemeral/cmd/discovery \
+            github.com/carbynestack/ephemeral/cmd/ephemeral \
+            github.com/carbynestack/ephemeral/cmd/network-controller
