@@ -29,7 +29,7 @@ jobs:
         with:
           filters: |
             java-client:
-              - 'ephemeral-java-client/**'
+              - '(ephemeral-java-client|.github)/**'
   test:
     runs-on: ubuntu-22.04
     needs: changes
