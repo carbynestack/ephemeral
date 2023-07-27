@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/carbynestack/ephemeral/compare/service-v0.1.8...service-v0.1.9) (2023-07-27)
+
+
+### Bug Fixes
+
+* **service:** generate both tags and lables for ko correctly ([#65](https://github.com/carbynestack/ephemeral/issues/65)) ([1ccac01](https://github.com/carbynestack/ephemeral/commit/1ccac012cff5c4ce7bcf4de854515116a872b51c))
+
 ## [0.1.8](https://github.com/carbynestack/ephemeral/compare/service-v0.1.7...service-v0.1.8) (2023-07-27)
 
 
