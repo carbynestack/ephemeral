@@ -68,9 +68,11 @@ jobs:
         uses: imjasonh/setup-ko@v0.6
       - name: Publish Docker Images
         run: |
+          readarray -t labels < <( echo "${{ steps.meta.outputs.labels }}" )
+          printf -v label_flags -- "--image-label=%s " "${labels[@]}"
           ko publish -B \
             --tags=${{ steps.meta.outputs.tags }} \
-            --image-label=${{ steps.meta.outputs.labels }} \
+            ${label_flags} \
             github.com/carbynestack/ephemeral/cmd/discovery \
             github.com/carbynestack/ephemeral/cmd/ephemeral \
             github.com/carbynestack/ephemeral/cmd/network-controller
