@@ -70,7 +70,7 @@ jobs:
         run: |
           ko publish -B \
             --tags=${{ steps.meta.outputs.tags }} \
-            --image-label ${{ steps.meta.outputs.labels }} \
+            --image-label=${{ steps.meta.outputs.labels }} \
             github.com/carbynestack/ephemeral/cmd/discovery \
             github.com/carbynestack/ephemeral/cmd/ephemeral \
             github.com/carbynestack/ephemeral/cmd/network-controller
