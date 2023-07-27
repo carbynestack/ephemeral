@@ -72,7 +72,6 @@ jobs:
           printf -v label_flags -- "--image-label=%s " "${labels[@]}"
           ko publish -B \
             --tags=${{ steps.meta.outputs.tags }} \
-            ${label_flags} \
             github.com/carbynestack/ephemeral/cmd/discovery \
             github.com/carbynestack/ephemeral/cmd/ephemeral \
             github.com/carbynestack/ephemeral/cmd/network-controller
