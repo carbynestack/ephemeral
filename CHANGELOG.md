@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/carbynestack/ephemeral/compare/service-v0.1.7...service-v0.1.8) (2023-07-27)
+
+
+### Bug Fixes
+
+* **service:** test without labels ([#63](https://github.com/carbynestack/ephemeral/issues/63)) ([5e1f1fa](https://github.com/carbynestack/ephemeral/commit/5e1f1fa14a7677e93253264bc3ba31a4c569227b))
+
 ## [0.1.7](https://github.com/carbynestack/ephemeral/compare/service-v0.1.6...service-v0.1.7) (2023-07-27)
 
 
