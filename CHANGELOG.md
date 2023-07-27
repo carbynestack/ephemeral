@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/carbynestack/ephemeral/compare/service-v0.1.6...service-v0.1.7) (2023-07-27)
+
+
+### Bug Fixes
+
+* **service:** provide labels to ko command as separate flags ([#61](https://github.com/carbynestack/ephemeral/issues/61)) ([74b9a9f](https://github.com/carbynestack/ephemeral/commit/74b9a9f7cefa06b52004a0001ab25ecc1acdd803))
+
 ## [0.1.6](https://github.com/carbynestack/ephemeral/compare/service-v0.1.5...service-v0.1.6) (2023-07-27)
 
 
