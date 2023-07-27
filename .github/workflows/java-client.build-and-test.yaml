@@ -30,7 +30,7 @@ jobs:
           filters: |
             java-client:
               - '(ephemeral-java-client|.github)/**'
-  test:
+  java-client-test:
     runs-on: ubuntu-22.04
     needs: changes
     if: ${{ needs.changes.outputs.java-client == 'true' }}
@@ -61,10 +61,24 @@ jobs:
       - name: Run Tests
         run: mvn verify --activate-profiles coverage --batch-mode --no-transfer-progress
       - name: Collect Jacoco reports
-        run: echo ::set-output name=reports::$(find . -regex '.*/target/site/jacoco/jacoco.xml' | tr '\n' ',' | sed 's/.$//')
+        run: echo ::set-output name=reports::$(find . -regex 'target/site/jacoco/jacoco.xml' | tr '\n' ',' | sed 's/.$//')
         id: jacoco
       - uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.jacoco.outputs.reports }}
+          flags: java-client
           name: codecov
+  # This is required to allow for setting the test job as required in scenarios
+  # where the tests are not actually run, e.g., when the helm chart is updated.
+  java-client-test-status:
+    runs-on: ubuntu-22.04
+    needs: java-client-test
+    if: '!cancelled()' # Makes the job run regardless whether 'test' succeeds or not but allows for cancellation
+    steps:
+      - name: Tests successful
+        if: ${{ !(contains(needs.java-client-test.result, 'failure')) }}
+        run: exit 0
+      - name: Tests failed
+        if: ${{ contains(needs.java-client-test.result, 'failure') }}
+        run: exit 1
