@@ -1,0 +1,13 @@
+flag_management:
+  default_rules:
+    carryforward: true
+  individual_flags:
+    - name: java-client
+      paths:
+        - ephemeral-java-client/
+    - name: service
+      paths:
+        - cmd/
+        - pkg/
+fixes:
+  - "((src/)?github\.com/[^\/\n]+/[^\/\n]+/)"

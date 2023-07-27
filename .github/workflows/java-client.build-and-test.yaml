@@ -61,10 +61,11 @@ jobs:
       - name: Run Tests
         run: mvn verify --activate-profiles coverage --batch-mode --no-transfer-progress
       - name: Collect Jacoco reports
-        run: echo ::set-output name=reports::$(find . -regex '.*/target/site/jacoco/jacoco.xml' | tr '\n' ',' | sed 's/.$//')
+        run: echo ::set-output name=reports::$(find . -regex 'target/site/jacoco/jacoco.xml' | tr '\n' ',' | sed 's/.$//')
         id: jacoco
       - uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.jacoco.outputs.reports }}
+          flags: java-client
           name: codecov
