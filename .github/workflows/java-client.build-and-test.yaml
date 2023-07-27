@@ -30,7 +30,7 @@ jobs:
           filters: |
             java-client:
               - '(ephemeral-java-client|.github)/**'
-  test:
+  java-client-test:
     runs-on: ubuntu-22.04
     needs: changes
     if: ${{ needs.changes.outputs.java-client == 'true' }}
@@ -69,3 +69,16 @@ jobs:
           files: ${{ steps.jacoco.outputs.reports }}
           flags: java-client
           name: codecov
+  # This is required to allow for setting the test job as required in scenarios
+  # where the tests are not actually run, e.g., when the helm chart is updated.
+  java-client-test-status:
+    runs-on: ubuntu-22.04
+    needs: java-client-test
+    if: '!cancelled()' # Makes the job run regardless whether 'test' succeeds or not but allows for cancellation
+    steps:
+      - name: Tests successful
+        if: ${{ !(contains(needs.java-client-test.result, 'failure')) }}
+        run: exit 0
+      - name: Tests failed
+        if: ${{ contains(needs.java-client-test.result, 'failure') }}
+        run: exit 1

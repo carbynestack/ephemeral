@@ -30,7 +30,7 @@ jobs:
           filters: |
             service:
               - '!((ephemeral-java-client|charts)/**)/**'
-  test:
+  service-test:
     runs-on: ubuntu-22.04
     needs: changes
     if: ${{ needs.changes.outputs.service == 'true' }}
@@ -64,3 +64,16 @@ jobs:
           files: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}/coverage.txt
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: service
+  # This is required to allow for setting the test job as required in scenarios
+  # where the tests are not actually run, e.g., when the helm chart is updated.
+  service-test-status:
+    runs-on: ubuntu-22.04
+    needs: service-test
+    if: '!cancelled()' # Makes the job run regardless whether 'test' succeeds or not but allows for cancellation
+    steps:
+      - name: Tests successful
+        if: ${{ !(contains(needs.service-test.result, 'failure')) }}
+        run: exit 0
+      - name: Tests failed
+        if: ${{ contains(needs.service-test.result, 'failure') }}
+        run: exit 1
