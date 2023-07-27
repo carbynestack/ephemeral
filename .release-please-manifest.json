@@ -1,5 +1,5 @@
 {
-  ".": "0.1.3",
+  ".": "0.1.4",
   "charts/ephemeral": "0.1.2",
   "ephemeral-java-client": "0.1.3"
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/carbynestack/ephemeral/compare/service-v0.1.3...service-v0.1.4) (2023-07-27)
+
+
+### Bug Fixes
+
+* **service:** update publish workflow to use correct working directory ([#55](https://github.com/carbynestack/ephemeral/issues/55)) ([0727a99](https://github.com/carbynestack/ephemeral/commit/0727a99081ee96f49b42fa45e72a30f0a6147548))
+
 ## [0.1.3](https://github.com/carbynestack/ephemeral/compare/service-v0.1.2...service-v0.1.3) (2023-07-27)
 
 
