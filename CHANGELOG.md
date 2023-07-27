@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/carbynestack/ephemeral/compare/service-v0.1.5...service-v0.1.6) (2023-07-27)
+
+
+### Bug Fixes
+
+* **service:** add missing '=' when invoking ko ([#59](https://github.com/carbynestack/ephemeral/issues/59)) ([ebe4c84](https://github.com/carbynestack/ephemeral/commit/ebe4c8472a3883917dbc562cc7e571141ca55bd2))
+
 ## [0.1.5](https://github.com/carbynestack/ephemeral/compare/service-v0.1.4...service-v0.1.5) (2023-07-27)
 
 
