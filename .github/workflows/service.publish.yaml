@@ -73,7 +73,7 @@ jobs:
           printf -v joined_tags "%s," "${tags[@]}"
           # Generate label flags
           readarray -t labels < <( echo "${{ steps.meta.outputs.labels }}" )
-          printf -v label_flags -- "--image-label=%s " "${labels[@]}"
+          printf -v label_flags -- "--image-label=\"%s\" " "${labels[@]}"
           ko publish -B \
             --tags=${joined_tags%,} \
             ${label_flags}
