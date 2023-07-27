@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/carbynestack/ephemeral/compare/java-client-v0.1.2...java-client-v0.1.3) (2023-07-27)
+
+
+### Bug Fixes
+
+* **service/java-client:** add support for partial builds using codeco… ([#52](https://github.com/carbynestack/ephemeral/issues/52)) ([5a7a591](https://github.com/carbynestack/ephemeral/commit/5a7a591c5d81daf8bad09826b9c9f8bfcbe73eee))
+
 ## [0.1.2](https://github.com/carbynestack/ephemeral/compare/java-client-v0.1.1...java-client-v0.1.2) (2023-07-26)
 
 
