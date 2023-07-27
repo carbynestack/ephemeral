@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/carbynestack/ephemeral/compare/service-v0.1.10...service-v0.1.11) (2023-07-27)
+
+
+### Bug Fixes
+
+* **service:** quote tags and labels argument to make ko working ([#69](https://github.com/carbynestack/ephemeral/issues/69)) ([973f067](https://github.com/carbynestack/ephemeral/commit/973f0673003530aae9a693f0799a6008850b269a))
+
 ## [0.1.10](https://github.com/carbynestack/ephemeral/compare/service-v0.1.9...service-v0.1.10) (2023-07-27)
 
 
