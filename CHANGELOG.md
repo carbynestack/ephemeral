@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.12](https://github.com/carbynestack/ephemeral/compare/service-v0.1.11...service-v0.1.12) (2023-07-28)
+
+
+### Bug Fixes
+
+* **service:** extract the label part from what is returned by the metadata action ([#71](https://github.com/carbynestack/ephemeral/issues/71)) ([2243f0f](https://github.com/carbynestack/ephemeral/commit/2243f0f113e96925d1ca4e1f3c92bb51914c3e4c))
+
 ## [0.1.11](https://github.com/carbynestack/ephemeral/compare/service-v0.1.10...service-v0.1.11) (2023-07-27)
 
 
