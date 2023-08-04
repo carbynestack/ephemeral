@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/carbynestack/ephemeral/compare/chart-v0.1.2...chart-v0.1.3) (2023-08-04)
+
+
+### Bug Fixes
+
+* **service/chart:** fix forced aborts of long-running computations ([#36](https://github.com/carbynestack/ephemeral/issues/36)) ([a131ae7](https://github.com/carbynestack/ephemeral/commit/a131ae74bd9d98d345d78d84a67388cbd783b36d))
+
 ## [0.1.2](https://github.com/carbynestack/ephemeral/compare/chart-v0.1.1...chart-v0.1.2) (2023-07-26)
 
 
