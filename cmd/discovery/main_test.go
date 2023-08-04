@@ -92,7 +92,7 @@ var _ = Describe("Main", func() {
 					})
 				})
 				Context("stateTimeout is invalid", func() {
-					It("return an error on invalid format", func() {
+					It("returns an error on invalid format", func() {
 						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
 		"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1", "connectTimeout": "2s", "computationTimeout": "3s"}`)
 						err := ioutil.WriteFile(path, data, 0644)
@@ -104,7 +104,7 @@ var _ = Describe("Main", func() {
 					})
 				})
 				Context("connectTimeout is invalid", func() {
-					It("return an error on invalid format", func() {
+					It("returns an error on invalid format", func() {
 						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
 		"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2", "computationTimeout": "3s"}`)
 						err := ioutil.WriteFile(path, data, 0644)
@@ -116,7 +116,7 @@ var _ = Describe("Main", func() {
 					})
 				})
 				Context("computationTimeout is invalid", func() {
-					It("return an error on invalid format", func() {
+					It("returns an error on invalid format", func() {
 						data := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud",
 		"masterPort": "31400","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3"}`)
 						err := ioutil.WriteFile(path, data, 0644)
