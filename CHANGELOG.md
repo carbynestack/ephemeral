@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.13](https://github.com/carbynestack/ephemeral/compare/service-v0.1.12...service-v0.1.13) (2023-08-04)
+
+
+### Bug Fixes
+
+* **service/chart:** fix forced aborts of long-running computations ([#36](https://github.com/carbynestack/ephemeral/issues/36)) ([a131ae7](https://github.com/carbynestack/ephemeral/commit/a131ae74bd9d98d345d78d84a67388cbd783b36d))
+
 ## [0.1.12](https://github.com/carbynestack/ephemeral/compare/service-v0.1.11...service-v0.1.12) (2023-07-28)
 
 
