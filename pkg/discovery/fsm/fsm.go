@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -20,9 +20,9 @@ const (
 )
 
 // NewFSM returns a new finate state machine.
-func NewFSM(ctx context.Context, initState string, trn map[TransitionID]*Transition, cb map[string][]*Callback, timeout time.Duration, logger *zap.SugaredLogger) (*FSM, error) {
+func NewFSM(ctx context.Context, initState string, trn map[TransitionID]*Transition, cb map[string][]*Callback, stateTimeout time.Duration, logger *zap.SugaredLogger) (*FSM, error) {
 	var stateTimeoutCb *Callback
-	timer := time.NewTimer(timeout)
+	timer := time.NewTimer(stateTimeout)
 	beforeCallbacks := make(map[string][]*Callback)
 	afterCallbacks := make(map[string][]*Callback)
 	for k, c := range cb {
@@ -52,7 +52,7 @@ func NewFSM(ctx context.Context, initState string, trn map[TransitionID]*Transit
 		history:              history,
 		stateTimeoutCallback: stateTimeoutCb,
 		timer:                timer,
-		timeout:              timeout,
+		stateTimeout:         stateTimeout,
 		pingCh:               make(chan struct{}),
 		doneCh:               make(chan struct{}, 1),
 		queue:                []*Event{},
@@ -74,7 +74,7 @@ type FSM struct {
 	pingCh               chan struct{}
 	doneCh               chan struct{}
 	timer                *time.Timer
-	timeout              time.Duration
+	stateTimeout         time.Duration
 	queue                []*Event
 	logger               *zap.SugaredLogger
 	mux                  sync.Mutex
@@ -107,17 +107,11 @@ func (f *FSM) Current() string {
 // The error is caused either by an unregistered event or by the callback itself.
 // If the FSM was stopped its state is updated, the timer is stopped and the error channel is closed.
 // The method is blocking and must be started exactly once.
+//
+// `errChan` is expected to be a buffered channel with minimum capacity of "1".
 func (f *FSM) Run(errChan chan error) {
 	for {
 		select {
-		case <-f.pingCh:
-			if err := f.process(); err != nil {
-				f.current = Stopped
-				errChan <- err
-				return
-			}
-		case <-f.timer.C:
-			f.stateTimeoutCallback.Action(f.stateTimeoutEvent())
 		case <-f.ctx.Done():
 			f.current = Stopped
 			f.timer.Stop()
@@ -126,6 +120,22 @@ func (f *FSM) Run(errChan chan error) {
 			f.current = Stopped
 			f.timer.Stop()
 			return
+		case <-f.pingCh:
+			if err := f.process(); err != nil {
+				f.current = Stopped
+				select {
+				case errChan <- err:
+				default:
+					// The ErrCh is a buffered channel potentially shared by multiple subroutines. Any error written to
+					// the channel indicates that the current procedure has failed.
+					// While the "root" error is sufficient to indicate that the routine failed, it may cause further
+					// errors in other routines. If write to ErrCh fails, err is classified as a consequent error. In
+					// this case, "err" is discarded to prevent the routine from blocking.
+				}
+				return
+			}
+		case <-f.timer.C:
+			f.stateTimeoutCallback.Action(f.stateTimeoutEvent())
 		}
 
 	}
@@ -146,15 +156,16 @@ func (f *FSM) process() error {
 		return errors.New("the number of events is out of sync with received pings")
 	}
 	event := f.queue[0]
+	f.logger.Debugf("FSM process event %v", event)
 	f.queue = f.queue[1:]
 	f.history.AddEvent(event)
 	trID := TransitionID{
 		Source: f.current,
 		Event:  event.Name,
 	}
-	// Specific state transition superceeds the general one, e.g.
+	// Specific state transition supersedes the general one, e.g.
 	// if there is a transition with a specified source state it is followed,
-	// otherwise a transition mathing any state "*" is specified.
+	// otherwise a transition matching any state "*" is specified.
 	tr, ok := f.transitions[trID]
 	if !ok {
 		trID = TransitionID{
@@ -191,7 +202,12 @@ func (f *FSM) doTransition(tr *Transition, event *Event) error {
 	if !f.timer.Stop() && len(f.timer.C) > 0 {
 		<-f.timer.C
 	}
-	f.timer.Reset(f.timeout)
+	timeout := f.stateTimeout
+	// Specific state timeout overrides the fsm's default state timeout.
+	if tr.Timeout > 0 {
+		timeout = tr.Timeout
+	}
+	f.timer.Reset(timeout)
 	// Run callbacks after state transition.
 	err = f.runCallbackIfExists(f.afterCallbacks, f.current, event)
 	if err != nil {
@@ -206,6 +222,7 @@ func (f *FSM) runCallbackIfExists(callbacks map[string][]*Callback, state string
 	callbacksBySource, ok := callbacks[state]
 	if ok {
 		for _, cb := range callbacksBySource {
+			f.logger.Debugw(fmt.Sprintf("Execute Callback %s", cb.Type), "state", state, "event", event)
 			err := cb.Action(event)
 			if err != nil {
 				return err
@@ -308,6 +325,7 @@ type TransitionID struct {
 type Transition struct {
 	ID              TransitionID
 	Event, Src, Dst string
+	Timeout         time.Duration
 }
 
 // WhenIn specifies the source state of the transition.
@@ -339,6 +357,12 @@ func (i *Transition) GoTo(dst string) *Transition {
 // Stay forces the transition to stay in the source state.
 func (i *Transition) Stay() *Transition {
 	i.Dst = i.Src
+	return i
+}
+
+// WithTimeout defines an individual timeout within the transition to the next state is expected.
+func (i *Transition) WithTimeout(d time.Duration) *Transition {
+	i.Timeout = d
 	return i
 }
 

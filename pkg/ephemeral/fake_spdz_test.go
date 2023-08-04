@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -69,9 +69,10 @@ func (f *BrokenFakeTransportClient) Stop() error {
 
 type FakePlayer struct {
 	Initialized bool
+	history     *fsm.History
 }
 
-func (f *FakePlayer) Init(errCh chan error) {
+func (f *FakePlayer) Init() {
 	f.Initialized = true
 	return
 }
@@ -79,7 +80,7 @@ func (f *FakePlayer) Stop() {
 	return
 }
 func (f *FakePlayer) History() *fsm.History {
-	return nil
+	return f.history
 }
 func (f *FakePlayer) Bus() mb.MessageBus {
 	return nil

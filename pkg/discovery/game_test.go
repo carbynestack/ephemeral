@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -38,7 +38,7 @@ func generateTestsWithPlayerCount(playerCount int) {
 		bus = mb.New(10000)
 		timeout = 10 * time.Second
 		gameID = "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"
-		game, _ = NewGame(ctx, gameID, bus, timeout, logger, playerCount)
+		game, _ = NewGame(ctx, gameID, bus, timeout, timeout, logger, playerCount)
 		pb = Publisher{
 			Bus: bus,
 			Fsm: game.fsm,
@@ -155,7 +155,7 @@ func generateTestsWithPlayerCount(playerCount int) {
 	Context("state timeout occurs", func() {
 		It("transitions to the GameError state", func() {
 			timeout := 10 * time.Millisecond
-			game, _ := NewGame(ctx, gameID, bus, timeout, logger, playerCount)
+			game, _ := NewGame(ctx, gameID, bus, timeout, timeout, logger, playerCount)
 			// No player publishes an event, simulate a state timeout.
 			Assert(GameDone, game, done, func(states []string) {
 				Expect(states[0]).To(Equal(Init))

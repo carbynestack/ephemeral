@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2022 - for information on the respective copyright owner
+// Copyright (c) 2022-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -32,11 +32,11 @@ import (
 const tupleStock = 42
 
 var _ = Describe("Tuple Streamer", func() {
-
+	var defaultWriteDeadline = 5 * time.Second
 	Context("when StartStreamTuples", func() {
 		var (
 			fcpw      *FakeConsumingPipeWriter
-			ts        CastorTupleStreamer
+			ts        *CastorTupleStreamer
 			cc        *FakeCastorClient
 			terminate chan struct{}
 			errCh     chan error
@@ -50,7 +50,7 @@ var _ = Describe("Tuple Streamer", func() {
 				isClosed: false,
 			}
 			cc = &FakeCastorClient{}
-			ts = CastorTupleStreamer{
+			ts = &CastorTupleStreamer{
 				logger:       zap.NewNop().Sugar(),
 				pipeWriter:   fcpw,
 				tupleType:    castor.BitGfp,
@@ -63,7 +63,7 @@ var _ = Describe("Tuple Streamer", func() {
 				expectedError := errors.New("expected error")
 				fcpw.openError = expectedError
 				wg.Add(1)
-				go ts.StartStreamTuples(terminate, errCh, wg)
+				ts.StartStreamTuples(terminate, errCh, wg)
 				var err error
 				select {
 				case err = <-errCh:
@@ -81,7 +81,7 @@ var _ = Describe("Tuple Streamer", func() {
 				fbwpw := &FakeBlockingWritePipeWriter{}
 				ts.pipeWriter = fbwpw
 				wg.Add(1)
-				go ts.StartStreamTuples(terminate, errCh, wg)
+				ts.StartStreamTuples(terminate, errCh, wg)
 				close(terminate)
 				wg.Wait()
 				close(errCh)
@@ -91,14 +91,13 @@ var _ = Describe("Tuple Streamer", func() {
 			})
 		})
 		Context("when streamData is empty", func() {
-			ts.streamData = make([]byte, 0)
 			Context("when castor client returns an error", func() {
 				BeforeEach(func() {
 					ts.castorClient = &BrokenDownloadCastorClient{}
 				})
 				It("writes error to error channel and stops", func() {
 					wg.Add(1)
-					go ts.StartStreamTuples(terminate, errCh, wg)
+					ts.StartStreamTuples(terminate, errCh, wg)
 					wg.Wait()
 					close(terminate)
 					close(errCh)
@@ -117,7 +116,7 @@ var _ = Describe("Tuple Streamer", func() {
 						tuples[0] = castor.Tuple{Shares: shares}
 						cc.TupleList = &castor.TupleList{Tuples: tuples}
 						wg.Add(1)
-						go ts.StartStreamTuples(terminate, errCh, wg)
+						ts.StartStreamTuples(terminate, errCh, wg)
 						wg.Wait()
 						close(terminate)
 						close(errCh)
@@ -138,7 +137,7 @@ var _ = Describe("Tuple Streamer", func() {
 						tuples[0] = castor.Tuple{Shares: shares}
 						cc.TupleList = &castor.TupleList{Tuples: tuples}
 						wg.Add(1)
-						go ts.StartStreamTuples(terminate, errCh, wg)
+						ts.StartStreamTuples(terminate, errCh, wg)
 						wg.Wait()
 						close(terminate)
 						close(errCh)
@@ -171,7 +170,7 @@ var _ = Describe("Tuple Streamer", func() {
 					})
 					It("return without error", func() {
 						wg.Add(1)
-						go ts.StartStreamTuples(terminate, errCh, wg)
+						ts.StartStreamTuples(terminate, errCh, wg)
 						wg.Wait()
 						close(terminate)
 						close(errCh)
@@ -187,7 +186,7 @@ var _ = Describe("Tuple Streamer", func() {
 					})
 					It("update fields accordingly", func() {
 						wg.Add(1)
-						go ts.StartStreamTuples(terminate, errCh, wg)
+						ts.StartStreamTuples(terminate, errCh, wg)
 						wg.Wait()
 						close(terminate)
 						close(errCh)

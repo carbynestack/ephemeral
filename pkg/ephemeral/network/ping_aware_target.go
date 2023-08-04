@@ -36,7 +36,7 @@ func (n *PingAwareTarget) HandleConn(conn net.Conn) {
 	br := bufio.NewReader(conn)
 	ping, err := n.read(br, PingMsg)
 	if err != nil {
-		n.Logger.Errorf("error while handling a ping message: %s", err)
+		n.Logger.Errorf("Error while handling a ping message: %s", err)
 		conn.Close()
 		return
 	}
@@ -46,7 +46,7 @@ func (n *PingAwareTarget) HandleConn(conn net.Conn) {
 		pong := []byte(PongMsg)
 		_, err := conn.Write(pong)
 		if err != nil {
-			n.Logger.Errorf("error while writing pong message: %s", err)
+			n.Logger.Errorf("Error while writing pong message: %s", err)
 		}
 		n.Logger.Debug("Responded with pong message")
 		return
@@ -73,7 +73,7 @@ func (n *PingAwareTarget) WaitUntilStarted(address, port string, timeout time.Du
 	defer func() {
 		err := conn.Close()
 		if err != nil {
-			n.Logger.Errorf("error closing ping connection", err)
+			n.Logger.Errorf("Error closing ping connection: %v", err)
 		}
 		n.Logger.Debug("Closing the ping connection")
 	}()

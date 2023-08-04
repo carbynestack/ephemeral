@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -10,7 +10,6 @@ import (
 	"errors"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	. "github.com/carbynestack/ephemeral/pkg/types"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -29,17 +29,34 @@ type DiscoveryClient interface {
 	GetOut() chan *pb.Event
 }
 
-// DiscoveryConfig represents the condig of discovery service.
+// DiscoveryConfig represents the config of discovery service.
 type DiscoveryConfig struct {
-	FrontendURL  string `json:"frontendURL"`
-	MasterHost   string `json:"masterHost"`
-	MasterPort   string `json:"masterPort"`
-	Slave        bool   `json:"slave"`
-	StateTimeout string `json:"stateTimeout"`
-	Port         string `json:"port"`
-	BusSize      int    `json:"busSize"`
-	PortRange    string `json:"portRange"`
-	PlayerCount  int    `json:"playerCount"`
+	FrontendURL        string `json:"frontendURL"`
+	MasterHost         string `json:"masterHost"`
+	MasterPort         string `json:"masterPort"`
+	Slave              bool   `json:"slave"`
+	StateTimeout       string `json:"stateTimeout"`
+	ComputationTimeout string `json:"computationTimeout"`
+	ConnectTimeout     string `json:"connectTimeout"`
+	Port               string `json:"port"`
+	BusSize            int    `json:"busSize"`
+	PortRange          string `json:"portRange"`
+	PlayerCount        int    `json:"playerCount"`
+}
+
+// DiscoveryTypedConfig reflects DiscoveryConfig, but it contains the real property types
+type DiscoveryTypedConfig struct {
+	FrontendURL        string
+	MasterHost         string
+	MasterPort         string
+	Slave              bool
+	StateTimeout       time.Duration
+	ComputationTimeout time.Duration
+	ConnectTimeout     time.Duration
+	Port               string
+	BusSize            int
+	PortRange          string
+	PlayerCount        int
 }
 
 // Activation is an object that is received as an input from the Ephemeral client.
@@ -69,24 +86,26 @@ type CtxConfig struct {
 
 // SPDZEngineConfig is the VPC specific configuration.
 type SPDZEngineConfig struct {
-	RetrySleep    string `json:"retrySleep"`
-	RetryTimeout  string `json:"retryTimeout"`
-	Prime         string `json:"prime"`
-	RInv          string `json:"rInv"`
-	GfpMacKey     string `json:"gfpMacKey"`
-	Gf2nMacKey    string `json:"gf2nMacKey"`
-	Gf2nBitLength int32  `json:"gf2nBitLength"`
+	RetrySleep              string `json:"retrySleep"`
+	NetworkEstablishTimeout string `json:"networkEstablishTimeout"`
+	Prime                   string `json:"prime"`
+	RInv                    string `json:"rInv"`
+	GfpMacKey               string `json:"gfpMacKey"`
+	Gf2nMacKey              string `json:"gf2nMacKey"`
+	Gf2nBitLength           int32  `json:"gf2nBitLength"`
 	// Gf2nStorageSize represents the size in bytes for each gf2n element e.g. depending on the 'USE_GF2N_LONG' flag
 	// being set when compiling SPDZ where storage size is 16 for USE_GF2N_LONG=1, or 8 if set to 0
-	Gf2nStorageSize  int32         `json:"gf2nStorageSize"`
-	PrepFolder       string        `json:"prepFolder"`
-	AmphoraConfig    AmphoraConfig `json:"amphoraConfig"`
-	CastorConfig     CastorConfig  `json:"castorConfig"`
-	FrontendURL      string        `json:"frontendURL"`
-	PlayerID         int32         `json:"playerID"`
-	PlayerCount      int32         `json:"playerCount"`
-	MaxBulkSize      int32         `json:"maxBulkSize"`
-	DiscoveryAddress string        `json:"discoveryAddress"`
+	Gf2nStorageSize    int32                 `json:"gf2nStorageSize"`
+	PrepFolder         string                `json:"prepFolder"`
+	AmphoraConfig      AmphoraConfig         `json:"amphoraConfig"`
+	CastorConfig       CastorConfig          `json:"castorConfig"`
+	FrontendURL        string                `json:"frontendURL"`
+	PlayerID           int32                 `json:"playerID"`
+	PlayerCount        int32                 `json:"playerCount"`
+	MaxBulkSize        int32                 `json:"maxBulkSize"`
+	DiscoveryConfig    DiscoveryClientConfig `json:"discoveryConfig"`
+	StateTimeout       string                `json:"stateTimeout"`
+	ComputationTimeout string                `json:"computationTimeout"`
 }
 
 // AmphoraConfig specifies the amphora host parameters.
@@ -104,6 +123,20 @@ type CastorConfig struct {
 	TupleStock int32  `json:"tupleStock"`
 }
 
+// Config contains TCP connection properties of Carrier.
+type DiscoveryClientConfig struct {
+	Port           string `json:"port"`
+	Host           string `json:"host"`
+	ConnectTimeout string `json:"connectTimeout"`
+}
+
+// DiscoveryClientTypedConfig reflects DiscoveryClientConfig, but it contains the real property types.
+type DiscoveryClientTypedConfig struct {
+	Port           string
+	Host           string
+	ConnectTimeout time.Duration
+}
+
 // OutputConfig defines how the output of the app execution is treated.
 type OutputConfig struct {
 	Type string `json:"type"`
@@ -112,29 +145,23 @@ type OutputConfig struct {
 // SPDZEngineTypedConfig reflects SPDZEngineConfig, but it contains the real property types.
 // We need this type, since the default json decoder doesn't know how to deserialize big.Int.
 type SPDZEngineTypedConfig struct {
-	RetrySleep       time.Duration
-	RetryTimeout     time.Duration
-	Prime            big.Int
-	RInv             big.Int
-	GfpMacKey        big.Int
-	Gf2nMacKey       string
-	Gf2nBitLength    int32
-	Gf2nStorageSize  int32
-	PrepFolder       string
-	AmphoraClient    amphora.AbstractClient
-	CastorClient     castor.AbstractClient
-	TupleStock       int32
-	PlayerID         int32
-	PlayerCount      int32
-	FrontendURL      string
-	MaxBulkSize      int32
-	DiscoveryAddress string
+	RetrySleep              time.Duration
+	NetworkEstablishTimeout time.Duration
+	Prime                   big.Int
+	RInv                    big.Int
+	GfpMacKey               big.Int
+	Gf2nMacKey              string
+	Gf2nBitLength           int32
+	Gf2nStorageSize         int32
+	PrepFolder              string
+	AmphoraClient           amphora.AbstractClient
+	CastorClient            castor.AbstractClient
+	TupleStock              int32
+	PlayerID                int32
+	PlayerCount             int32
+	FrontendURL             string
+	MaxBulkSize             int32
+	DiscoveryConfig         DiscoveryClientTypedConfig
+	StateTimeout            time.Duration
+	ComputationTimeout      time.Duration
 }
-
-type contextKey string
-
-var (
-	ActCtx   = contextKey("activation")
-	SpdzCtx  = contextKey("spdz")
-	ProxyCtx = contextKey("proxy")
-)

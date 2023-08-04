@@ -9,6 +9,7 @@ package network
 
 import (
 	"context"
+	"fmt"
 	mpcv1alpha1 "github.com/carbynestack/ephemeral/pkg/network-controller/apis/mpc/v1alpha1"
 	clientset "github.com/knative/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_network")
+var log = logf.ZapLogger(true).WithName("controller_network")
 
 var istioGW = "test"
 
@@ -177,7 +178,7 @@ func (r *ReconcileNetwork) Reconcile(request reconcile.Request) (reconcile.Resul
 	gatewayName := gatewayName(instance.Name)
 	_, err = r.sharedClientSet.NetworkingV1alpha3().Gateways(request.Namespace).Get(gatewayName, metav1.GetOptions{})
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new gateway ", gatewayName)
+		reqLogger.Info(fmt.Sprintf("Creating a new gateway \"%s\"", gatewayName))
 		_, err := r.sharedClientSet.NetworkingV1alpha3().Gateways(request.Namespace).Create(gw)
 		if err != nil {
 			reqLogger.Error(err, "not able to create the gateway")

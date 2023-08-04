@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -11,6 +11,7 @@ import (
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral/io"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.uber.org/zap"
 	"net"
 	"sync"
 )
@@ -28,6 +29,7 @@ var _ = Describe("Carrier", func() {
 		}
 		carrier := Carrier{
 			Dialer: fakeDialer,
+			Logger: zap.NewNop().Sugar(),
 		}
 		err := carrier.Connect(context.TODO(), playerID, "", "")
 		Expect(connected).To(BeTrue())
@@ -40,6 +42,7 @@ var _ = Describe("Carrier", func() {
 		}
 		carrier := Carrier{
 			Dialer: fakeDialer,
+			Logger: zap.NewNop().Sugar(),
 		}
 		err := carrier.Connect(context.TODO(), playerID, "", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -75,6 +78,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer: dialer,
 				Packer: packer,
+				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -90,6 +94,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer: dialer,
 				Packer: packer,
+				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -106,6 +111,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer: dialer,
 				Packer: packer,
+				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -127,6 +133,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer: dialer,
 				Packer: &packer,
+				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -148,6 +155,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer: dialer,
 				Packer: &packer,
+				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -162,6 +170,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer: dialer,
 				Packer: packer,
+				Logger: zap.NewNop().Sugar(),
 			}
 			go server.Read(connectionOutput)
 			carrier.Connect(ctx, playerID, "", "")
@@ -185,6 +194,7 @@ var _ = Describe("Carrier", func() {
 			carrier := Carrier{
 				Dialer: dialer,
 				Packer: packer,
+				Logger: zap.NewNop().Sugar(),
 			}
 			waitGroup := sync.WaitGroup{}
 			waitGroup.Add(1)

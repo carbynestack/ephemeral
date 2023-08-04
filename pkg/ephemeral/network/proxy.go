@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -33,7 +33,7 @@ func NewProxy(lg *zap.SugaredLogger, conf *SPDZEngineTypedConfig, checker Networ
 	return &Proxy{
 		logger:       lg,
 		retrySleep:   conf.RetrySleep,
-		retryTimeout: conf.RetryTimeout,
+		retryTimeout: conf.NetworkEstablishTimeout,
 		tcpChecker:   checker,
 	}
 }
@@ -47,6 +47,9 @@ type Proxy struct {
 	proxy        *tcpproxy.Proxy
 	ctx          *CtxConfig
 	tcpChecker   NetworkChecker
+	// activeProxyIndicatorCh indicates that proxy was successfully started (see [tcpproxy.Proxy.Start]) if the channel
+	// is closed.
+	activeProxyIndicatorCh chan struct{}
 }
 
 // Run start the tcpproxy, makes sure it has started by means of a ping.
@@ -67,11 +70,17 @@ func (p *Proxy) Run(ctx *CtxConfig, errCh chan error) error {
 
 	p.logger.Infow("Starting TCP Proxy", GameID, ctx.Act.GameID)
 	go func() {
-		err := p.proxy.Run()
+		defer close(errCh)
+		p.activeProxyIndicatorCh = make(chan struct{})
+		err := p.proxy.Start()
+		if err == nil {
+			close(p.activeProxyIndicatorCh)
+			err = p.proxy.Wait()
+		}
 		errCh <- err
 	}()
 	dialer := RetryingDialer(p.retrySleep, p.retryTimeout, func() {
-		p.logger.Debugw(fmt.Sprintf("retrying to ping after %s", p.retrySleep), GameID, p.ctx.Act.GameID)
+		p.logger.Debugw(fmt.Sprintf("Retrying to ping after %s", p.retrySleep), GameID, p.ctx.Act.GameID)
 	})
 
 	for i, pat := range pats {
@@ -147,7 +156,11 @@ func (p *Proxy) checkTCPConnectionToPeer(config *ProxyConfig) error {
 func (p *Proxy) Stop() {
 	p.logger.Debugw("Waiting for TCP proxy to stop", GameID, p.ctx.Act.GameID)
 	p.proxy.Close()
-	p.proxy.Wait()
+	select {
+	case <-p.activeProxyIndicatorCh:
+		p.proxy.Wait()
+	default:
+	}
 	p.logger.Debugw("Stopped the TCP proxy", GameID, p.ctx.Act.GameID)
 }
 
@@ -174,14 +187,27 @@ func RetryingDialer(sleep, timeout time.Duration, sideEffect func()) func(addr, 
 }
 
 // RetryingDialerWithContext tries to establish a TCP connection to a socket until the timeout is reached or the context is cancelled.
-func RetryingDialerWithContext(sleep, timeout time.Duration, sideEffect func()) func(ctx context.Context, addr, port string) (conn net.Conn, err error) {
+func RetryingDialerWithContext(sleep time.Duration, timeout time.Duration, l *zap.SugaredLogger) func(ctx context.Context, addr, port string) (conn net.Conn, err error) {
+	return RetryingDialerWithContextAndLogTimeout(sleep, timeout, l, 5*time.Second)
+}
+
+// RetryingDialerWithContextAndLogTimeout uses an individual log message timer.
+//
+// Used for testing
+func RetryingDialerWithContextAndLogTimeout(sleep time.Duration, timeout time.Duration, l *zap.SugaredLogger, logPeriod time.Duration) func(ctx context.Context, addr, port string) (conn net.Conn, err error) {
 	return func(ctx context.Context, addr, port string) (conn net.Conn, err error) {
 		started := time.Now()
+		logTicker := time.NewTicker(logPeriod)
+		connectTimer := time.NewTimer(0)
+		defer logTicker.Stop()
+		defer connectTimer.Stop()
 		for {
 			select {
 			case <-ctx.Done():
-				return conn, errors.New("context cancelled")
-			default:
+				return conn, errors.New(fmt.Sprintf("cancelled connection attempt for %s:%s - context done", addr, port))
+			case <-logTicker.C:
+				l.Debugf("Connection attempt to %s:%s active for %s", addr, port, time.Now().Sub(started))
+			case <-connectTimer.C:
 				var tcpAddr *net.TCPAddr
 				tcpAddr, err = net.ResolveTCPAddr("tcp", addr+":"+port)
 				if err != nil {
@@ -189,10 +215,15 @@ func RetryingDialerWithContext(sleep, timeout time.Duration, sideEffect func()) 
 				}
 				conn, err = net.DialTCP("tcp", nil, tcpAddr)
 				if err != nil && time.Now().Sub(started) < timeout {
-					sideEffect()
-					time.Sleep(sleep)
+					connectTimer.Reset(sleep)
 					continue
 				}
+				if conn.(*net.TCPConn) != nil {
+					if err := conn.(*net.TCPConn).SetKeepAlive(true); err != nil {
+						return nil, err
+					}
+				}
+				l.Debugw("Dialer done", "Conn", conn, "Err", err)
 				return conn, err
 			}
 		}

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -51,7 +51,7 @@ var _ = Describe("Player", func() {
 	Context("when game is successful", func() {
 		It("notifies discovery and transitions to PlayerFinishedWithSuccess", func() {
 			client := NewFakeDiscoveryClient(bus, id)
-			pl, _ := NewPlayer(ctx, bus, timeout, &me, params, logger)
+			pl, _ := NewPlayer(ctx, bus, timeout, timeout, &me, params, errCh, logger)
 			client.Run()
 			Assert(GameFinishedWithSuccess, pl, done, func(states []string) {
 				Expect(states[0]).To(Equal(Init))
@@ -59,7 +59,7 @@ var _ = Describe("Player", func() {
 				Expect(states[2]).To(Equal("Playing"))
 				Expect(states[3]).To(Equal("PlayerFinishedWithSuccess"))
 			})
-			pl.Init(errCh)
+			pl.Init()
 			WaitDoneOrTimeout(done)
 		})
 	})
@@ -67,7 +67,7 @@ var _ = Describe("Player", func() {
 		It("transitions to the PlayerDone state", func() {
 			client := NewFakeDiscoveryClient(bus, id)
 			me := BrokenSPDZEngine{}
-			pl, _ := NewPlayer(ctx, bus, timeout, &me, params, logger)
+			pl, _ := NewPlayer(ctx, bus, timeout, timeout, &me, params, errCh, logger)
 			client.Run()
 			Assert(PlayerDone, pl, done, func(states []string) {
 				Expect(states[0]).To(Equal(Init))
@@ -76,7 +76,7 @@ var _ = Describe("Player", func() {
 				Expect(states[3]).To(Equal(PlayerFinishedWithError))
 				Expect(states[4]).To(Equal(PlayerDone))
 			}, ServiceEventsTopic)
-			pl.Init(errCh)
+			pl.Init()
 			WaitDoneOrTimeout(done)
 		})
 	})
@@ -85,28 +85,28 @@ var _ = Describe("Player", func() {
 		Context("in Registering state", func() {
 			It("transitions to the PlayerDone state", func() {
 				client := NewFakeBrokenDiscoveryClient(bus, id, false, false)
-				pl, _ := NewPlayer(ctx, bus, timeout, &me, params, logger)
+				pl, _ := NewPlayer(ctx, bus, timeout, timeout, &me, params, errCh, logger)
 				client.Run()
 				Assert(PlayerDone, pl, done, func(states []string) {
 					Expect(states[0]).To(Equal(Init))
 					Expect(states[1]).To(Equal(Registering))
 					Expect(states[2]).To(Equal(PlayerFinishedWithError))
 				}, ServiceEventsTopic)
-				pl.Init(errCh)
+				pl.Init()
 				WaitDoneOrTimeout(done)
 			})
 		})
 		Context("in WaitPlayersReady state", func() {
 			It("transitions to the PlayerFinishedWithError state", func() {
 				client := NewFakeBrokenDiscoveryClient(bus, id, true, false)
-				pl, _ := NewPlayer(ctx, bus, timeout, &me, params, logger)
+				pl, _ := NewPlayer(ctx, bus, timeout, timeout, &me, params, errCh, logger)
 				client.Run()
 				Assert(GameFinishedWithError, pl, done, func(states []string) {
 					Expect(states[0]).To(Equal(Init))
 					Expect(states[1]).To(Equal(Registering))
 					Expect(states[2]).To(Equal(PlayerFinishedWithError))
 				})
-				pl.Init(errCh)
+				pl.Init()
 				WaitDoneOrTimeout(done)
 			})
 		})

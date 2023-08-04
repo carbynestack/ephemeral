@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -11,7 +11,6 @@ import (
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	"github.com/carbynestack/ephemeral/pkg/discovery/transport/server"
 	p "github.com/carbynestack/ephemeral/pkg/ephemeral"
-	"github.com/carbynestack/ephemeral/pkg/ephemeral/io"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	"time"
 
@@ -33,9 +32,10 @@ func generateEphemeralIntegrationTestsWithPlayerCount(playerCount int) {
 	Context("when connecting ephemeral to discovery", func() {
 		It("finishes the game successfully", func() {
 			port := "8080"
-			conf := &io.Config{
-				Host: "localhost",
-				Port: port,
+			conf := &DiscoveryClientTypedConfig{
+				Host:           "localhost",
+				Port:           port,
+				ConnectTimeout: 2 * time.Second,
 			}
 			logger := zap.NewNop().Sugar()
 			doneCh := make(chan struct{})
@@ -43,9 +43,9 @@ func generateEphemeralIntegrationTestsWithPlayerCount(playerCount int) {
 				doneCh: doneCh,
 			}
 			bus := mb.New(10000)
-			in := make(chan *pb.Event)
-			out := make(chan *pb.Event)
-			errCh := make(chan error)
+			in := make(chan *pb.Event, 1)
+			out := make(chan *pb.Event, 1)
+			errCh := make(chan error, playerCount)
 			serverConf := &server.TransportConfig{
 				In:     in,
 				Out:    out,
@@ -56,11 +56,12 @@ func generateEphemeralIntegrationTestsWithPlayerCount(playerCount int) {
 			tr := server.NewTransportServer(serverConf)
 			pb := discovery.NewPublisher(bus)
 			stateTimeout := 10 * time.Second
+			computationTimeout := 20 * time.Second
 			n := &discovery.FakeNetworker{
 				FreePorts: []int32{30000, 30001, 30002, 30003, 30004, 30005},
 			}
 			cl := &discovery.FakeDClient{}
-			s := discovery.NewServiceNG(bus, pb, stateTimeout, tr, n, frontendAddress, logger, ModeMaster, cl, playerCount)
+			s := discovery.NewServiceNG(bus, pb, stateTimeout, computationTimeout, tr, n, frontendAddress, logger, ModeMaster, cl, playerCount)
 			defer s.Stop()
 			go s.Start()
 			s.WaitUntilReady(5 * time.Second)
@@ -78,7 +79,7 @@ func generateEphemeralIntegrationTestsWithPlayerCount(playerCount int) {
 					Context: context.TODO(),
 				}
 				pod := fmt.Sprintf("abc%d", i)
-				player, err := p.NewPlayerWithIO(ctxConf, conf, pod, spdz, errCh, logger)
+				player, err := p.NewPlayerWithIO(ctxConf, conf, pod, spdz, stateTimeout, computationTimeout, errCh, logger)
 				Expect(err).NotTo(HaveOccurred())
 				players[i] = player
 			}

@@ -1,10 +1,8 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
 package types
-
-import "time"
 
 const (
 	// DiscoveryServiceStarted indicates the discovery service has started and ready to processIn events.
@@ -17,8 +15,6 @@ const (
 	ClientOutgoingEventsTopic = "clientOutgoingEvents"
 	MasterOutgoingEventsTopic = "masterOutgoingEvents"
 	DiscoveryTopic            = "discovery"
-	// TODO: read this param from the config.
-	Timeout = 20 * time.Second
 
 	Init                      = "Init"
 	Registering               = "Registering"

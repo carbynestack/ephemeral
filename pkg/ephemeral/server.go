@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -10,7 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/carbynestack/ephemeral/pkg/ephemeral/io"
+	"github.com/carbynestack/ephemeral/pkg/discovery/fsm"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	. "github.com/carbynestack/ephemeral/pkg/utils"
 	"io/ioutil"
@@ -36,12 +36,9 @@ const paramsMsg = "either secret params or amphora secret share UUIDs must be sp
 
 var (
 	// The number of parallel games that could run per container.
-	parallelGames   = 1
-	retryInterval   = 100 * time.Millisecond
-	fsmStateTimeout = 20 * time.Second
-	defaultBusSize  = 10000
-	DoneTopic       = "Done"
-	ctxConf         = contextConf("contextConf")
+	parallelGames  = 1
+	defaultBusSize = 10000
+	ctxConf        = contextConf("contextConf")
 )
 
 // NewServer returns a new server.
@@ -155,6 +152,7 @@ func (s *Server) BodyFilter(next http.Handler) http.Handler {
 		}
 		con = context.WithValue(con, ctxConf, ctx)
 		r := req.Clone(con)
+		s.logger.Debug("Bodyfilter handler done")
 		next.ServeHTTP(writer, r)
 	})
 }
@@ -165,9 +163,10 @@ func (s *Server) CompilationHandler(next http.Handler) http.Handler {
 		conf, ok := req.Context().Value(ctxConf).(*CtxConfig)
 		if !ok {
 			writer.WriteHeader(http.StatusBadRequest)
-			s.logger.Error("no context config provided")
+			s.logger.Error("No context config provided")
 			return
 		}
+		s.logger.Debugf("Executing Compilation Handler: %v", conf.Act)
 		// These channels initialized here, because they must be unique
 		// for each incoming request.
 		s.respCh = make(chan []byte)
@@ -186,7 +185,7 @@ func (s *Server) CompilationHandler(next http.Handler) http.Handler {
 				return
 			}
 			if compile {
-				s.logger.Infow("Compiling the application.", GameID, conf.Act.GameID)
+				s.logger.Infow("Compiling the application", GameID, conf.Act.GameID)
 				err := s.compile(conf)
 				if err != nil {
 					msg := fmt.Sprintf("error compiling the code: %s\n", err)
@@ -198,6 +197,7 @@ func (s *Server) CompilationHandler(next http.Handler) http.Handler {
 				s.logger.Debugw("Finished compiling the application", GameID, conf.Act.GameID)
 			}
 		}
+		s.logger.Debug("Compilation handler done")
 		next.ServeHTTP(writer, req)
 	})
 }
@@ -206,31 +206,29 @@ func (s *Server) CompilationHandler(next http.Handler) http.Handler {
 func (s *Server) ActivationHandler(writer http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	ctxConfig := ctx.Value(ctxConf).(*CtxConfig)
-	activationContext := context.Background()
-	con, cancel := context.WithTimeout(activationContext, ctxConfig.Spdz.RetryTimeout)
+	con, cancel := context.WithTimeout(ctx, ctxConfig.Spdz.StateTimeout*3+ctxConfig.Spdz.ComputationTimeout)
+	defer cancel()
+	deadline, _ := con.Deadline()
+	s.logger.Debugw("Created Activation context", "Context", con, "Deadline", deadline)
 	ctxConfig.Context = con
 	pod, err := s.getPodName()
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
-		s.logger.Errorw(fmt.Sprintf("error retrieving pod name: %s", err), GameID, ctxConfig.Act.GameID)
+		s.logger.Errorw(fmt.Sprintf("Error retrieving pod name: %s", err), GameID, ctxConfig.Act.GameID)
 	}
 	s.logger.Debugf("Retrieved pod name %v", pod)
 
 	spdz := NewSPDZWrapper(ctxConfig, s.respCh, s.execErrCh, s.logger, s.activate)
-	conf := &io.Config{
-		Host: s.config.DiscoveryAddress,
-		Port: "8080",
-	}
 	plIO := s.getPlayer(func() AbstractPlayerWithIO {
-		pl, err := NewPlayerWithIO(ctxConfig, conf, pod, spdz, s.errCh, s.logger)
+		pl, err := NewPlayerWithIO(ctxConfig, &s.config.DiscoveryConfig, pod, spdz, s.config.StateTimeout, s.config.ComputationTimeout, s.errCh, s.logger)
 		if err != nil {
-			cancel()
-			s.logger.Error(err)
+			s.logger.Errorf("Failed to initialize Player: %v", err)
 		}
 		return pl
 	})
 
 	plIO.Start()
+
 	select {
 	case stdout := <-s.respCh:
 		writer.WriteHeader(http.StatusOK)
@@ -245,13 +243,13 @@ func (s *Server) ActivationHandler(writer http.ResponseWriter, req *http.Request
 		writer.WriteHeader(http.StatusInternalServerError)
 		writer.Write([]byte(msg))
 		s.logger.Errorw(msg, GameID, ctxConfig.Act.GameID)
-	case <-time.After(ctxConfig.Spdz.RetryTimeout):
-		msg := fmt.Sprintf("timeout during MPC execution")
+	case <-con.Done():
+		msg := fmt.Sprintf("timeout during activation procedure")
 		writer.WriteHeader(http.StatusInternalServerError)
 		writer.Write([]byte(msg))
-		s.logger.Errorw(msg, GameID, ctxConfig.Act.GameID)
+		s.logger.Errorw(msg, GameID, ctxConfig.Act.GameID, "FSM History", plIO.History())
 	}
-	cancel()
+	s.logger.Debug("Activation finalized")
 }
 
 // getPlayer is main purpose to test activation handler using a custom PlayerWithIO
@@ -267,10 +265,11 @@ func (s *Server) getPlayer(initializer func() AbstractPlayerWithIO) AbstractPlay
 // AbstractPlayerWithIO is an interface type for a PlayerWithIO.
 type AbstractPlayerWithIO interface {
 	Start()
+	History() *fsm.History
 }
 
 // NewPlayerWithIO returns a new instance of PlayerWithIO.
-func NewPlayerWithIO(ctx *CtxConfig, conf *io.Config, pod string, spdz MPCEngine, errCh chan error, logger *zap.SugaredLogger) (*PlayerWithIO, error) {
+func NewPlayerWithIO(ctx *CtxConfig, dcConf *DiscoveryClientTypedConfig, pod string, spdz MPCEngine, stateTimeout time.Duration, computationTimeout time.Duration, errCh chan error, logger *zap.SugaredLogger) (*PlayerWithIO, error) {
 	bus := mb.New(defaultBusSize)
 
 	name := NewTopicFromPlayerID(ctx)
@@ -283,7 +282,7 @@ func NewPlayerWithIO(ctx *CtxConfig, conf *io.Config, pod string, spdz MPCEngine
 		GameID:   ctx.Act.GameID,
 		Name:     name,
 	}
-	pl, _ := NewPlayer(ctx.Context, bus, fsmStateTimeout, spdz, params, logger)
+	pl, _ := NewPlayer(ctx.Context, bus, stateTimeout, computationTimeout, spdz, params, errCh, logger)
 
 	wires := &Wires{
 		In:  make(chan *pb.Event, 1),
@@ -300,7 +299,7 @@ func NewPlayerWithIO(ctx *CtxConfig, conf *io.Config, pod string, spdz MPCEngine
 	}
 	forwarder := NewForwarder(fConf)
 
-	cl, err := NewTransportClientFromDiverseConfigs(conf, ctx, fsmStateTimeout, logger, wires)
+	cl, err := NewTransportClientFromDiverseConfigs(dcConf, ctx, logger, wires)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +330,12 @@ func (p *PlayerWithIO) Start() {
 	}
 	dc := pb.NewDiscoveryClient(conn)
 	go p.Client.Run(dc)
-	p.Player.Init(p.Wires.Err)
+	p.Player.Init()
+}
+
+// History returns the [fsm.History] of the game's statemachine.
+func (p *PlayerWithIO) History() *fsm.History {
+	return p.Player.History()
 }
 
 func (s *Server) getPodName() (string, error) {
@@ -378,18 +382,18 @@ type Wires struct {
 }
 
 // NewTransportClientFromDiverseConfigs returns a new transport client.
-func NewTransportClientFromDiverseConfigs(ioConfig *io.Config, ctx *CtxConfig, timeout time.Duration, logger *zap.SugaredLogger, ch *Wires) (*c.Client, error) {
+func NewTransportClientFromDiverseConfigs(dcConf *DiscoveryClientTypedConfig, ctx *CtxConfig, logger *zap.SugaredLogger, ch *Wires) (*c.Client, error) {
 	clientConf := &c.TransportClientConfig{
-		In:         ch.In,
-		Out:        ch.Out,
-		ErrCh:      ch.Err,
-		Host:       ioConfig.Host,
-		Port:       ioConfig.Port,
-		Logger:     logger,
-		ConnID:     ctx.Act.GameID,
-		EventScope: EventScopeSelf,
-		Timeout:    timeout,
-		Context:    ctx.Context,
+		In:             ch.In,
+		Out:            ch.Out,
+		ErrCh:          ch.Err,
+		Host:           dcConf.Host,
+		Port:           dcConf.Port,
+		Logger:         logger,
+		ConnID:         ctx.Act.GameID,
+		EventScope:     EventScopeSelf,
+		ConnectTimeout: dcConf.ConnectTimeout,
+		Context:        ctx.Context,
 	}
 	cl, err := c.NewClient(clientConf)
 	if err != nil {

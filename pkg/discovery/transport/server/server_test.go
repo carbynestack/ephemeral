@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -309,7 +309,7 @@ var _ = Describe("Server", func() {
 				ev := &pb.Event{}
 				f(ev)
 				Expect(recorded.Len()).To(Equal(1))
-				Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("unknown event scope " + invalidScope))
+				Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("Unknown event scope " + invalidScope))
 			})
 		})
 	})
@@ -326,7 +326,7 @@ var _ = Describe("Server", func() {
 				st := &BrokenStream{}
 				ts.sendEvent(st, &pb.Event{Name: "abc"})
 				Expect(recorded.Len()).To(Equal(1))
-				Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("error broadcasting the event abc"))
+				Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("Error broadcasting the event abc"))
 			})
 		})
 	})
@@ -343,8 +343,10 @@ var _ = Describe("Server", func() {
 	})
 	Context("when broadcasting events", func() {
 		It("exits upon a message from 'done' channel", func() {
+			core, recorded := observer.New(zapcore.DebugLevel)
 			conf := &TransportConfig{
-				Out: make(chan *pb.Event),
+				Out:    make(chan *pb.Event),
+				Logger: zap.New(core).Sugar(),
 			}
 			ts := TransportServer{
 				conf: conf,
@@ -353,6 +355,8 @@ var _ = Describe("Server", func() {
 			done <- struct{}{}
 			// The command below should not block.
 			ts.broadcast(done)
+			Expect(recorded.Len()).To(Equal(1))
+			Expect(recorded.AllUntimed()[0].Entry.Message).To(Equal("Stopped broadcasting"))
 		})
 	})
 

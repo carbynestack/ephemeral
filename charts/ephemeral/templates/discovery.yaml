@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 - for information on the respective copyright owner
+# Copyright (c) 2021-2023 - for information on the respective copyright owner
 # see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -75,7 +75,10 @@ data:
       "masterHost": "{{ .Values.discovery.master.host }}",
       "masterPort": "{{ .Values.discovery.master.port }}",
       "slave": {{ if .Values.discovery.isMaster }}false{{ else }}true{{ end }},
-      "playerCount": {{ .Values.playerCount }}
+      "playerCount": {{ .Values.playerCount }},
+      "stateTimeout": "{{ .Values.discovery.stateTimeout }}",
+      "computationTimeout": "{{ .Values.discovery.computationTimeout }}",
+      "connectTimeout": "{{ .Values.discovery.slave.connectTimeout }}"
     }
 ---
 apiVersion: networking.istio.io/v1alpha3

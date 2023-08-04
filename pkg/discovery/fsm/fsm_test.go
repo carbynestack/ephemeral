@@ -127,6 +127,35 @@ var _ = Describe("FSM", func() {
 		})
 	})
 
+	Context("when individual state timeout is set", func() {
+		It("overrides default timeout and transitions to another state when the timeout is reached", func() {
+			respCh := make(chan string)
+			respond := func(interface{}) error {
+				respCh <- "timeout"
+				return nil
+			}
+			tr := WhenIn("Init").
+				GotEvent("StartTest").GoTo("AwaitTimeout").WithTimeout(5 * time.Millisecond)
+			cb := WhenStateTimeout().Do(respond)
+			callbacks := map[string][]*Callback{cb.Src: {cb}}
+			transitions := map[TransitionID]*Transition{tr.ID: tr}
+			timeout := 1 * time.Hour
+			fsm, _ := NewFSM(ctx, "Init", transitions, callbacks, timeout, logger)
+			go fsm.Run(errChan)
+			fsm.Write(&Event{
+				Name: "StartTest",
+				Meta: &Metadata{FSM: fsm},
+			})
+			var resp string
+			select {
+			case resp = <-respCh:
+			case <-time.After(2 * time.Second):
+				Fail("timeout exceeded - individual timeout not triggered")
+			}
+			Expect(resp).To(Equal("timeout"))
+		})
+	})
+
 	Context("when staying the same state", func() {
 		It("executes registered callbacks for the state", func() {
 			respCh := make(chan string)

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -90,10 +90,6 @@ func ParseConfig(path string) (*SPDZEngineConfig, error) {
 // InitTypedConfig converts the string parameters that were parsed by standard json parser to
 // the parameters which are used internally, e.g. string -> time.Duration.
 func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
-	retryTimeout, err := time.ParseDuration(conf.RetryTimeout)
-	if err != nil {
-		return nil, err
-	}
 	retrySleep, err := time.ParseDuration(conf.RetrySleep)
 	if err != nil {
 		return nil, err
@@ -110,6 +106,22 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	_, ok = gfpMacKey.SetString(conf.GfpMacKey, 10)
 	if !ok {
 		return nil, errors.New("wrong gfpMacKey format")
+	}
+	stateTimeout, err := time.ParseDuration(conf.StateTimeout)
+	if err != nil {
+		return nil, err
+	}
+	computationTimeout, err := time.ParseDuration(conf.ComputationTimeout)
+	if err != nil {
+		return nil, err
+	}
+	connectTimeout, err := time.ParseDuration(conf.DiscoveryConfig.ConnectTimeout)
+	if err != nil {
+		return nil, err
+	}
+	networkEstablishTimeout, err := time.ParseDuration(conf.NetworkEstablishTimeout)
+	if err != nil {
+		return nil, err
 	}
 
 	amphoraURL := url.URL{
@@ -133,22 +145,28 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	}
 
 	return &SPDZEngineTypedConfig{
-		RetryTimeout:     retryTimeout,
-		RetrySleep:       retrySleep,
-		Prime:            p,
-		RInv:             rInv,
-		GfpMacKey:        gfpMacKey,
-		Gf2nMacKey:       conf.Gf2nMacKey,
-		Gf2nBitLength:    conf.Gf2nBitLength,
-		Gf2nStorageSize:  conf.Gf2nStorageSize,
-		PrepFolder:       conf.PrepFolder,
-		AmphoraClient:    amphoraClient,
-		CastorClient:     castorClient,
-		TupleStock:       conf.CastorConfig.TupleStock,
-		PlayerID:         conf.PlayerID,
-		PlayerCount:      conf.PlayerCount,
-		FrontendURL:      conf.FrontendURL,
-		MaxBulkSize:      conf.MaxBulkSize,
-		DiscoveryAddress: conf.DiscoveryAddress,
+		NetworkEstablishTimeout: networkEstablishTimeout,
+		RetrySleep:              retrySleep,
+		Prime:                   p,
+		RInv:                    rInv,
+		GfpMacKey:               gfpMacKey,
+		Gf2nMacKey:              conf.Gf2nMacKey,
+		Gf2nBitLength:           conf.Gf2nBitLength,
+		Gf2nStorageSize:         conf.Gf2nStorageSize,
+		PrepFolder:              conf.PrepFolder,
+		AmphoraClient:           amphoraClient,
+		CastorClient:            castorClient,
+		TupleStock:              conf.CastorConfig.TupleStock,
+		PlayerID:                conf.PlayerID,
+		PlayerCount:             conf.PlayerCount,
+		FrontendURL:             conf.FrontendURL,
+		MaxBulkSize:             conf.MaxBulkSize,
+		DiscoveryConfig: DiscoveryClientTypedConfig{
+			Host:           conf.DiscoveryConfig.Host,
+			Port:           conf.DiscoveryConfig.Port,
+			ConnectTimeout: connectTimeout,
+		},
+		StateTimeout:       stateTimeout,
+		ComputationTimeout: computationTimeout,
 	}, nil
 }
