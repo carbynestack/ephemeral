@@ -100,7 +100,7 @@ var _ = Describe("Main", func() {
 						conf, err := ParseConfig(path)
 						Expect(conf).To(BeNil())
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("invalid state timeout format: time: missing unit in duration \"1\""))
+						Expect(err.Error()).To(Equal("invalid state timeout format: time: missing unit in duration 1"))
 					})
 				})
 				Context("connectTimeout is invalid", func() {
@@ -112,7 +112,7 @@ var _ = Describe("Main", func() {
 						conf, err := ParseConfig(path)
 						Expect(conf).To(BeNil())
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("invalid connection timeout format: time: missing unit in duration \"2\""))
+						Expect(err.Error()).To(Equal("invalid connection timeout format: time: missing unit in duration 2"))
 					})
 				})
 				Context("computationTimeout is invalid", func() {
@@ -124,7 +124,7 @@ var _ = Describe("Main", func() {
 						conf, err := ParseConfig(path)
 						Expect(conf).To(BeNil())
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("invalid computation timeout format: time: missing unit in duration \"3\""))
+						Expect(err.Error()).To(Equal("invalid computation timeout format: time: missing unit in duration 3"))
 					})
 				})
 			})

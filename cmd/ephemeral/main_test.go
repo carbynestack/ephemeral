@@ -364,7 +364,7 @@ var _ = Describe("Main", func() {
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("time: invalid duration \"corrupt\""))
+						Expect(err.Error()).To(Equal("time: invalid duration corrupt"))
 						Expect(typedConf).To(BeNil())
 					})
 				})
@@ -398,7 +398,7 @@ var _ = Describe("Main", func() {
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("time: invalid duration \"corrupt\""))
+						Expect(err.Error()).To(Equal("time: invalid duration corrupt"))
 						Expect(typedConf).To(BeNil())
 					})
 				})
@@ -432,7 +432,7 @@ var _ = Describe("Main", func() {
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("time: invalid duration \"corrupt\""))
+						Expect(err.Error()).To(Equal("time: invalid duration corrupt"))
 						Expect(typedConf).To(BeNil())
 					})
 				})
@@ -466,7 +466,7 @@ var _ = Describe("Main", func() {
 						}
 						typedConf, err := InitTypedConfig(conf)
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("time: invalid duration \"corrupt\""))
+						Expect(err.Error()).To(Equal("time: invalid duration corrupt"))
 						Expect(typedConf).To(BeNil())
 					})
 				})
