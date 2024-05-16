@@ -94,6 +94,7 @@ helm install --name my-release -f values.yaml ephemeral
 | `discovery.service.annotations`  | Annotations that should be attached to the Discovery service                 | `[]`                               |
 | `discovery.frontendUrl`          | The external base URL of the VCP                                             | \`\`                               |
 | `discovery.master.port`          | The port of the master discovery service instance                            | \`\`                               |
+| `discovery.tls.secret`           | The name of the k8s secret that holds the TLS keys and certificates          | \`\`                               |
 | `discovery.isMaster`             | Determines whether the service acts as master or slave                       | `true`                             |
 | `discovery.slave.connectTimeout` | Timeout to establish the connection to the upstream master Discovery Service | `60s`                              |
 | `discovery.stateTimeout`         | Timeout in which the transition to the next state is expected                | `60s`                              |

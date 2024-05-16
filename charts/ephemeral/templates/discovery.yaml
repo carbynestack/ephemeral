@@ -95,6 +95,16 @@ spec:
         protocol: GRPC
       hosts:
         - "*"
+    - port:
+        number: 31401
+        name: grpc-my-tls
+        protocol: HTTPS
+      hosts:
+        - "*"
+      tls:
+        mode: MUTUAL # enables mTLS on the Gateway
+        credentialName: {{ .Values.discovery.tls.secret }} # the name of the Secret that holds the TLS certs and CA certifcate
+
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService

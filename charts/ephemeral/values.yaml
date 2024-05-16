@@ -26,6 +26,8 @@ discovery:
   computationTimeout : "600s"
   slave:
     connectTimeout: "60s"
+  tls:
+    secret:
 
 ephemeral:
   service:
