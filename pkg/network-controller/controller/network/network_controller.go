@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -10,14 +10,16 @@ package network
 import (
 	"context"
 	"fmt"
+
 	mpcv1alpha1 "github.com/carbynestack/ephemeral/pkg/network-controller/apis/mpc/v1alpha1"
+	configtypes "github.com/carbynestack/ephemeral/pkg/types"
 	clientset "github.com/knative/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"knative.dev/pkg/apis/istio/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,17 +40,17 @@ var podLabel = "mpc.podName"
 
 // Add creates a new Network Controller and adds it to the PortsState. The PortsState will set fields on the Controller
 // and Start it when the PortsState is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, config *configtypes.NetworkControllerTypedConfig) error {
+	return add(mgr, newReconciler(mgr, config))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, config *configtypes.NetworkControllerTypedConfig) reconcile.Reconciler {
 
 	c := mgr.GetConfig()
 	cs := clientset.NewForConfigOrDie(c)
 
-	return &ReconcileNetwork{client: mgr.GetClient(), scheme: mgr.GetScheme(), sharedClientSet: cs}
+	return &ReconcileNetwork{client: mgr.GetClient(), scheme: mgr.GetScheme(), sharedClientSet: cs, config: config}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -100,6 +102,7 @@ type ReconcileNetwork struct {
 	client          client.Client
 	scheme          *runtime.Scheme
 	sharedClientSet *clientset.Clientset
+	config          *configtypes.NetworkControllerTypedConfig
 }
 
 // Reconcile reads that state of the cluster for a Network object and makes changes based on the state read
@@ -131,7 +134,7 @@ func (r *ReconcileNetwork) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	podName := instance.Labels[podLabel]
 	pod := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: instance.Namespace}, pod)
+	err = r.client.Get(context.TODO(), k8stypes.NamespacedName{Name: podName, Namespace: instance.Namespace}, pod)
 	if err != nil {
 		reqLogger.Error(err, "not able to retrieve the Pod for the service")
 		return reconcile.Result{}, err
@@ -155,7 +158,7 @@ func (r *ReconcileNetwork) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	// Check if the Service already exists
 	found := &corev1.Service{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: service.Name, Namespace: service.Namespace}, found)
+	err = r.client.Get(context.TODO(), k8stypes.NamespacedName{Name: service.Name, Namespace: service.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Info("Creating a new Service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
 		err = r.client.Create(context.TODO(), service)
@@ -167,9 +170,11 @@ func (r *ReconcileNetwork) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
+	log.Info(fmt.Sprintf("Reconcile with the config:\n%+v", r.config))
+
 	// Check if the gateway already exist, create it otherwise.
 
-	gw := newGateway(instance, instance.Spec.Port)
+	gw := newGateway(instance, instance.Spec.Port, r.config)
 
 	if err := controllerutil.SetControllerReference(instance, gw, r.scheme); err != nil {
 		return reconcile.Result{}, err
@@ -290,12 +295,18 @@ func newVirtualService(cr *mpcv1alpha1.Network, port int32, gateway string) *v1a
 		}}
 }
 
-func newGateway(cr *mpcv1alpha1.Network, port int32) *v1alpha3.Gateway {
+func newGateway(cr *mpcv1alpha1.Network, port int32, config *configtypes.NetworkControllerTypedConfig) *v1alpha3.Gateway {
 	gwlb := cr.Labels
 	gwlb["mpc.gateway"] = "true"
 	selectors := map[string]string{}
 	selectors["istio"] = "ingressgateway"
 	srv := newServer(cr.Name, int(port))
+	if config.TlsEnabled {
+		srv.TLS = &v1alpha3.TLSOptions{
+			Mode:           v1alpha3.TLSModeMutual, // Use TLSModeMutual mode for mTLS
+			CredentialName: config.TlsSecret,       // Name of the Kubernetes secret holding the certificate
+		}
+	}
 	servers := []v1alpha3.Server{srv}
 	return &v1alpha3.Gateway{
 		ObjectMeta: metav1.ObjectMeta{

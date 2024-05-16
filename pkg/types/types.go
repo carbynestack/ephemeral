@@ -10,6 +10,7 @@ import (
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	"github.com/carbynestack/ephemeral/pkg/opa"
+	"crypto/tls"
 	"math/big"
 	"time"
 
@@ -35,6 +36,7 @@ type DiscoveryConfig struct {
 	FrontendURL        string `json:"frontendURL"`
 	MasterHost         string `json:"masterHost"`
 	MasterPort         string `json:"masterPort"`
+	TlsEnabled         bool   `json:"tlsEnabled"`
 	Slave              bool   `json:"slave"`
 	StateTimeout       string `json:"stateTimeout"`
 	ComputationTimeout string `json:"computationTimeout"`
@@ -50,6 +52,7 @@ type DiscoveryTypedConfig struct {
 	FrontendURL        string
 	MasterHost         string
 	MasterPort         string
+	TlsEnabled         bool
 	Slave              bool
 	StateTimeout       time.Duration
 	ComputationTimeout time.Duration
@@ -58,6 +61,18 @@ type DiscoveryTypedConfig struct {
 	BusSize            int
 	PortRange          string
 	PlayerCount        int
+}
+
+// NetworkControllerConfig represents the config of the network-controller service.
+type NetworkControllerConfig struct {
+	TlsEnabled bool   `json:"tlsEnabled"`
+	TlsSecret  string `json:"tlsSecret"`
+}
+
+// NetworkControllerTypedConfig reflects NetworkControllerConfig, but it contains the real property types
+type NetworkControllerTypedConfig struct {
+	TlsEnabled bool
+	TlsSecret  string
 }
 
 // Activation is an object that is received as an input from the Ephemeral client.
@@ -111,6 +126,7 @@ type SPDZEngineConfig struct {
 	AmphoraConfig      AmphoraConfig         `json:"amphoraConfig"`
 	CastorConfig       CastorConfig          `json:"castorConfig"`
 	FrontendURL        string                `json:"frontendURL"`
+	TlsEnabled         bool                  `json:"tlsEnabled"`
 	PlayerID           int32                 `json:"playerID"`
 	PlayerCount        int32                 `json:"playerCount"`
 	MaxBulkSize        int32                 `json:"maxBulkSize"`
@@ -183,4 +199,6 @@ type SPDZEngineTypedConfig struct {
 	DiscoveryConfig         DiscoveryClientTypedConfig
 	StateTimeout            time.Duration
 	ComputationTimeout      time.Duration
+	TlsEnabled              bool
+	TlsConfig               *tls.Config
 }
