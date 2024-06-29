@@ -554,16 +554,16 @@ type FakeCastorClient struct {
 	TupleList *castor.TupleList
 }
 
-func (fcc *FakeCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) (*castor.TupleList, error) {
+func (fcc *FakeCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) ([]byte, error) {
 	tl := fcc.TupleList
 	if tl == nil {
 		tl = &castor.TupleList{}
 	}
-	return tl, nil
+	return []byte{}, nil
 }
 
 type BrokenDownloadCastorClient struct{}
 
-func (fcc *BrokenDownloadCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) (*castor.TupleList, error) {
-	return &castor.TupleList{}, errors.New("fetching tuples failed")
+func (fcc *BrokenDownloadCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) ([]byte, error) {
+	return []byte{}, errors.New("fetching tuples failed")
 }

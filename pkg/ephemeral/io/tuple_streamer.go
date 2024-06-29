@@ -273,15 +273,11 @@ func (ts *CastorTupleStreamer) bufferData(terminateCh chan struct{}, streamerErr
 func (ts *CastorTupleStreamer) getTupleData() ([]byte, error) {
 	requestID := uuid.NewMD5(ts.baseRequestID, []byte(strconv.Itoa(ts.requestCycle)))
 	ts.requestCycle++
-	tupleList, err := ts.castorClient.GetTuples(ts.stockSize, ts.tupleType, requestID)
+	tupleData, err := ts.castorClient.GetTuples(ts.stockSize, ts.tupleType, requestID)
 	if err != nil {
 		return nil, err
 	}
 	ts.logger.Debugw("Fetched new tuples from Castor", "RequestID", requestID)
-	tupleData, err := ts.tupleListToByteArray(tupleList)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing received tuple list: %v", err)
-	}
 	return tupleData, nil
 }
 
