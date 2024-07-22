@@ -103,7 +103,7 @@ spec:
         - "*"
       tls:
         mode: MUTUAL # enables mTLS on the Gateway
-        credentialName: {{ .Values.discovery.tls.secret }} # the name of the Secret that holds the TLS certs and CA certifcate
+        credentialName: {{ .Values.discovery.tls.secret }} # the name of the Secret that holds the TLS certs and CA certificate
 
 ---
 apiVersion: networking.istio.io/v1beta1

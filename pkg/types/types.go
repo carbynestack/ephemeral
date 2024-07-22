@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -6,11 +6,12 @@ package types
 
 import (
 	"context"
+	"math/big"
+	"time"
+
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
-	"math/big"
-	"time"
 
 	mb "github.com/vardius/message-bus"
 	"google.golang.org/grpc"
@@ -57,6 +58,18 @@ type DiscoveryTypedConfig struct {
 	BusSize            int
 	PortRange          string
 	PlayerCount        int
+}
+
+// NetworkControllerConfig represents the config of the network-controller service.
+type NetworkControllerConfig struct {
+	TlsEnabled bool   `json:"tlsEnabled"`
+	TlsSecret  string `json:"tlsSecret"`
+}
+
+// NetworkControllerTypedConfig reflects NetworkControllerConfig, but it contains the real property types
+type NetworkControllerTypedConfig struct {
+	TlsEnabled bool
+	TlsSecret  string
 }
 
 // Activation is an object that is received as an input from the Ephemeral client.

@@ -83,3 +83,6 @@ networkController:
     tag: latest
     pullPolicy: "IfNotPresent"
     pullSecrets: []
+  tls:
+    enabled: false
+    secret:

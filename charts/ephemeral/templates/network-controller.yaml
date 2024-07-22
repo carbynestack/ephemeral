@@ -41,3 +41,23 @@ spec:
                 fieldPath: metadata.name
           - name: OPERATOR_NAME
             value: "network-controller"
+        volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "ephemeral.fullname" . }}-network-controller-config
+      serviceAccountName: network-controller
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ephemeral.fullname" . }}-network-controller-config
+data:
+  config.json: |-
+    {
+      "tlsEnabled": {{ .Values.networkController.tls.enabled }},
+      "tlsSecret": "{{ .Values.networkController.tls.secret }}"
+    }
