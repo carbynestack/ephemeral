@@ -6,6 +6,7 @@ package types
 
 import (
 	"context"
+	"crypto/tls"
 	"math/big"
 	"time"
 
@@ -113,6 +114,7 @@ type SPDZEngineConfig struct {
 	AmphoraConfig      AmphoraConfig         `json:"amphoraConfig"`
 	CastorConfig       CastorConfig          `json:"castorConfig"`
 	FrontendURL        string                `json:"frontendURL"`
+	TlsEnabled         bool                  `json:"tlsEnabled"`
 	PlayerID           int32                 `json:"playerID"`
 	PlayerCount        int32                 `json:"playerCount"`
 	MaxBulkSize        int32                 `json:"maxBulkSize"`
@@ -150,6 +152,13 @@ type DiscoveryClientTypedConfig struct {
 	ConnectTimeout time.Duration
 }
 
+// K8sSecret represents the structure containing key, cert, and CA cert
+type K8sSecret struct {
+	Key    string
+	Cert   string
+	CACert string
+}
+
 // OutputConfig defines how the output of the app execution is treated.
 type OutputConfig struct {
 	Type string `json:"type"`
@@ -177,4 +186,6 @@ type SPDZEngineTypedConfig struct {
 	DiscoveryConfig         DiscoveryClientTypedConfig
 	StateTimeout            time.Duration
 	ComputationTimeout      time.Duration
+	TlsEnabled              bool
+	TlsConfig               *tls.Config
 }

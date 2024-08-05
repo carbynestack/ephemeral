@@ -5,26 +5,33 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral"
 	l "github.com/carbynestack/ephemeral/pkg/logger"
 	"github.com/carbynestack/ephemeral/pkg/utils"
 
-	. "github.com/carbynestack/ephemeral/pkg/types"
 	"math/big"
 	"net/http"
 	"net/url"
 	"time"
 
+	. "github.com/carbynestack/ephemeral/pkg/types"
+
 	"go.uber.org/zap"
 )
 
 const (
-	defaultConfig = "/etc/config/config.json"
-	defaultPort   = "8080"
+	defaultConfig    = "/etc/config/config.json"
+	defaultTlsConfig = "/etc/tls"
+	defaultPort      = "8080"
 )
 
 func main() {
@@ -87,6 +94,40 @@ func ParseConfig(path string) (*SPDZEngineConfig, error) {
 	return &conf, nil
 }
 
+// CreateTLSConfig creates a tls.Config object for mTLS connections
+func CreateTLSConfig(mountPath string) (*tls.Config, error) {
+	keyPath := filepath.Join(mountPath, "tls.key")
+	certPath := filepath.Join(mountPath, "tls.crt")
+	caCertPath := filepath.Join(mountPath, "cacert")
+
+	// Load the client certificate and key
+	clientCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the CA certificate
+	caCertBytes, err := ioutil.ReadFile(caCertPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a CertPool and add the CA certificate
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(caCertBytes) {
+		return nil, err
+	}
+
+	// Create and return the tls.Config object
+	tlsConfig := &tls.Config{
+		Certificates:       []tls.Certificate{clientCert},
+		RootCAs:            caCertPool,
+		InsecureSkipVerify: false, // Hostname verfication is enabled
+	}
+
+	return tlsConfig, nil
+}
+
 // InitTypedConfig converts the string parameters that were parsed by standard json parser to
 // the parameters which are used internally, e.g. string -> time.Duration.
 func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
@@ -144,6 +185,15 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		return nil, err
 	}
 
+	var tlsConfig *tls.Config
+	if conf.TlsEnabled {
+		var err error
+		tlsConfig, err = CreateTLSConfig(defaultTlsConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &SPDZEngineTypedConfig{
 		NetworkEstablishTimeout: networkEstablishTimeout,
 		RetrySleep:              retrySleep,
@@ -168,5 +218,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		},
 		StateTimeout:       stateTimeout,
 		ComputationTimeout: computationTimeout,
+		TlsEnabled:         conf.TlsEnabled,
+		TlsConfig:          tlsConfig,
 	}, nil
 }

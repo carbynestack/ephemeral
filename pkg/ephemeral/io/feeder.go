@@ -7,10 +7,11 @@ package io
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
 	. "github.com/carbynestack/ephemeral/pkg/types"
-	"strings"
 
 	"go.uber.org/zap"
 )
