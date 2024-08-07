@@ -36,6 +36,7 @@ type DiscoveryConfig struct {
 	FrontendURL        string `json:"frontendURL"`
 	MasterHost         string `json:"masterHost"`
 	MasterPort         string `json:"masterPort"`
+	TlsEnabled         bool   `json:"tlsEnabled"`
 	Slave              bool   `json:"slave"`
 	StateTimeout       string `json:"stateTimeout"`
 	ComputationTimeout string `json:"computationTimeout"`
@@ -51,6 +52,7 @@ type DiscoveryTypedConfig struct {
 	FrontendURL        string
 	MasterHost         string
 	MasterPort         string
+	TlsEnabled         bool
 	Slave              bool
 	StateTimeout       time.Duration
 	ComputationTimeout time.Duration

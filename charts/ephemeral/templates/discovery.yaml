@@ -39,10 +39,16 @@ spec:
         volumeMounts:
           - name: config-volume
             mountPath: /etc/config
+          - name: tls-secret-volume
+            mountPath: /etc/tls
+            readOnly: true
       volumes:
         - name: config-volume
           configMap:
             name: discovery-config
+        - name: tls-secret-volume
+          secret:
+            secretName: {{ .Values.discovery.tls.secret }}
       serviceAccountName: discovery
 ---
 kind: Service
@@ -74,6 +80,7 @@ data:
       "frontendURL": "{{ .Values.discovery.frontendUrl }}",
       "masterHost": "{{ .Values.discovery.master.host }}",
       "masterPort": "{{ .Values.discovery.master.port }}",
+      "tlsEnabled": {{ .Values.discovery.tls.enabled }},
       "slave": {{ if .Values.discovery.isMaster }}false{{ else }}true{{ end }},
       "playerCount": {{ .Values.playerCount }},
       "stateTimeout": "{{ .Values.discovery.stateTimeout }}",
@@ -89,21 +96,24 @@ spec:
   selector:
     istio: ingressgateway # use istio default controller
   servers:
+{{- if .Values.discovery.tls.enabled }}
+    - port:
+        number: 31400
+        name: grpc-my
+        protocol: HTTPS
+      tls:
+        mode: MUTUAL # enables mTLS on the Gateway
+        credentialName: {{ .Values.discovery.tls.secret }} # the name of the Secret that holds the TLS certs and CA certificate
+      hosts:
+        - "*"
+{{- else }}
     - port:
         number: 31400
         name: grpc-my
         protocol: GRPC
       hosts:
         - "*"
-    - port:
-        number: 31401
-        name: grpc-my-tls
-        protocol: HTTPS
-      hosts:
-        - "*"
-      tls:
-        mode: MUTUAL # enables mTLS on the Gateway
-        credentialName: {{ .Values.discovery.tls.secret }} # the name of the Secret that holds the TLS certs and CA certificate
+{{- end }}
 
 ---
 apiVersion: networking.istio.io/v1beta1

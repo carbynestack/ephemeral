@@ -7,6 +7,8 @@ package utils
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -89,4 +91,38 @@ func ReadFile(path string) ([]byte, error) {
 		return nil, err
 	}
 	return ioutil.ReadAll(file)
+}
+
+// CreateTLSConfig creates a tls.Config object for mTLS connections
+func CreateTLSConfig(mountPath string) (*tls.Config, error) {
+	keyPath := filepath.Join(mountPath, "tls.key")
+	certPath := filepath.Join(mountPath, "tls.crt")
+	caCertPath := filepath.Join(mountPath, "cacert")
+
+	// Load the client certificate and key
+	clientCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the CA certificate
+	caCertBytes, err := ioutil.ReadFile(caCertPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a CertPool and add the CA certificate
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(caCertBytes) {
+		return nil, err
+	}
+
+	// Create and return the tls.Config object
+	tlsConfig := &tls.Config{
+		Certificates:       []tls.Certificate{clientCert},
+		RootCAs:            caCertPool,
+		InsecureSkipVerify: false, // Hostname verfication is enabled
+	}
+
+	return tlsConfig, nil
 }

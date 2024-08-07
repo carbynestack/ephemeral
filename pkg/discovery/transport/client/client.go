@@ -6,15 +6,18 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
-	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	"io"
 	"time"
+
+	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 
 	. "github.com/carbynestack/ephemeral/pkg/types"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -41,6 +44,8 @@ type TransportClientConfig struct {
 	Logger *zap.SugaredLogger
 
 	Context context.Context
+
+	TlsConfig *tls.Config
 }
 
 // TransportConn is an interface for the underlying gRPC transport connection.
@@ -101,7 +106,17 @@ func (c *Client) GetOut() chan *pb.Event {
 func (c *Client) Connect() (*grpc.ClientConn, error) {
 	ctx, cancelConnect := context.WithTimeout(context.Background(), c.conf.ConnectTimeout)
 	defer cancelConnect()
-	conn, err := grpc.DialContext(ctx, c.conf.Host+":"+c.conf.Port, grpc.WithBlock(), grpc.WithInsecure())
+
+	var opts []grpc.DialOption
+	if c.conf.TlsConfig != nil {
+		c.conf.Logger.Debug("Using TLS for gRPC connection")
+		creds := credentials.NewTLS(c.conf.TlsConfig)
+		opts = append(opts, grpc.WithTransportCredentials(creds))
+	} else {
+		opts = append(opts, grpc.WithInsecure())
+	}
+
+	conn, err := grpc.DialContext(ctx, c.conf.Host+":"+c.conf.Port, append(opts, grpc.WithBlock())...)
 	if err != nil {
 		c.conf.Logger.Errorf("Error establishing a gRPC connection: %v", err)
 		return nil, err
