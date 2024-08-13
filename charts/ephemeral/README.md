@@ -94,6 +94,7 @@ helm install --name my-release -f values.yaml ephemeral
 | `discovery.service.annotations`  | Annotations that should be attached to the Discovery service                 | `[]`                               |
 | `discovery.frontendUrl`          | The external base URL of the VCP                                             | \`\`                               |
 | `discovery.master.port`          | The port of the master discovery service instance                            | \`\`                               |
+| `discovery.tls.enabled`          | Determines whether the service communicates over TLS or plaintext            | `false`                            |
 | `discovery.tls.secret`           | The name of the k8s secret that holds the TLS keys and certificates          | \`\`                               |
 | `discovery.isMaster`             | Determines whether the service acts as master or slave                       | `true`                             |
 | `discovery.slave.connectTimeout` | Timeout to establish the connection to the upstream master Discovery Service | `60s`                              |
@@ -102,12 +103,14 @@ helm install --name my-release -f values.yaml ephemeral
 
 ### Network Controller
 
-| Parameter                            | Description                                                      | Default                                     |
-| ------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------- |
-| `networkController.image.registry`   | Image registry used to pull the Network Controller Service image | `ghcr.io`                                   |
-| `networkController.image.repository` | Network Controller Image name                                    | `carbynestack/ephemeral/network-controller` |
-| `networkController.image.tag`        | Network Controller Image tag                                     | `latest`                                    |
-| `networkController.image.pullPolicy` | Network Controller Image pull policy                             | `IfNotPresent`                              |
+| Parameter                            | Description                                                         | Default                                     |
+| ------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------- |
+| `networkController.image.registry`   | Image registry used to pull the Network Controller Service image    | `ghcr.io`                                   |
+| `networkController.image.repository` | Network Controller Image name                                       | `carbynestack/ephemeral/network-controller` |
+| `networkController.image.tag`        | Network Controller Image tag                                        | `latest`                                    |
+| `networkController.image.pullPolicy` | Network Controller Image pull policy                                | `IfNotPresent`                              |
+| `networkController.tls.enabled`      | Determines whether the service communicates over TLS or plaintext   | `false`                                     |
+| `networkController.tls.secret`       | The name of the k8s secret that holds the TLS keys and certificates | \`\`                                        |
 
 ### Ephemeral Service
 
@@ -134,6 +137,8 @@ helm install --name my-release -f values.yaml ephemeral
 | `ephemeral.discovery.port`                    | The port of the discovery service                                        | `8080`                                |
 | `ephemeral.discovery.connectTimout`           | Timeout to establish the connection to the discovery service             | `60s`                                 |
 | `ephemeral.frontendUrl`                       | The external base URL of the VCP                                         | \`\`                                  |
+| `ephemeral.tls.enabled`                       | Determines whether the service communicates over TLS or plaintext        | `false`                               |
+| `ephemeral.tls.secret`                        | The name of the k8s secret that holds the TLS keys and certificates      | \`\`                                  |
 | `ephemeral.spdz.prime`                        | The prime used by SPDZ                                                   | \`\`                                  |
 | `ephemeral.spdz.rInv`                         | The rInv used by SPDZ                                                    | \`\`                                  |
 | `ephemeral.spdz.gfpMacKey`                    | The macKey for the prime protocol used by SPDZ                           | \`\`                                  |

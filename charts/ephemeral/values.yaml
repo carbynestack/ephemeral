@@ -27,6 +27,7 @@ discovery:
   slave:
     connectTimeout: "60s"
   tls:
+    enabled: false
     secret:
 
 ephemeral:
@@ -58,6 +59,9 @@ ephemeral:
     path: "/"
     tupleStock: 1000
   frontendUrl:
+  tls:
+    enabled: false
+    secret:
   discovery:
     host: discovery.default.svc.cluster.local
     port: 8080
