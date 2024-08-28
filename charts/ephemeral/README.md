@@ -77,6 +77,8 @@ provided while installing the chart. For example,
 helm install --name my-release -f values.yaml ephemeral
 ```
 
+<!-- markdownlint-disable MD013 -->
+
 ### Global Parameters
 
 | Parameter     | Description       | Default |
@@ -150,3 +152,5 @@ helm install --name my-release -f values.yaml ephemeral
 | `ephemeral.networkEstablishTimeout`           | Timeout to establish network connections                                 | `1m`                                  |
 | `ephemeral.player.stateTimeout`               | Timeout in which the transition to the next state is expected            | `60s`                                 |
 | `ephemeral.player.computationTimeout`         | Timeout in which the result of a game's mpc computation is expected      | `60s`                                 |
+
+<!-- markdownlint-enable MD013 -->
