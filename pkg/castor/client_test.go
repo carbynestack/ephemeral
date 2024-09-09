@@ -65,7 +65,7 @@ var _ = Describe("Castor", func() {
 				client := Client{URL: myURL, HTTPClient: httpClient}
 				tuples, err := client.GetTuples(2, BitGfp, uuid.MustParse("acc23dc8-7855-4a2f-bc89-494ba30a74d2"))
 
-				Expect(tuples).To(Equal(jsn))
+				Expect(tuples).To(Equal(tbytelist))
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
