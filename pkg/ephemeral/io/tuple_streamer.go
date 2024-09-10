@@ -8,7 +8,6 @@
 package io
 
 import (
-	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -322,26 +321,6 @@ func (ts *CastorTupleStreamer) writeDataToPipe(terminateCh chan struct{}, doneCh
 			}
 		}
 	}
-}
-
-// tupleListToByteArray converts a given list of tuple to a byte array
-func (ts *CastorTupleStreamer) tupleListToByteArray(tl *castor.TupleList) ([]byte, error) {
-	var result []byte
-	for _, tuple := range tl.Tuples {
-		for _, share := range tuple.Shares {
-			decodeString, err := base64.StdEncoding.DecodeString(share.Value)
-			if err != nil {
-				return []byte{}, err
-			}
-			result = append(result, decodeString...)
-			decodeString, err = base64.StdEncoding.DecodeString(share.Mac)
-			if err != nil {
-				return []byte{}, err
-			}
-			result = append(result, decodeString...)
-		}
-	}
-	return result, nil
 }
 
 // generateHeader returns the file header for the given protocol and spdz runtime configuration
