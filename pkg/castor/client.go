@@ -74,7 +74,7 @@ func (c *Client) GetTuples(count int32, tt TupleType, requestID uuid.UUID) ([]by
 		}
 		return nil, fmt.Errorf("getting tuples failed for \"%s\" with response code #%d: %s", req.URL, resp.StatusCode, string(bodyBytes))
 	}
-	if err != nil { //|| (int32(len(bodyBytes)) != count*int32(tt.Arity)*2) {
+	if err != nil {
 		return nil, fmt.Errorf("castor has returned an invalid response body: %s", err)
 	}
 	return bodyBytes, nil

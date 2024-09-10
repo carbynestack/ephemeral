@@ -47,30 +47,29 @@ type TupleType struct {
 	Name              string
 	PreprocessingName string
 	SpdzProtocol      SPDZProtocol
-	Arity             int8
 }
 
 var (
 	// BitGfp describes the Bits tuple type in the Mudulo a Prime domain.
-	BitGfp = TupleType{"BIT_GFP", "Bits", SPDZGfp, 1}
+	BitGfp = TupleType{"BIT_GFP", "Bits", SPDZGfp}
 	// BitGf2n describes the Bits tuple type in the GF(2^n) domain.
-	BitGf2n = TupleType{"BIT_GF2N", "Bits", SPDZGf2n, 1}
+	BitGf2n = TupleType{"BIT_GF2N", "Bits", SPDZGf2n}
 	// InputMaskGfp describes the Inputs tuple type in the Mudulo a Prime domain.
-	InputMaskGfp = TupleType{"INPUT_MASK_GFP", "Inputs", SPDZGfp, 2}
+	InputMaskGfp = TupleType{"INPUT_MASK_GFP", "Inputs", SPDZGfp}
 	// InputMaskGf2n describes the Inputs tuple type in the GF(2^n) domain.
-	InputMaskGf2n = TupleType{"INPUT_MASK_GF2N", "Inputs", SPDZGf2n, 2}
+	InputMaskGf2n = TupleType{"INPUT_MASK_GF2N", "Inputs", SPDZGf2n}
 	// InverseTupleGfp describes the Inverses tuple type in the Mudulo a Prime domain.
-	InverseTupleGfp = TupleType{"INVERSE_TUPLE_GFP", "Inverses", SPDZGfp, 2}
+	InverseTupleGfp = TupleType{"INVERSE_TUPLE_GFP", "Inverses", SPDZGfp}
 	// InverseTupleGf2n describes the Inverses tuple type in the GF(2^n) domain.
-	InverseTupleGf2n = TupleType{"INVERSE_TUPLE_GF2N", "Inverses", SPDZGf2n, 2}
+	InverseTupleGf2n = TupleType{"INVERSE_TUPLE_GF2N", "Inverses", SPDZGf2n}
 	// SquareTupleGfp describes the Squares tuple type in the Mudulo a Prime domain.
-	SquareTupleGfp = TupleType{"SQUARE_TUPLE_GFP", "Squares", SPDZGfp, 2}
+	SquareTupleGfp = TupleType{"SQUARE_TUPLE_GFP", "Squares", SPDZGfp}
 	// SquareTupleGf2n describes the Squares tuple type in the GF(2^n) domain.
-	SquareTupleGf2n = TupleType{"SQUARE_TUPLE_GF2N", "Squares", SPDZGf2n, 2}
+	SquareTupleGf2n = TupleType{"SQUARE_TUPLE_GF2N", "Squares", SPDZGf2n}
 	// MultiplicationTripleGfp describes the Triples tuple type in the Mudulo a Prime domain.
-	MultiplicationTripleGfp = TupleType{"MULTIPLICATION_TRIPLE_GFP", "Triples", SPDZGfp, 3}
+	MultiplicationTripleGfp = TupleType{"MULTIPLICATION_TRIPLE_GFP", "Triples", SPDZGfp}
 	// MultiplicationTripleGf2n describes the Triples tuple type in the GF(2^n) domain.
-	MultiplicationTripleGf2n = TupleType{"MULTIPLICATION_TRIPLE_GF2N", "Triples", SPDZGf2n, 3}
+	MultiplicationTripleGf2n = TupleType{"MULTIPLICATION_TRIPLE_GF2N", "Triples", SPDZGf2n}
 )
 
 // SupportedTupleTypes is a list of all tuple types supported by the castor client.

@@ -5,7 +5,6 @@
 package ephemeral
 
 import (
-	// "runtime/pprof"
 	"context"
 	"errors"
 	"fmt"
@@ -178,17 +177,6 @@ type SPDZEngine struct {
 
 // Activate starts a proxy, writes an IP file, start SPDZ execution, unpacks inputs parameters, sends them to the runtime and waits for the response.
 func (s *SPDZEngine) Activate(ctx *CtxConfig) ([]byte, error) {
-    // f, errs := os.Create("cpu2.pprof")
-    // if errs != nil {
-    //     s.logger.Errorw("Error creating cpu profile", GameID, ctx.Act.GameID, "Error", errs)
-    //     return nil, errs
-    // }
-    // defer f.Close()
-    // defer pprof.StopCPUProfile()
-    // if err := pprof.StartCPUProfile(f); err != nil {
-    //     s.logger.Errorw("Error starting cpu profile", GameID, ctx.Act.GameID, "Error", err)
-    // }
-
 	proxyErrCh := make(chan error, 1)
 	act := ctx.Act
 	err := s.proxy.Run(ctx, proxyErrCh)
@@ -325,7 +313,6 @@ func (s *SPDZEngine) startMPC(ctx *CtxConfig) {
 		wg.Add(1)
 		s.StartStreamTuples(terminateStreams, streamErrCh, wg)
 	}
-	// command := []string{fmt.Sprintf("valgrind --tool=callgrind ./Player-Online.x %s %s -N %s --ip-file-name %s --file-prep-per-thread", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
 	command := []string{fmt.Sprintf("./Player-Online.x %s %s -N %s --ip-file-name %s --file-prep-per-thread", fmt.Sprint(s.config.PlayerID), appName, fmt.Sprint(ctx.Spdz.PlayerCount), ipFile)}
 	s.logger.Infow("Starting Player-Online.x", GameID, ctx.Act.GameID, "command", command)
 	go func() {
