@@ -171,9 +171,6 @@ func (r *ReconcileNetwork) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	log.Info(fmt.Sprintf("Reconcile with the config:\n%+v", r.config))
-	if err != nil {
-		panic(err)
-	}
 
 	// Check if the gateway already exist, create it otherwise.
 

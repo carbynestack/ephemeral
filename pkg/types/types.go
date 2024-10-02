@@ -154,13 +154,6 @@ type DiscoveryClientTypedConfig struct {
 	ConnectTimeout time.Duration
 }
 
-// K8sSecret represents the structure containing key, cert, and CA cert
-type K8sSecret struct {
-	Key    string
-	Cert   string
-	CACert string
-}
-
 // OutputConfig defines how the output of the app execution is treated.
 type OutputConfig struct {
 	Type string `json:"type"`

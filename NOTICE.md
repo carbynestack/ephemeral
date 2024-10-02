@@ -26,5 +26,6 @@ these files remains with the original authors.
 ### Robert Bosch GmbH
 
 - Becker Sebastian <sebastian.becker@de.bosch.com>
+- Hettwer Benjamin <benjamin.hettwer@de.bosch.com>
 - Raskin Vadim <vadim.raskin@de.bosch.com>
 - Trieflinger Sven <sven.trieflinger@de.bosch.com>

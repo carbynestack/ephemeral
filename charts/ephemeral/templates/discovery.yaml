@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2023 - for information on the respective copyright owner
+# Copyright (c) 2021-2024 - for information on the respective copyright owner
 # see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -66,7 +66,7 @@ spec:
   ports:
     - protocol: TCP
       port: 8080
-      name: grpc-my
+      name: cs-tcp
       targetPort: 8080
 ---
 apiVersion: v1
@@ -99,7 +99,7 @@ spec:
 {{- if .Values.discovery.tls.enabled }}
     - port:
         number: 31400
-        name: grpc-my
+        name: cs-grpc
         protocol: HTTPS
       tls:
         mode: MUTUAL # enables mTLS on the Gateway
@@ -109,7 +109,7 @@ spec:
 {{- else }}
     - port:
         number: 31400
-        name: grpc-my
+        name: cs-grpc
         protocol: GRPC
       hosts:
         - "*"
