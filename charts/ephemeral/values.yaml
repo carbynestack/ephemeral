@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2023 - for information on the respective copyright owner
+# Copyright (c) 2021-2024 - for information on the respective copyright owner
 # see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -26,6 +26,9 @@ discovery:
   computationTimeout : "600s"
   slave:
     connectTimeout: "60s"
+  tls:
+    enabled: false
+    secret:
 
 ephemeral:
   service:
@@ -56,6 +59,9 @@ ephemeral:
     path: "/"
     tupleStock: 1000
   frontendUrl:
+  tls:
+    enabled: false
+    secret:
   discovery:
     host: discovery.default.svc.cluster.local
     port: 8080
@@ -81,3 +87,6 @@ networkController:
     tag: latest
     pullPolicy: "IfNotPresent"
     pullSecrets: []
+  tls:
+    enabled: false
+    secret:

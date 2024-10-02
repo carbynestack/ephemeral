@@ -5,26 +5,30 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
+
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral"
 	l "github.com/carbynestack/ephemeral/pkg/logger"
 	"github.com/carbynestack/ephemeral/pkg/utils"
 
-	. "github.com/carbynestack/ephemeral/pkg/types"
 	"math/big"
 	"net/http"
 	"net/url"
 	"time"
 
+	. "github.com/carbynestack/ephemeral/pkg/types"
+
 	"go.uber.org/zap"
 )
 
 const (
-	defaultConfig = "/etc/config/config.json"
-	defaultPort   = "8080"
+	defaultConfig    = "/etc/config/config.json"
+	defaultTlsConfig = "/etc/tls"
+	defaultPort      = "8080"
 )
 
 func main() {
@@ -144,6 +148,15 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		return nil, err
 	}
 
+	var tlsConfig *tls.Config
+	if conf.TlsEnabled {
+		var err error
+		tlsConfig, err = utils.CreateTLSConfig(defaultTlsConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &SPDZEngineTypedConfig{
 		NetworkEstablishTimeout: networkEstablishTimeout,
 		RetrySleep:              retrySleep,
@@ -168,5 +181,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		},
 		StateTimeout:       stateTimeout,
 		ComputationTimeout: computationTimeout,
+		TlsEnabled:         conf.TlsEnabled,
+		TlsConfig:          tlsConfig,
 	}, nil
 }

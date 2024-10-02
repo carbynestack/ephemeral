@@ -30,7 +30,7 @@ var _ = Describe("Main", func() {
 		}
 		logger := zap.NewNop().Sugar()
 		errCh := make(chan error)
-		cl, mode, err := NewClient(conf, logger, errCh)
+		cl, mode, err := NewClient(conf, nil, logger, errCh)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mode).To(Equal(ModeSlave))
 		Expect(cl).NotTo(BeNil())

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 - for information on the respective copyright owner
+# Copyright (c) 2021-2024 - for information on the respective copyright owner
 # see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -41,3 +41,23 @@ spec:
                 fieldPath: metadata.name
           - name: OPERATOR_NAME
             value: "network-controller"
+        volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "ephemeral.fullname" . }}-network-controller-config
+      serviceAccountName: network-controller
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ephemeral.fullname" . }}-network-controller-config
+data:
+  config.json: |-
+    {
+      "tlsEnabled": {{ .Values.networkController.tls.enabled }},
+      "tlsSecret": "{{ .Values.networkController.tls.secret }}"
+    }

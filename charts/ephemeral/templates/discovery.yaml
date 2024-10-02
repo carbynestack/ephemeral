@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2023 - for information on the respective copyright owner
+# Copyright (c) 2021-2024 - for information on the respective copyright owner
 # see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -39,10 +39,16 @@ spec:
         volumeMounts:
           - name: config-volume
             mountPath: /etc/config
+          - name: tls-secret-volume
+            mountPath: /etc/tls
+            readOnly: true
       volumes:
         - name: config-volume
           configMap:
             name: discovery-config
+        - name: tls-secret-volume
+          secret:
+            secretName: {{ .Values.discovery.tls.secret }}
       serviceAccountName: discovery
 ---
 kind: Service
@@ -60,7 +66,7 @@ spec:
   ports:
     - protocol: TCP
       port: 8080
-      name: grpc-my
+      name: cs-tcp
       targetPort: 8080
 ---
 apiVersion: v1
@@ -74,6 +80,7 @@ data:
       "frontendURL": "{{ .Values.discovery.frontendUrl }}",
       "masterHost": "{{ .Values.discovery.master.host }}",
       "masterPort": "{{ .Values.discovery.master.port }}",
+      "tlsEnabled": {{ .Values.discovery.tls.enabled }},
       "slave": {{ if .Values.discovery.isMaster }}false{{ else }}true{{ end }},
       "playerCount": {{ .Values.playerCount }},
       "stateTimeout": "{{ .Values.discovery.stateTimeout }}",
@@ -89,12 +96,25 @@ spec:
   selector:
     istio: ingressgateway # use istio default controller
   servers:
+{{- if .Values.discovery.tls.enabled }}
     - port:
         number: 31400
-        name: grpc-my
+        name: cs-grpc
+        protocol: HTTPS
+      tls:
+        mode: MUTUAL # enables mTLS on the Gateway
+        credentialName: {{ .Values.discovery.tls.secret }} # the name of the Secret that holds the TLS certs and CA certificate
+      hosts:
+        - "*"
+{{- else }}
+    - port:
+        number: 31400
+        name: cs-grpc
         protocol: GRPC
       hosts:
         - "*"
+{{- end }}
+
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
