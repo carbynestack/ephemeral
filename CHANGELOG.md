@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/carbynestack/ephemeral/compare/service-v0.1.13...service-v0.2.0) (2024-10-09)
+
+
+### Features
+
+* **java-client:** upgrade dependencies ([#77](https://github.com/carbynestack/ephemeral/issues/77)) ([4f1d0e8](https://github.com/carbynestack/ephemeral/commit/4f1d0e81ccb11b73cb7d03ccc0f598e58f89678e))
+
 ## [0.1.13](https://github.com/carbynestack/ephemeral/compare/service-v0.1.12...service-v0.1.13) (2023-08-04)
 
 
