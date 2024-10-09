@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (c) 2021 - for information on the respective copyright owner
+  ~ Copyright (c) 2021-2024 - for information on the respective copyright owner
   ~ see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
   ~
   ~ SPDX-License-Identifier: Apache-2.0
@@ -57,7 +57,7 @@
         <maven-license-plugin.version>2.0.0</maven-license-plugin.version>
 
         <!-- Carbyne Stack dependency versions -->
-        <java-http-client.version>0.1-SNAPSHOT-1257534854-1-46815a7</java-http-client.version>
+        <java-http-client.version>0.2.0</java-http-client.version>
 
         <!-- External dependency versions -->
         <lombok.version>1.18.20</lombok.version>
