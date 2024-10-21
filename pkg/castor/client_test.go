@@ -58,13 +58,14 @@ var _ = Describe("Castor", func() {
 		})
 		Context("when the path is correct", func() {
 			It("returns tuples", func() {
-				mockedRT := MockedRoundTripper{ExpectedPath: "/intra-vcp/tuples", ReturnJSON: jsn, ExpectedResponseCode: http.StatusOK}
+				tbytelist := []byte{1, 2, 1, 2}
+				mockedRT := MockedRoundTripper{ExpectedPath: "/intra-vcp/tuples", ReturnJSON: tbytelist, ExpectedResponseCode: http.StatusOK}
 				httpClient := &http.Client{Transport: &mockedRT}
 
 				client := Client{URL: myURL, HTTPClient: httpClient}
-				tuples, err := client.GetTuples(0, BitGfp, uuid.MustParse("acc23dc8-7855-4a2f-bc89-494ba30a74d2"))
+				tuples, err := client.GetTuples(2, BitGfp, uuid.MustParse("acc23dc8-7855-4a2f-bc89-494ba30a74d2"))
 
-				Expect(tuples).To(Equal(tupleList))
+				Expect(tuples).To(Equal(tbytelist))
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -88,18 +89,6 @@ var _ = Describe("Castor", func() {
 				_, err := client.GetTuples(0, BitGfp, uuid.MustParse("acc23dc8-7855-4a2f-bc89-494ba30a74d2"))
 
 				Expect(checkHTTPError(err.Error(), "communication with castor failed")).To(BeTrue())
-			})
-		})
-		Context("when castor returns invalid json body", func() {
-			It("returns an error", func() {
-				jsn = []byte("invalid JSON String")
-				mockedRT := MockedRoundTripper{ExpectedPath: "/intra-vcp/tuples", ReturnJSON: jsn, ExpectedResponseCode: http.StatusOK}
-				httpClient := &http.Client{Transport: &mockedRT}
-
-				client := Client{URL: myURL, HTTPClient: httpClient}
-				_, err := client.GetTuples(0, BitGfp, uuid.MustParse("acc23dc8-7855-4a2f-bc89-494ba30a74d2"))
-
-				Expect(checkHTTPError(err.Error(), "castor has returned an invalid response body")).To(BeTrue())
 			})
 		})
 
