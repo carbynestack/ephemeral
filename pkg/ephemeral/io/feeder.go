@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -17,7 +17,11 @@ import (
 
 // Feeder is an interface.
 type Feeder interface {
+	// LoadFromSecretStoreAndFeed loads input parameters from Amphora.
 	LoadFromSecretStoreAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error)
+	// LoadFromRequestAndFeed oads input parameteters from the request body.
+	//
+	// Deprecated: providing secrets in the request body is not recommended and will be removed in the future.
 	LoadFromRequestAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error)
 	Close() error
 }
@@ -50,12 +54,21 @@ type AmphoraFeeder struct {
 // LoadFromSecretStoreAndFeed loads input parameters from Amphora.
 func (f *AmphoraFeeder) LoadFromSecretStoreAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error) {
 	var data []string
+	inputs := []ActivationInput{}
 	client := f.conf.AmphoraClient
 	for i := range act.AmphoraParams {
-		osh, err := client.GetSecretShare(act.AmphoraParams[i])
+		osh, err := client.GetSecretShare(act.AmphoraParams[i], ctx.Spdz.ProgramIdentifier)
 		if err != nil {
 			return nil, err
 		}
+		policy := "_DEFAULT_POLICY_"
+		owner, _ := findValueForKeyInTags(osh.Tags, "owner")
+		policy, _ = findValueForKeyInTags(osh.Tags, "accessPolicy")
+		inputs = append(inputs, ActivationInput{
+			SecretId:     osh.SecretID,
+			Owner:        owner,
+			AccessPolicy: policy,
+		})
 		data = append(data, osh.Data)
 	}
 	resp, err := f.feedAndRead(data, feedPort, ctx)
@@ -64,7 +77,7 @@ func (f *AmphoraFeeder) LoadFromSecretStoreAndFeed(act *Activation, feedPort str
 	}
 	// Write to amphora if required and return amphora secret ids.
 	if act.Output.Type == AmphoraSecret {
-		ids, err := f.writeToAmphora(act, *resp)
+		ids, err := f.writeToAmphora(act, inputs, *resp)
 		if err != nil {
 			return nil, err
 		}
@@ -74,6 +87,8 @@ func (f *AmphoraFeeder) LoadFromSecretStoreAndFeed(act *Activation, feedPort str
 }
 
 // LoadFromRequestAndFeed loads input parameteters from the request body.
+//
+// Deprecated: providing secrets in the request body is not recommended and will be removed in the future.
 func (f *AmphoraFeeder) LoadFromRequestAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error) {
 	resp, err := f.feedAndRead(act.SecretParams, feedPort, ctx)
 	if err != nil {
@@ -81,7 +96,7 @@ func (f *AmphoraFeeder) LoadFromRequestAndFeed(act *Activation, feedPort string,
 	}
 	// Write to amphora if required and return amphora secret ids.
 	if act.Output.Type == AmphoraSecret {
-		ids, err := f.writeToAmphora(act, *resp)
+		ids, err := f.writeToAmphora(act, []ActivationInput{}, *resp)
 		if err != nil {
 			return nil, err
 		}
@@ -137,24 +152,44 @@ func (f *AmphoraFeeder) feedAndRead(params []string, feedPort string, ctx *CtxCo
 	return f.carrier.Read(conv, isBulk)
 }
 
-func (f *AmphoraFeeder) writeToAmphora(act *Activation, resp Result) ([]string, error) {
+func (f *AmphoraFeeder) writeToAmphora(act *Activation, inputs []ActivationInput, resp Result) ([]string, error) {
 	client := f.conf.AmphoraClient
+	generatedTags, err := f.conf.OpaClient.GenerateTags(inputs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate tags for program output: %w", err)
+	}
+	for i := range generatedTags {
+		if generatedTags[i].ValueType == "" {
+			generatedTags[i].ValueType = "STRING"
+		}
+	}
+	tags := []amphora.Tag{
+		amphora.Tag{
+			ValueType: "STRING",
+			Key:       "gameID",
+			Value:     act.GameID,
+		},
+	}
+	tags = append(tags, generatedTags...)
 	os := amphora.SecretShare{
 		SecretID: act.GameID,
 		// When writing to Amphora, the slice has exactly 1 element.
 		Data: resp.Response[0],
-		Tags: []amphora.Tag{
-			amphora.Tag{
-				ValueType: "STRING",
-				Key:       "gameID",
-				Value:     act.GameID,
-			},
-		},
+		Tags: tags,
 	}
-	err := client.CreateSecretShare(&os)
+	err = client.CreateSecretShare(&os)
 	f.logger.Infow(fmt.Sprintf("Created secret share with id %s", os.SecretID), GameID, act.GameID)
 	if err != nil {
 		return nil, err
 	}
 	return []string{act.GameID}, nil
+}
+
+func findValueForKeyInTags(tags []amphora.Tag, key string) (string, bool) {
+	for _, tag := range tags {
+		if tag.Key == key {
+			return tag.Value, true
+		}
+	}
+	return "", false
 }

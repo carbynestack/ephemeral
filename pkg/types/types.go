@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -9,6 +9,7 @@ import (
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
+	"github.com/carbynestack/ephemeral/pkg/opa"
 	"math/big"
 	"time"
 
@@ -68,6 +69,12 @@ type Activation struct {
 	Output        OutputConfig `json:"output"`
 }
 
+type ActivationInput struct {
+	SecretId     string `json:"secretId"`
+	Owner        string `json:"owner"`
+	AccessPolicy string `json:"accessPolicy"`
+}
+
 // ProxyConfig is the configuration used by the proxy when the connection between players is established.
 type ProxyConfig struct {
 	Host      string `json:"host"`
@@ -86,6 +93,7 @@ type CtxConfig struct {
 
 // SPDZEngineConfig is the VPC specific configuration.
 type SPDZEngineConfig struct {
+	ProgramIdentifier       string `json:"programIdentifier"`
 	RetrySleep              string `json:"retrySleep"`
 	NetworkEstablishTimeout string `json:"networkEstablishTimeout"`
 	Prime                   string `json:"prime"`
@@ -97,6 +105,7 @@ type SPDZEngineConfig struct {
 	// being set when compiling SPDZ where storage size is 16 for USE_GF2N_LONG=1, or 8 if set to 0
 	Gf2nStorageSize    int32                 `json:"gf2nStorageSize"`
 	PrepFolder         string                `json:"prepFolder"`
+	OpaConfig          OpaConfig             `json:"opaConfig"`
 	AmphoraConfig      AmphoraConfig         `json:"amphoraConfig"`
 	CastorConfig       CastorConfig          `json:"castorConfig"`
 	FrontendURL        string                `json:"frontendURL"`
@@ -106,6 +115,11 @@ type SPDZEngineConfig struct {
 	DiscoveryConfig    DiscoveryClientConfig `json:"discoveryConfig"`
 	StateTimeout       string                `json:"stateTimeout"`
 	ComputationTimeout string                `json:"computationTimeout"`
+}
+
+type OpaConfig struct {
+	Endpoint      string `json:"endpoint"`
+	PolicyPackage string `json:"policyPackage"`
 }
 
 // AmphoraConfig specifies the amphora host parameters.
@@ -145,6 +159,7 @@ type OutputConfig struct {
 // SPDZEngineTypedConfig reflects SPDZEngineConfig, but it contains the real property types.
 // We need this type, since the default json decoder doesn't know how to deserialize big.Int.
 type SPDZEngineTypedConfig struct {
+	ProgramIdentifier       string
 	RetrySleep              time.Duration
 	NetworkEstablishTimeout time.Duration
 	Prime                   big.Int
@@ -154,6 +169,7 @@ type SPDZEngineTypedConfig struct {
 	Gf2nBitLength           int32
 	Gf2nStorageSize         int32
 	PrepFolder              string
+	OpaClient               opa.AbstractClient
 	AmphoraClient           amphora.AbstractClient
 	CastorClient            castor.AbstractClient
 	TupleStock              int32

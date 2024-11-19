@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -232,7 +232,11 @@ func (s *Server) ActivationHandler(writer http.ResponseWriter, req *http.Request
 	select {
 	case stdout := <-s.respCh:
 		writer.WriteHeader(http.StatusOK)
-		writer.Write(stdout)
+		result, err := json.Marshal(stdout)
+		if err != nil {
+			writer.Write([]byte(fmt.Sprintf("error marshalling the result: %s", err.Error())))
+		}
+		writer.Write(result)
 	case err := <-s.errCh:
 		msg := fmt.Sprintf("error while talking to Discovery: %s", err)
 		writer.WriteHeader(http.StatusInternalServerError)

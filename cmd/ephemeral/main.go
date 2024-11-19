@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -11,7 +11,9 @@ import (
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral"
 	l "github.com/carbynestack/ephemeral/pkg/logger"
+	"github.com/carbynestack/ephemeral/pkg/opa"
 	"github.com/carbynestack/ephemeral/pkg/utils"
+	"os"
 
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	"math/big"
@@ -123,6 +125,19 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	programIdentifier, ok := os.LookupEnv("EPHEMERAL_PROGRAM_IDENTIFIER")
+	if !ok {
+		programIdentifier = conf.ProgramIdentifier
+	}
+
+	policyPackage, ok := os.LookupEnv("EPHEMERAL_OPA_POLICY_PACKAGE")
+	if !ok {
+		policyPackage = conf.OpaConfig.PolicyPackage
+	}
+	opaClient, err := opa.NewClient(conf.OpaConfig.Endpoint, policyPackage)
+	if err != nil {
+		return nil, err
+	}
 
 	amphoraURL := url.URL{
 		Host:   conf.AmphoraConfig.Host,
@@ -145,6 +160,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	}
 
 	return &SPDZEngineTypedConfig{
+		ProgramIdentifier:       programIdentifier,
 		NetworkEstablishTimeout: networkEstablishTimeout,
 		RetrySleep:              retrySleep,
 		Prime:                   p,
@@ -154,6 +170,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 		Gf2nBitLength:           conf.Gf2nBitLength,
 		Gf2nStorageSize:         conf.Gf2nStorageSize,
 		PrepFolder:              conf.PrepFolder,
+		OpaClient:               opaClient,
 		AmphoraClient:           amphoraClient,
 		CastorClient:            castorClient,
 		TupleStock:              conf.CastorConfig.TupleStock,

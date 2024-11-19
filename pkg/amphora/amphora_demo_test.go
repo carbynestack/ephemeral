@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -35,6 +35,7 @@ func TestPostAndGet(t *testing.T) {
 		}
 
 		secretID := uuid.New().String()
+		programID := "ephemeral-generic"
 		fmt.Printf("Operating on shared secret with UUID: %s\n", secretID)
 		os := SecretShare{
 			SecretID: secretID,
@@ -47,7 +48,7 @@ func TestPostAndGet(t *testing.T) {
 			t.Error(err)
 		}
 
-		retrieved, err := client.GetSecretShare(secretID)
+		retrieved, err := client.GetSecretShare(secretID, programID)
 		if retrieved.Data != os.Data {
 			t.Error("Retrieved object data is not equal to expected.")
 		}

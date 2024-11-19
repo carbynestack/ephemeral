@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -34,6 +34,7 @@ var _ = Describe("Feeder", func() {
 		f = AmphoraFeeder{
 			conf: &SPDZEngineTypedConfig{
 				AmphoraClient: &FakeAmphoraClient{},
+				OpaClient:     &FakeOpaClient{},
 			},
 			carrier: carrier,
 			logger:  zap.NewNop().Sugar(),
@@ -175,10 +176,17 @@ var _ = Describe("Feeder", func() {
 	})
 })
 
+type FakeOpaClient struct {
+}
+
+func (f *FakeOpaClient) GenerateTags(interface{}) ([]amphora.Tag, error) {
+	return []amphora.Tag{}, nil
+}
+
 type FakeAmphoraClient struct {
 }
 
-func (f *FakeAmphoraClient) GetSecretShare(string) (amphora.SecretShare, error) {
+func (f *FakeAmphoraClient) GetSecretShare(string, string) (amphora.SecretShare, error) {
 	return amphora.SecretShare{}, nil
 }
 func (f *FakeAmphoraClient) CreateSecretShare(*amphora.SecretShare) error {
@@ -188,7 +196,7 @@ func (f *FakeAmphoraClient) CreateSecretShare(*amphora.SecretShare) error {
 type BrokenReadFakeAmphoraClient struct {
 }
 
-func (f *BrokenReadFakeAmphoraClient) GetSecretShare(string) (amphora.SecretShare, error) {
+func (f *BrokenReadFakeAmphoraClient) GetSecretShare(string, string) (amphora.SecretShare, error) {
 	return amphora.SecretShare{}, errors.New("amphora read error")
 }
 func (f *BrokenReadFakeAmphoraClient) CreateSecretShare(*amphora.SecretShare) error {
@@ -198,7 +206,7 @@ func (f *BrokenReadFakeAmphoraClient) CreateSecretShare(*amphora.SecretShare) er
 type BrokenWriteFakeAmphoraClient struct {
 }
 
-func (f *BrokenWriteFakeAmphoraClient) GetSecretShare(string) (amphora.SecretShare, error) {
+func (f *BrokenWriteFakeAmphoraClient) GetSecretShare(string, string) (amphora.SecretShare, error) {
 	return amphora.SecretShare{}, nil
 }
 func (f *BrokenWriteFakeAmphoraClient) CreateSecretShare(*amphora.SecretShare) error {

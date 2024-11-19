@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -49,6 +49,7 @@ var _ = Describe("Main", func() {
 					It("initializes the config", func() {
 						data := []byte(
 							`{
+								"programIdentifier":"ephemeral-generic",
 								"retrySleep":"50ms",
 								"networkEstablishTimeout":"1m",
 								"prime":"p",
@@ -58,6 +59,10 @@ var _ = Describe("Main", func() {
 								"gf2nBitLength":40,
 								"gf2nStorageSize":8,
 								"prepFolder":"Player-Data",
+								"opaConfig": {
+									"endpoint": "http://opa.carbynestack.io",
+									"policePackage": "carbynestack.def",
+								},
 								"amphoraConfig": {
 									"host":"mock-server:1080",
 									"scheme":"http","path":"/amphora1"
@@ -107,6 +112,7 @@ var _ = Describe("Main", func() {
 		Context("when initializing typed config", func() {
 			It("succeeds when all parameters are specified", func() {
 				conf := &SPDZEngineConfig{
+					ProgramIdentifier:       "ephemeral-generic",
 					NetworkEstablishTimeout: "2s",
 					RetrySleep:              "1s",
 					Prime:                   "198766463529478683931867765928436695041",
@@ -114,6 +120,10 @@ var _ = Describe("Main", func() {
 					GfpMacKey:               "1113507028231509545156335486838233835",
 					Gf2nBitLength:           40,
 					Gf2nStorageSize:         8,
+					OpaConfig: OpaConfig{
+						Endpoint:      "http://opa.carbynestack.io",
+						PolicyPackage: "carbynestack.def",
+					},
 					AmphoraConfig: AmphoraConfig{
 						Host:   "localhost",
 						Scheme: "http",
@@ -143,6 +153,7 @@ var _ = Describe("Main", func() {
 				Context("retry timeout format is corrupt", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2",
 						}
 						typedConf, err := InitTypedConfig(conf)
@@ -153,6 +164,7 @@ var _ = Describe("Main", func() {
 				Context("retry sleep format is corrupt", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1",
 						}
@@ -164,6 +176,7 @@ var _ = Describe("Main", func() {
 				Context("prime number is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "",
@@ -177,6 +190,7 @@ var _ = Describe("Main", func() {
 				Context("inverse R is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "123",
@@ -191,6 +205,7 @@ var _ = Describe("Main", func() {
 				Context("gfpMacKey is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "123",
@@ -206,6 +221,7 @@ var _ = Describe("Main", func() {
 				Context("amphora URL is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "123",
@@ -239,6 +255,7 @@ var _ = Describe("Main", func() {
 				Context("amphora scheme is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "123",
@@ -273,6 +290,7 @@ var _ = Describe("Main", func() {
 				Context("castor URL is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "123",
@@ -305,6 +323,7 @@ var _ = Describe("Main", func() {
 				Context("castor scheme is not specified", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "123",
@@ -338,6 +357,7 @@ var _ = Describe("Main", func() {
 				Context("stateTimeout format is corrupt", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "198766463529478683931867765928436695041",
@@ -371,6 +391,7 @@ var _ = Describe("Main", func() {
 				Context("discovery config's connect timeout format is corrupt", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "198766463529478683931867765928436695041",
@@ -405,6 +426,7 @@ var _ = Describe("Main", func() {
 				Context("computationTimeout format is corrupt", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1s",
 							Prime:                   "198766463529478683931867765928436695041",
@@ -439,6 +461,7 @@ var _ = Describe("Main", func() {
 				Context("networkEstablishTimeout format is corrupt", func() {
 					It("returns an error", func() {
 						conf := &SPDZEngineConfig{
+							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "corrupt",
 							RetrySleep:              "1s",
 							Prime:                   "198766463529478683931867765928436695041",
@@ -480,6 +503,7 @@ var _ = Describe("Main", func() {
 				defer os.RemoveAll(tmpPrepDir)
 				logger := zap.NewNop().Sugar()
 				conf := &SPDZEngineConfig{
+					ProgramIdentifier:       "ephemeral-generic",
 					NetworkEstablishTimeout: "2s",
 					RetrySleep:              "1s",
 					Prime:                   "198766463529478683931867765928436695041",
@@ -518,6 +542,7 @@ var _ = Describe("Main", func() {
 			It("is returned", func() {
 				logger := zap.NewNop().Sugar()
 				conf := &SPDZEngineConfig{
+					ProgramIdentifier:       "ephemeral-generic",
 					NetworkEstablishTimeout: "2s",
 					RetrySleep:              "1s",
 					Prime:                   "198766463529478683931867765928436695041",
