@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	TagsAction = "tags"
+	TagsAction    = "tags"
+	ExecuteAction = "execute"
 )
 
 type OpaRequest struct {
@@ -29,31 +30,64 @@ type TagResponse struct {
 	Tags []amphora.Tag `json:"result"`
 }
 
-type AbstractClient interface {
-	GenerateTags(interface{}) ([]amphora.Tag, error)
+type ExecuteResponse struct {
+	IsAllowed bool `json:"result"`
 }
 
+// AbstractClient is an interface that defines the methods that an OPA client must implement.
+type AbstractClient interface {
+	GenerateTags(input interface{}) ([]amphora.Tag, error)
+	CanExecute(input interface{}) (bool, error)
+}
+
+// NewClient creates a new OPA client with the given endpoint and policy package. It returns an error if the endpoint is
+// invalid or the policy package is empty.
 func NewClient(endpoint string, policyPackage string) (*Client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil || !govalidator.IsURL(u.String()) {
-		return &Client{}, fmt.Errorf("invalid Url: %w", err)
+		return nil, fmt.Errorf("invalid URL: %w", err)
 	}
 	if strings.TrimSpace(policyPackage) == "" {
-		return &Client{}, fmt.Errorf("invalid policy package")
+		return nil, fmt.Errorf("invalid policy package")
 	}
 	return &Client{HttpClient: http.Client{}, URL: *u, PolicyPackage: strings.TrimSpace(policyPackage)}, nil
 }
 
+// Client represents an OPA client that can be used to interact with an OPA server.
 type Client struct {
 	URL           url.URL
 	PolicyPackage string
 	HttpClient    http.Client
 }
 
+// GenerateTags generates tags for the data described by the data provided according to the policy package. It returns
+// the tags if the request was successful. An error is returned if the request fails.
 func (c *Client) GenerateTags(data interface{}) ([]amphora.Tag, error) {
+	result := TagResponse{}
+	err := c.makeOpaRequest(TagsAction, data, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result.Tags, nil
+
+}
+
+// CanExecute checks if the program can be executed with the input described by the data provided according to the
+// policy package. It returns true if the program can be executed, false otherwise. An error is returned if the request
+// fails.
+func (c *Client) CanExecute(data interface{}) (bool, error) {
+	result := ExecuteResponse{}
+	err := c.makeOpaRequest(ExecuteAction, data, &result)
+	if err != nil {
+		return false, err
+	}
+	return result.IsAllowed, nil
+}
+
+func (c *Client) makeOpaRequest(action string, data interface{}, v interface{}) error {
 	payload, err := json.Marshal(OpaRequest{Input: data})
 	if err != nil {
-		return nil, fmt.Errorf("invalid opa input: %w", err)
+		return fmt.Errorf("invalid opa input: %w", err)
 	}
 	bytes.NewBuffer(payload)
 	req, err := http.NewRequest(
@@ -61,27 +95,26 @@ func (c *Client) GenerateTags(data interface{}) ([]amphora.Tag, error) {
 		fmt.Sprintf("%s/v1/data/%s/%s",
 			c.URL.String(),
 			strings.ReplaceAll(c.PolicyPackage, ".", "/"),
-			TagsAction),
+			action),
 		bytes.NewBuffer(payload))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request to fetch tags from OPA: %w", err)
+		return fmt.Errorf("failed to create opa \"%s\" request: %w", action, err)
 	}
 	resp, err := c.HttpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch tags from OPA: %w", err)
+		return fmt.Errorf("failed to check \"%s\" access: %w", action, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch tags from OPA (Code %d)", resp.StatusCode)
+		return fmt.Errorf("failed to check \"%s\" access (Code %d)", action, resp.StatusCode)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read opa response body: %w", err)
+		return fmt.Errorf("failed to read opa response body: %w", err)
 	}
-	tags := TagResponse{}
-	err = json.Unmarshal(body, &tags)
+	err = json.Unmarshal(body, &v)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal opa response body: %w", err)
+		return fmt.Errorf("failed to unmarshal opa response body: %w", err)
 	}
-	return tags.Tags, nil
+	return nil
 }

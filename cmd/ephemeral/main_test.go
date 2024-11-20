@@ -61,7 +61,7 @@ var _ = Describe("Main", func() {
 								"prepFolder":"Player-Data",
 								"opaConfig": {
 									"endpoint": "http://opa.carbynestack.io",
-									"policePackage": "carbynestack.def",
+									"policePackage": "carbynestack.def"
 								},
 								"amphoraConfig": {
 									"host":"mock-server:1080",
@@ -229,6 +229,10 @@ var _ = Describe("Main", func() {
 							GfpMacKey:               "123",
 							Gf2nBitLength:           40,
 							Gf2nStorageSize:         8,
+							OpaConfig: OpaConfig{
+								Endpoint:      "http://opa.carbynestack.io",
+								PolicyPackage: "carbynestack.def",
+							},
 							AmphoraConfig: AmphoraConfig{
 								Host: "",
 							},
@@ -263,6 +267,10 @@ var _ = Describe("Main", func() {
 							GfpMacKey:               "123",
 							Gf2nBitLength:           40,
 							Gf2nStorageSize:         8,
+							OpaConfig: OpaConfig{
+								Endpoint:      "http://opa.carbynestack.io",
+								PolicyPackage: "carbynestack.def",
+							},
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "",
@@ -298,6 +306,10 @@ var _ = Describe("Main", func() {
 							GfpMacKey:               "123",
 							Gf2nBitLength:           40,
 							Gf2nStorageSize:         8,
+							OpaConfig: OpaConfig{
+								Endpoint:      "http://opa.carbynestack.io",
+								PolicyPackage: "carbynestack.def",
+							},
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -331,6 +343,10 @@ var _ = Describe("Main", func() {
 							GfpMacKey:               "123",
 							Gf2nBitLength:           40,
 							Gf2nStorageSize:         8,
+							OpaConfig: OpaConfig{
+								Endpoint:      "http://opa.carbynestack.io",
+								PolicyPackage: "carbynestack.def",
+							},
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -365,6 +381,10 @@ var _ = Describe("Main", func() {
 							GfpMacKey:               "1113507028231509545156335486838233835",
 							Gf2nBitLength:           40,
 							Gf2nStorageSize:         8,
+							OpaConfig: OpaConfig{
+								Endpoint:      "http://opa.carbynestack.io",
+								PolicyPackage: "carbynestack.def",
+							},
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -399,6 +419,10 @@ var _ = Describe("Main", func() {
 							GfpMacKey:               "1113507028231509545156335486838233835",
 							Gf2nBitLength:           40,
 							Gf2nStorageSize:         8,
+							OpaConfig: OpaConfig{
+								Endpoint:      "http://opa.carbynestack.io",
+								PolicyPackage: "carbynestack.def",
+							},
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -434,6 +458,10 @@ var _ = Describe("Main", func() {
 							GfpMacKey:               "1113507028231509545156335486838233835",
 							Gf2nBitLength:           40,
 							Gf2nStorageSize:         8,
+							OpaConfig: OpaConfig{
+								Endpoint:      "http://opa.carbynestack.io",
+								PolicyPackage: "carbynestack.def",
+							},
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -469,6 +497,10 @@ var _ = Describe("Main", func() {
 							GfpMacKey:               "1113507028231509545156335486838233835",
 							Gf2nBitLength:           40,
 							Gf2nStorageSize:         8,
+							OpaConfig: OpaConfig{
+								Endpoint:      "http://opa.carbynestack.io",
+								PolicyPackage: "carbynestack.def",
+							},
 							AmphoraConfig: AmphoraConfig{
 								Host:   "localhost",
 								Scheme: "http",
@@ -514,6 +546,10 @@ var _ = Describe("Main", func() {
 					Gf2nStorageSize:         8,
 					PlayerCount:             2,
 					PrepFolder:              tmpPrepDir,
+					OpaConfig: OpaConfig{
+						Endpoint:      "http://opa.carbynestack.io",
+						PolicyPackage: "carbynestack.def",
+					},
 					AmphoraConfig: AmphoraConfig{
 						Host:   "localhost",
 						Scheme: "http",
@@ -550,6 +586,10 @@ var _ = Describe("Main", func() {
 					GfpMacKey:               "1113507028231509545156335486838233835",
 					Gf2nBitLength:           40,
 					Gf2nStorageSize:         8,
+					OpaConfig: OpaConfig{
+						Endpoint:      "http://opa.carbynestack.io",
+						PolicyPackage: "carbynestack.def",
+					},
 					// an empty amphora config is given to provoke an error.
 					AmphoraConfig: AmphoraConfig{},
 					CastorConfig: CastorConfig{

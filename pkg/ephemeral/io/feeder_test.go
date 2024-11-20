@@ -183,6 +183,10 @@ func (f *FakeOpaClient) GenerateTags(interface{}) ([]amphora.Tag, error) {
 	return []amphora.Tag{}, nil
 }
 
+func (f *FakeOpaClient) CanExecute(interface{}) (bool, error) {
+	return true, nil
+}
+
 type FakeAmphoraClient struct {
 }
 

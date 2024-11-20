@@ -11,6 +11,7 @@ import (
 	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
 	. "github.com/carbynestack/ephemeral/pkg/types"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -71,6 +72,23 @@ func (f *AmphoraFeeder) LoadFromSecretStoreAndFeed(act *Activation, feedPort str
 		})
 		data = append(data, osh.Data)
 	}
+	t := time.Now()
+	canExecute, err := f.conf.OpaClient.CanExecute(
+		map[string]interface{}{
+			"subject": ctx.Spdz.ProgramIdentifier,
+			"inputs":  inputs,
+			"time": map[string]interface{}{
+				"formatted": t.String(),
+				"nano":      t.UnixNano(),
+			},
+			"playerCount": ctx.Spdz.PlayerCount,
+		})
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if program can be executed: %w", err)
+	}
+	if !canExecute {
+		return nil, fmt.Errorf("unauthorized: program cannot be executed")
+	}
 	resp, err := f.feedAndRead(data, feedPort, ctx)
 	if err != nil {
 		return nil, err
@@ -111,7 +129,9 @@ func (f *AmphoraFeeder) Close() error {
 	return f.carrier.Close()
 }
 
-// feedAndRead takes a slice of base64 encoded secret shared parameters along with the port where SPDZ runtime is listening for the input. The base64 input params are converted into a form digestable by SPDZ and sent to the socket. The runtime must send back a response for this function to finish without an error.
+// feedAndRead takes a slice of base64 encoded secret shared parameters along with the port where SPDZ runtime is
+// listening for the input. The base64 input params are converted into a form digestable by SPDZ and sent to the socket.
+// The runtime must send back a response for this function to finish without an error.
 func (f *AmphoraFeeder) feedAndRead(params []string, feedPort string, ctx *CtxConfig) (*Result, error) {
 	var conv ResponseConverter
 	f.logger.Debugw(fmt.Sprintf("Received secret shared parameters \"%.10s...\" (len: %d)", params, len(params)), GameID, ctx.Act.GameID)
@@ -154,7 +174,7 @@ func (f *AmphoraFeeder) feedAndRead(params []string, feedPort string, ctx *CtxCo
 
 func (f *AmphoraFeeder) writeToAmphora(act *Activation, inputs []ActivationInput, resp Result) ([]string, error) {
 	client := f.conf.AmphoraClient
-	generatedTags, err := f.conf.OpaClient.GenerateTags(inputs)
+	generatedTags, err := f.conf.OpaClient.GenerateTags(map[string]interface{}{"inputs": inputs})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate tags for program output: %w", err)
 	}

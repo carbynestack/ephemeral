@@ -3,10 +3,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package opa
+package opa_test
 
 import (
 	"github.com/carbynestack/ephemeral/pkg/amphora"
+	. "github.com/carbynestack/ephemeral/pkg/opa"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -20,13 +21,13 @@ var _ = Describe("OpaClient", func() {
 		It("returns an error when the endpoint is invalid", func() {
 			client, err := NewClient("invalid-url", "valid.policy.package")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("invalid URL"))
+			Expect(err.Error()).To(HavePrefix("invalid URL"))
 			Expect(client).To(BeNil())
 		})
 		It("returns an error when the policy package is empty", func() {
 			client, err := NewClient("http://valid-url.com", "")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("policy package is required"))
+			Expect(err.Error()).To(HavePrefix("invalid policy package"))
 			Expect(client).To(BeNil())
 		})
 		It("returns a new client when the endpoint and policy package are valid", func() {
@@ -47,9 +48,8 @@ var _ = Describe("OpaClient", func() {
 
 			u, _ := url.Parse(server.URL)
 			client := &Client{
-				URL:           *u,
-				PolicyPackage: "test.policy.package",
-				HttpClient:    http.Client{},
+				URL:        *u,
+				HttpClient: http.Client{},
 			}
 
 			tags, err := client.GenerateTags(map[string]interface{}{"key": "value"})
@@ -67,9 +67,8 @@ var _ = Describe("OpaClient", func() {
 
 			u, _ := url.Parse(server.URL)
 			client := &Client{
-				URL:           *u,
-				PolicyPackage: "test.policy.package",
-				HttpClient:    http.Client{},
+				URL:        *u,
+				HttpClient: http.Client{},
 			}
 
 			_, err := client.GenerateTags(map[string]interface{}{"key": "value"})
@@ -84,12 +83,63 @@ var _ = Describe("OpaClient", func() {
 
 			u, _ := url.Parse(server.URL)
 			client := &Client{
-				URL:           *u,
-				PolicyPackage: "test.policy.package",
-				HttpClient:    http.Client{},
+				URL:        *u,
+				HttpClient: http.Client{},
 			}
 
 			_, err := client.GenerateTags(map[string]interface{}{"key": "value"})
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Context("when checking if program can be executed", func() {
+		It("returns true when the response is valid", func() {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{"result": true}`))
+			}))
+			defer server.Close()
+
+			u, _ := url.Parse(server.URL)
+			client := &Client{
+				URL:        *u,
+				HttpClient: http.Client{},
+			}
+
+			result, err := client.CanExecute(map[string]interface{}{"key": "value"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+		It("returns an error when the response code is not 200", func() {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte(`{"result": true}`))
+			}))
+			defer server.Close()
+
+			u, _ := url.Parse(server.URL)
+			client := &Client{
+				URL:        *u,
+				HttpClient: http.Client{},
+			}
+
+			_, err := client.CanExecute(map[string]interface{}{"key": "value"})
+			Expect(err).To(HaveOccurred())
+		})
+		It("returns an error when the response body is invalid", func() {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`invalid json`))
+			}))
+			defer server.Close()
+
+			u, _ := url.Parse(server.URL)
+			client := &Client{
+				URL:        *u,
+				HttpClient: http.Client{},
+			}
+
+			_, err := client.CanExecute(map[string]interface{}{"key": "value"})
 			Expect(err).To(HaveOccurred())
 		})
 	})
