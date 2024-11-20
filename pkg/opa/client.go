@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -42,7 +43,7 @@ type AbstractClient interface {
 
 // NewClient creates a new OPA client with the given endpoint and policy package. It returns an error if the endpoint is
 // invalid or the policy package is empty.
-func NewClient(endpoint string, policyPackage string) (*Client, error) {
+func NewClient(logger *zap.SugaredLogger, endpoint string, policyPackage string) (*Client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil || !govalidator.IsURL(u.String()) {
 		return nil, fmt.Errorf("invalid URL: %w", err)
@@ -50,7 +51,7 @@ func NewClient(endpoint string, policyPackage string) (*Client, error) {
 	if strings.TrimSpace(policyPackage) == "" {
 		return nil, fmt.Errorf("invalid policy package")
 	}
-	return &Client{HttpClient: http.Client{}, URL: *u, PolicyPackage: strings.TrimSpace(policyPackage)}, nil
+	return &Client{Logger: logger, HttpClient: http.Client{}, URL: *u, PolicyPackage: strings.TrimSpace(policyPackage)}, nil
 }
 
 // Client represents an OPA client that can be used to interact with an OPA server.
@@ -58,6 +59,7 @@ type Client struct {
 	URL           url.URL
 	PolicyPackage string
 	HttpClient    http.Client
+	Logger        *zap.SugaredLogger
 }
 
 // GenerateTags generates tags for the data described by the data provided according to the policy package. It returns
@@ -100,6 +102,7 @@ func (c *Client) makeOpaRequest(action string, data interface{}, v interface{}) 
 	if err != nil {
 		return fmt.Errorf("failed to create opa \"%s\" request: %w", action, err)
 	}
+	c.Logger.Debugw("Sending OPA request", "url", req.URL.String(), "payload", string(payload))
 	resp, err := c.HttpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to check \"%s\" access: %w", action, err)

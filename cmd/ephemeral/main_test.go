@@ -22,7 +22,7 @@ import (
 )
 
 var _ = Describe("Main", func() {
-
+	logger := zap.NewNop().Sugar()
 	Context("when manipulating ephemeral configuration", func() {
 
 		Context("when working with real config file", func() {
@@ -142,7 +142,7 @@ var _ = Describe("Main", func() {
 					StateTimeout:       "5s",
 					ComputationTimeout: "10s",
 				}
-				typedConf, err := InitTypedConfig(conf)
+				typedConf, err := InitTypedConfig(conf, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(typedConf.NetworkEstablishTimeout).To(Equal(2 * time.Second))
 				Expect(typedConf.RetrySleep).To(Equal(1 * time.Second))
@@ -156,7 +156,7 @@ var _ = Describe("Main", func() {
 							ProgramIdentifier:       "ephemeral-generic",
 							NetworkEstablishTimeout: "2",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(typedConf).To(BeNil())
 					})
@@ -168,7 +168,7 @@ var _ = Describe("Main", func() {
 							NetworkEstablishTimeout: "2s",
 							RetrySleep:              "1",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(typedConf).To(BeNil())
 					})
@@ -181,7 +181,7 @@ var _ = Describe("Main", func() {
 							RetrySleep:              "1s",
 							Prime:                   "",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("wrong prime number format"))
 						Expect(typedConf).To(BeNil())
@@ -196,7 +196,7 @@ var _ = Describe("Main", func() {
 							Prime:                   "123",
 							RInv:                    "",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("wrong rInv format"))
 						Expect(typedConf).To(BeNil())
@@ -212,7 +212,7 @@ var _ = Describe("Main", func() {
 							RInv:                    "123",
 							GfpMacKey:               "",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("wrong gfpMacKey format"))
 						Expect(typedConf).To(BeNil())
@@ -250,7 +250,7 @@ var _ = Describe("Main", func() {
 							StateTimeout:       "0s",
 							ComputationTimeout: "0s",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("invalid Url"))
 						Expect(typedConf).To(BeNil())
@@ -289,7 +289,7 @@ var _ = Describe("Main", func() {
 							StateTimeout:       "0s",
 							ComputationTimeout: "0s",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("invalid Url"))
 						Expect(typedConf).To(BeNil())
@@ -326,7 +326,7 @@ var _ = Describe("Main", func() {
 							StateTimeout:       "0s",
 							ComputationTimeout: "0s",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("invalid Url"))
 						Expect(typedConf).To(BeNil())
@@ -364,7 +364,7 @@ var _ = Describe("Main", func() {
 							StateTimeout:       "0s",
 							ComputationTimeout: "0s",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("invalid Url"))
 						Expect(typedConf).To(BeNil())
@@ -402,7 +402,7 @@ var _ = Describe("Main", func() {
 							},
 							StateTimeout: "corrupt",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("time: invalid duration corrupt"))
 						Expect(typedConf).To(BeNil())
@@ -441,7 +441,7 @@ var _ = Describe("Main", func() {
 							StateTimeout:       "0s",
 							ComputationTimeout: "0s",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("time: invalid duration corrupt"))
 						Expect(typedConf).To(BeNil())
@@ -480,7 +480,7 @@ var _ = Describe("Main", func() {
 							StateTimeout:       "0s",
 							ComputationTimeout: "corrupt",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("time: invalid duration corrupt"))
 						Expect(typedConf).To(BeNil())
@@ -519,7 +519,7 @@ var _ = Describe("Main", func() {
 							StateTimeout:       "0s",
 							ComputationTimeout: "0s",
 						}
-						typedConf, err := InitTypedConfig(conf)
+						typedConf, err := InitTypedConfig(conf, logger)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("time: invalid duration corrupt"))
 						Expect(typedConf).To(BeNil())

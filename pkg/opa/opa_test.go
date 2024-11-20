@@ -8,6 +8,7 @@ package opa_test
 import (
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	. "github.com/carbynestack/ephemeral/pkg/opa"
+	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,21 +18,22 @@ import (
 )
 
 var _ = Describe("OpaClient", func() {
+	logger := zap.NewNop().Sugar()
 	Context("when creating a new client", func() {
 		It("returns an error when the endpoint is invalid", func() {
-			client, err := NewClient("invalid-url", "valid.policy.package")
+			client, err := NewClient(logger, "invalid-url", "valid.policy.package")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(HavePrefix("invalid URL"))
 			Expect(client).To(BeNil())
 		})
 		It("returns an error when the policy package is empty", func() {
-			client, err := NewClient("http://valid-url.com", "")
+			client, err := NewClient(logger, "http://valid-url.com", "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(HavePrefix("invalid policy package"))
 			Expect(client).To(BeNil())
 		})
 		It("returns a new client when the endpoint and policy package are valid", func() {
-			client, err := NewClient("http://valid-url.com", "valid.policy.package")
+			client, err := NewClient(logger, "http://valid-url.com", "valid.policy.package")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client.URL.String()).To(Equal("http://valid-url.com"))
 			Expect(client.PolicyPackage).To(Equal("valid.policy.package"))
@@ -50,6 +52,7 @@ var _ = Describe("OpaClient", func() {
 			client := &Client{
 				URL:        *u,
 				HttpClient: http.Client{},
+				Logger:     logger,
 			}
 
 			tags, err := client.GenerateTags(map[string]interface{}{"key": "value"})
@@ -69,6 +72,7 @@ var _ = Describe("OpaClient", func() {
 			client := &Client{
 				URL:        *u,
 				HttpClient: http.Client{},
+				Logger:     logger,
 			}
 
 			_, err := client.GenerateTags(map[string]interface{}{"key": "value"})
@@ -85,6 +89,7 @@ var _ = Describe("OpaClient", func() {
 			client := &Client{
 				URL:        *u,
 				HttpClient: http.Client{},
+				Logger:     logger,
 			}
 
 			_, err := client.GenerateTags(map[string]interface{}{"key": "value"})
@@ -104,6 +109,7 @@ var _ = Describe("OpaClient", func() {
 			client := &Client{
 				URL:        *u,
 				HttpClient: http.Client{},
+				Logger:     logger,
 			}
 
 			result, err := client.CanExecute(map[string]interface{}{"key": "value"})
@@ -121,6 +127,7 @@ var _ = Describe("OpaClient", func() {
 			client := &Client{
 				URL:        *u,
 				HttpClient: http.Client{},
+				Logger:     logger,
 			}
 
 			_, err := client.CanExecute(map[string]interface{}{"key": "value"})
@@ -137,6 +144,7 @@ var _ = Describe("OpaClient", func() {
 			client := &Client{
 				URL:        *u,
 				HttpClient: http.Client{},
+				Logger:     logger,
 			}
 
 			_, err := client.CanExecute(map[string]interface{}{"key": "value"})

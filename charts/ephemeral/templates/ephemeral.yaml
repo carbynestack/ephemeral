@@ -36,7 +36,7 @@ spec:
             - name: tcp
               containerPort: 5000
           env:
-            - name: EPHEMERAL_PROGRAM_IDENTIFIERS
+            - name: EPHEMERAL_PROGRAM_IDENTIFIER
               value: {{ .Values.ephemeral.programIdentifier }}
             - name: EPHEMERAL_OPA_POLICY_PACKAGE
               value: {{ .Values.ephemeral.opa.policyPackage }}

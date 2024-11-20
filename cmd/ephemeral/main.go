@@ -56,7 +56,7 @@ func main() {
 
 // GetHandlerChain returns a chain of handlers that are used to process HTTP requests.
 func GetHandlerChain(conf *SPDZEngineConfig, logger *zap.SugaredLogger) (http.Handler, error) {
-	typedConfig, err := InitTypedConfig(conf)
+	typedConfig, err := InitTypedConfig(conf, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func ParseConfig(path string) (*SPDZEngineConfig, error) {
 
 // InitTypedConfig converts the string parameters that were parsed by standard json parser to
 // the parameters which are used internally, e.g. string -> time.Duration.
-func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
+func InitTypedConfig(conf *SPDZEngineConfig, logger *zap.SugaredLogger) (*SPDZEngineTypedConfig, error) {
 	retrySleep, err := time.ParseDuration(conf.RetrySleep)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func InitTypedConfig(conf *SPDZEngineConfig) (*SPDZEngineTypedConfig, error) {
 	if !ok {
 		policyPackage = conf.OpaConfig.PolicyPackage
 	}
-	opaClient, err := opa.NewClient(conf.OpaConfig.Endpoint, policyPackage)
+	opaClient, err := opa.NewClient(logger, conf.OpaConfig.Endpoint, policyPackage)
 	if err != nil {
 		return nil, err
 	}
