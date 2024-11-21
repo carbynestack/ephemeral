@@ -48,7 +48,7 @@ ephemeral:
   minScale: 1
   programIdentifier: "ephemeral-generic"
   opa:
-    endpoint: "http://opa.carbynestack.io"
+    endpoint: "http://opa.default.svc.cluster.local:8081/"
     policyPackage: "carbynestack.def"
   amphora:
     host: "amphora"

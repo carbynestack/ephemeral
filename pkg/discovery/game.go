@@ -75,11 +75,11 @@ func NewGame(ctx context.Context, id string, bus mb.MessageBus, stateTimeout tim
 		fsm.WhenIn(WaitTCPCheck).GotEvent(TCPCheckSuccess).Stay(),
 		fsm.WhenIn(WaitTCPCheck).GotEvent(TCPCheckSuccessAll).GoTo(Playing).WithTimeout(computationTimeout),
 		fsm.WhenIn(WaitTCPCheck).GotEvent(TCPCheckFailure).GoTo(GameError),
+		fsm.WhenIn(WaitTCPCheck).GotEvent(GameFinishedWithError).GoTo(GameError),
 		fsm.WhenIn(Playing).GotEvent(GameFinishedWithSuccess).Stay(),
 		fsm.WhenIn(Playing).GotEvent(GameFinishedWithError).GoTo(GameError),
 		fsm.WhenIn(Playing).GotEvent(GameSuccess).GoTo(GameDone),
 		fsm.WhenIn(Playing).GotEvent(GameError).GoTo(GameError),
-		fsm.WhenInAnyState().GotEvent(GameFinishedWithError).GoTo(GameError),
 		fsm.WhenInAnyState().GotEvent(StateTimeoutError).GoTo(GameError),
 		fsm.WhenInAnyState().GotEvent(GameDone).GoTo(GameDone),
 	}

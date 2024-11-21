@@ -49,8 +49,9 @@ func NewPlayer(ctx context.Context, bus mb.MessageBus, stateTimeout time.Duratio
 		fsm.WhenIn(Init).GotEvent(Register).GoTo(Registering),
 		fsm.WhenIn(Registering).GotEvent(PlayersReady).GoTo(Playing).WithTimeout(computationTimeout),
 		fsm.WhenIn(Playing).GotEvent(PlayerFinishedWithSuccess).GoTo(PlayerFinishedWithSuccess),
+		fsm.WhenIn(Playing).GotEvent(PlayerFinishedWithError).GoTo(PlayerFinishedWithError),
+		fsm.WhenIn(Playing).GotEvent(PlayingError).GoTo(PlayerFinishedWithError),
 		fsm.WhenInAnyState().GotEvent(GameError).GoTo(PlayerFinishedWithError),
-		fsm.WhenInAnyState().GotEvent(PlayingError).GoTo(PlayerFinishedWithError),
 		fsm.WhenInAnyState().GotEvent(PlayerDone).GoTo(PlayerDone),
 		fsm.WhenInAnyState().GotEvent(StateTimeoutError).GoTo(PlayerFinishedWithError),
 	}

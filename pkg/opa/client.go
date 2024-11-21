@@ -95,7 +95,7 @@ func (c *Client) makeOpaRequest(action string, data interface{}, v interface{}) 
 	req, err := http.NewRequest(
 		"POST",
 		fmt.Sprintf("%s/v1/data/%s/%s",
-			c.URL.String(),
+			strings.Trim(c.URL.String(), "/"),
 			strings.ReplaceAll(c.PolicyPackage, ".", "/"),
 			action),
 		bytes.NewBuffer(payload))
