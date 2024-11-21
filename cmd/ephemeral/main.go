@@ -64,14 +64,14 @@ func GetHandlerChain(conf *SPDZEngineConfig, logger *zap.SugaredLogger) (http.Ha
 	if err != nil {
 		return nil, err
 	}
-	server := NewServer(spdzClient.Compile, spdzClient.Activate, logger, typedConfig)
+	server := NewServer(conf.AuthUserIdField, spdzClient.Compile, spdzClient.Activate, logger, typedConfig)
 	activationHandler := http.HandlerFunc(server.ActivationHandler)
 	// Apply in Order:
 	// 1) MethodFilter: Check that only POST Requests can go through
-	// 2) BodyFilter: Check that Request Body is set properly and Sets the CtxConfig to the request
+	// 2) RequestFilter: Check that Request Body is set properly and Sets the CtxConfig to the request
 	// 3) CompilationHandler: Compiles the script if ?compile=true
 	// 4) ActivationHandler: Runs the script
-	filterChain := server.MethodFilter(server.BodyFilter(server.CompilationHandler(activationHandler)))
+	filterChain := server.MethodFilter(server.RequestFilter(server.CompilationHandler(activationHandler)))
 	return filterChain, nil
 }
 

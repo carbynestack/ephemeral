@@ -84,16 +84,18 @@ type ProxyConfig struct {
 
 // CtxConfig contains both execution and platform specific parameters.
 type CtxConfig struct {
-	Act          *Activation
-	Spdz         *SPDZEngineTypedConfig
-	ProxyEntries []*ProxyConfig
-	ErrCh        chan error
-	Context      context.Context
+	AuthorizedUser string
+	Act            *Activation
+	Spdz           *SPDZEngineTypedConfig
+	ProxyEntries   []*ProxyConfig
+	ErrCh          chan error
+	Context        context.Context
 }
 
 // SPDZEngineConfig is the VPC specific configuration.
 type SPDZEngineConfig struct {
 	ProgramIdentifier       string `json:"programIdentifier"`
+	AuthUserIdField         string `json:"authUserIdField"`
 	RetrySleep              string `json:"retrySleep"`
 	NetworkEstablishTimeout string `json:"networkEstablishTimeout"`
 	Prime                   string `json:"prime"`
@@ -160,6 +162,7 @@ type OutputConfig struct {
 // We need this type, since the default json decoder doesn't know how to deserialize big.Int.
 type SPDZEngineTypedConfig struct {
 	ProgramIdentifier       string
+	AuthUserIdField         string
 	RetrySleep              time.Duration
 	NetworkEstablishTimeout time.Duration
 	Prime                   big.Int

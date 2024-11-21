@@ -47,6 +47,7 @@ ephemeral:
       cpu:
   minScale: 1
   programIdentifier: "ephemeral-generic"
+  authUserIdField: "sub"
   opa:
     endpoint: "http://opa.default.svc.cluster.local:8081/"
     policyPackage: "carbynestack.def"

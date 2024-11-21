@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -42,28 +42,32 @@ var (
 )
 
 // NewServer returns a new server.
-func NewServer(compile func(*CtxConfig) error, activate func(*CtxConfig) ([]byte, error), logger *zap.SugaredLogger, config *SPDZEngineTypedConfig) *Server {
+func NewServer(authUserIdField string,
+	compile func(*CtxConfig) error,
+	activate func(*CtxConfig) ([]byte, error), logger *zap.SugaredLogger, config *SPDZEngineTypedConfig) *Server {
 	return &Server{
-		player:   &PlayerWithIO{},
-		compile:  compile,
-		activate: activate,
-		logger:   logger,
-		config:   config,
-		executor: NewCommander(),
+		authUserIdField: authUserIdField,
+		player:          &PlayerWithIO{},
+		compile:         compile,
+		activate:        activate,
+		logger:          logger,
+		config:          config,
+		executor:        NewCommander(),
 	}
 }
 
 // Server is a HTTP server which wraps the handling of incoming requests that trigger the MPC computation.
 type Server struct {
-	player    AbstractPlayerWithIO
-	compile   func(*CtxConfig) error
-	activate  func(*CtxConfig) ([]byte, error)
-	logger    *zap.SugaredLogger
-	config    *SPDZEngineTypedConfig
-	respCh    chan []byte
-	errCh     chan error
-	execErrCh chan error
-	executor  Executor
+	authUserIdField string
+	player          AbstractPlayerWithIO
+	compile         func(*CtxConfig) error
+	activate        func(*CtxConfig) ([]byte, error)
+	logger          *zap.SugaredLogger
+	config          *SPDZEngineTypedConfig
+	respCh          chan []byte
+	errCh           chan error
+	execErrCh       chan error
+	executor        Executor
 }
 
 // MethodFilter assures that only HTTP POST requests are able to get through.
@@ -89,11 +93,19 @@ func (s *Server) MethodFilter(next http.Handler) http.Handler {
 	})
 }
 
-// BodyFilter verifies all necessary parameters are set in the request body.
+// RequestFilter verifies all necessary headers and parameters in the request body are set.
 // Also sets the CtxConfig to the request
-func (s *Server) BodyFilter(next http.Handler) http.Handler {
+func (s *Server) RequestFilter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 		var act Activation
+		authorizedUser, err := GetUserFromAuthHeader(req.Header.Get("Authorization"), s.authUserIdField)
+		if err != nil {
+			msg := "unauthorized request"
+			writer.WriteHeader(http.StatusUnauthorized)
+			writer.Write([]byte(msg))
+			s.logger.Errorw(msg, "Error", err)
+			return
+		}
 		if req.Body == nil {
 			msg := "request body is nil"
 			writer.WriteHeader(http.StatusBadRequest)
@@ -104,7 +116,7 @@ func (s *Server) BodyFilter(next http.Handler) http.Handler {
 		bodyBytes, _ := ioutil.ReadAll(req.Body)
 		req.Body.Close()
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-		err := json.Unmarshal(bodyBytes, &act)
+		err = json.Unmarshal(bodyBytes, &act)
 		if err != nil {
 			msg := "error decoding the request body"
 			writer.WriteHeader(http.StatusBadRequest)
@@ -147,14 +159,52 @@ func (s *Server) BodyFilter(next http.Handler) http.Handler {
 		}
 		con := context.Background()
 		ctx := &CtxConfig{
-			Act:  &act,
-			Spdz: s.config,
+			AuthorizedUser: authorizedUser,
+			Act:            &act,
+			Spdz:           s.config,
 		}
 		con = context.WithValue(con, ctxConf, ctx)
 		r := req.Clone(con)
 		s.logger.Debug("Bodyfilter handler done")
 		next.ServeHTTP(writer, r)
 	})
+}
+
+func GetUserFromAuthHeader(header string, idField string) (string, error) {
+	token := strings.TrimPrefix(header, "Bearer ")
+	if token == "" {
+		return "", fmt.Errorf("no token provided")
+	}
+	return GetUserIDFromToken(token, idField)
+}
+
+func GetUserIDFromToken(token string, field string) (string, error) {
+	jwtParts := strings.Split(token, ".")
+	if len(jwtParts) != 3 {
+		return "", fmt.Errorf("invalid JWT format")
+	}
+	jwt, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(jwtParts[1])
+	if err != nil {
+		return "", fmt.Errorf("error decoding JWT claims: %w", err)
+	}
+	var claimsMap map[string]interface{}
+	err = json.Unmarshal(jwt, &claimsMap)
+	if err != nil {
+		return "", fmt.Errorf("error unmarshalling JWT claims: %w", err)
+	}
+	var ok bool
+	path := strings.Split(field, ".")
+	for _, part := range path[:len(path)-1] {
+		claimsMap, ok = claimsMap[part].(map[string]interface{})
+		if !ok {
+			return "", fmt.Errorf("field %s not found in JWT claims or invalid", part)
+		}
+	}
+	id, ok := claimsMap[path[len(path)-1]].(string)
+	if !ok {
+		return "", fmt.Errorf("field %s is not a string", field)
+	}
+	return id, nil
 }
 
 // CompilationHandler parses the JSON payload and adds it to the request context.

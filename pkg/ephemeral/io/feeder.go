@@ -73,16 +73,17 @@ func (f *AmphoraFeeder) LoadFromSecretStoreAndFeed(act *Activation, feedPort str
 		data = append(data, osh.Data)
 	}
 	t := time.Now()
-	canExecute, err := f.conf.OpaClient.CanExecute(
-		map[string]interface{}{
-			"subject": ctx.Spdz.ProgramIdentifier,
-			"inputs":  inputs,
-			"time": map[string]interface{}{
-				"formatted": t.String(),
-				"nano":      t.UnixNano(),
-			},
-			"playerCount": ctx.Spdz.PlayerCount,
-		})
+	opaInput := map[string]interface{}{
+		"subject":  ctx.Spdz.ProgramIdentifier,
+		"executor": ctx.AuthorizedUser,
+		"inputs":   inputs,
+		"time": map[string]interface{}{
+			"formatted": t.String(),
+			"nano":      t.UnixNano(),
+		},
+		"playerCount": ctx.Spdz.PlayerCount,
+	}
+	canExecute, err := f.conf.OpaClient.CanExecute(opaInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check if program can be executed: %w", err)
 	}
@@ -95,7 +96,7 @@ func (f *AmphoraFeeder) LoadFromSecretStoreAndFeed(act *Activation, feedPort str
 	}
 	// Write to amphora if required and return amphora secret ids.
 	if act.Output.Type == AmphoraSecret {
-		ids, err := f.writeToAmphora(act, inputs, *resp)
+		ids, err := f.writeToAmphora(act, opaInput, *resp)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +115,7 @@ func (f *AmphoraFeeder) LoadFromRequestAndFeed(act *Activation, feedPort string,
 	}
 	// Write to amphora if required and return amphora secret ids.
 	if act.Output.Type == AmphoraSecret {
-		ids, err := f.writeToAmphora(act, []ActivationInput{}, *resp)
+		ids, err := f.writeToAmphora(act, map[string]interface{}{}, *resp)
 		if err != nil {
 			return nil, err
 		}
@@ -172,9 +173,9 @@ func (f *AmphoraFeeder) feedAndRead(params []string, feedPort string, ctx *CtxCo
 	return f.carrier.Read(conv, isBulk)
 }
 
-func (f *AmphoraFeeder) writeToAmphora(act *Activation, inputs []ActivationInput, resp Result) ([]string, error) {
+func (f *AmphoraFeeder) writeToAmphora(act *Activation, opaInput map[string]interface{}, resp Result) ([]string, error) {
 	client := f.conf.AmphoraClient
-	generatedTags, err := f.conf.OpaClient.GenerateTags(map[string]interface{}{"inputs": inputs})
+	generatedTags, err := f.conf.OpaClient.GenerateTags(opaInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate tags for program output: %w", err)
 	}
