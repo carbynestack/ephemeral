@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -49,8 +49,8 @@ func NewPlayer(ctx context.Context, bus mb.MessageBus, stateTimeout time.Duratio
 		fsm.WhenIn(Init).GotEvent(Register).GoTo(Registering),
 		fsm.WhenIn(Registering).GotEvent(PlayersReady).GoTo(Playing).WithTimeout(computationTimeout),
 		fsm.WhenIn(Playing).GotEvent(PlayerFinishedWithSuccess).GoTo(PlayerFinishedWithSuccess),
-		fsm.WhenIn(Playing).GotEvent(PlayingError).GoTo(PlayerFinishedWithError),
 		fsm.WhenInAnyState().GotEvent(GameError).GoTo(PlayerFinishedWithError),
+		fsm.WhenInAnyState().GotEvent(PlayingError).GoTo(PlayerFinishedWithError),
 		fsm.WhenInAnyState().GotEvent(PlayerDone).GoTo(PlayerDone),
 		fsm.WhenInAnyState().GotEvent(StateTimeoutError).GoTo(PlayerFinishedWithError),
 	}

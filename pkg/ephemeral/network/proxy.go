@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -110,7 +110,7 @@ func (p *Proxy) checkConnectionToPeers() error {
 		proxyEntry := proxyEntry
 		waitGroup.Add(1)
 		go func() {
-			err := p.checkTCPConnectionToPeer(proxyEntry)
+			err := p.checkTCPConnectionToPeer(p.ctx.Context, proxyEntry)
 			defer waitGroup.Done()
 			if err != nil {
 				errorsCheckingConnection = append(errorsCheckingConnection, err)
@@ -142,9 +142,9 @@ func (p *Proxy) addProxyEntry(config *ProxyConfig) *PingAwareTarget {
 	return pat
 }
 
-func (p *Proxy) checkTCPConnectionToPeer(config *ProxyConfig) error {
+func (p *Proxy) checkTCPConnectionToPeer(ctx context.Context, config *ProxyConfig) error {
 	p.logger.Info(fmt.Sprintf("Checking if connection to peer works for config: %s", config))
-	err := p.tcpChecker.Verify(config.Host, config.Port)
+	err := p.tcpChecker.Verify(ctx, config.Host, config.Port)
 	if err != nil {
 		return fmt.Errorf("error checking connection to the peer '%s:%s': %s", config.Host, config.Port, err)
 	}
