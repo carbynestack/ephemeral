@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/carbynestack/ephemeral/compare/chart-v0.1.3...chart-v0.2.0) (2024-12-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **chart/service:** Add authorization ([#80](https://github.com/carbynestack/ephemeral/issues/80))
+
+### Features
+
+* **chart/service:** Add authorization ([#80](https://github.com/carbynestack/ephemeral/issues/80)) ([d2b2899](https://github.com/carbynestack/ephemeral/commit/d2b28994e1c08f01cbc2b510026d3c3918828354))
+
 ## [0.1.3](https://github.com/carbynestack/ephemeral/compare/chart-v0.1.2...chart-v0.1.3) (2023-08-04)
 
 
