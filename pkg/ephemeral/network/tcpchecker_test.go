@@ -1,10 +1,11 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
 package network
 
 import (
+	"context"
 	"io"
 	"net"
 	"sync"
@@ -48,7 +49,7 @@ var _ = Describe("TcpChecker", func() {
 			Logger:       zap.NewNop().Sugar(),
 		}
 		checker := NewTCPChecker(conf)
-		err := checker.Verify(host, port)
+		err := checker.Verify(context.TODO(), host, port)
 		Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
 	})
@@ -59,7 +60,7 @@ var _ = Describe("TcpChecker", func() {
 			Logger:       zap.NewNop().Sugar(),
 		}
 		checker := NewTCPChecker(conf)
-		err := checker.Verify(host, port)
+		err := checker.Verify(context.TODO(), host, port)
 		Expect(err).To(HaveOccurred())
 	})
 	It("returns an error if dialing succeeds but the connection is closed down shortly", func() {
@@ -87,7 +88,7 @@ var _ = Describe("TcpChecker", func() {
 			Logger:       zap.NewNop().Sugar(),
 		}
 		checker := NewTCPChecker(conf)
-		err := checker.Verify(host, port)
+		err := checker.Verify(context.TODO(), host, port)
 		Expect(err).To(HaveOccurred())
 		Expect(checker.retries > 1).To(BeTrue())
 		wg.Wait()
@@ -100,8 +101,22 @@ var _ = Describe("TcpChecker", func() {
 			Logger:       zap.NewNop().Sugar(),
 		}
 		checker := NewTCPChecker(conf)
-		err := checker.Verify(host, port)
+		err := checker.Verify(context.TODO(), host, port)
 		Expect(err).To(HaveOccurred())
 		Expect(checker.retries > 1).To(BeTrue())
+	})
+	It("aborts if context is closed", func() {
+		ctx, cancel := context.WithCancel(context.TODO())
+		cancel()
+		conf := &TCPCheckerConf{
+			DialTimeout:  50 * time.Millisecond,
+			RetryTimeout: 100 * time.Millisecond,
+			Logger:       zap.NewNop().Sugar(),
+		}
+		checker := NewTCPChecker(conf)
+		err := checker.Verify(ctx, host, port)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(Equal("TCPCheck for 'localhost:9999' aborted after 0 attempts"))
+		Expect(checker.retries == 0).To(BeTrue())
 	})
 })

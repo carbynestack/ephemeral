@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -18,6 +18,7 @@ import (
 // MockedRoundTripper mocks http.RoundTripper for testing which always returns successful
 type MockedRoundTripper struct {
 	ExpectedPath         string
+	ExpectedRawQuery     string
 	ReturnJSON           []byte
 	ExpectedResponseCode int
 }
@@ -27,6 +28,9 @@ func (m *MockedRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 	var statusCode = m.ExpectedResponseCode
 	p := req.URL.Path
 	if p != m.ExpectedPath {
+		statusCode = http.StatusNotFound
+	}
+	if m.ExpectedRawQuery != "" && req.URL.RawQuery != m.ExpectedRawQuery {
 		statusCode = http.StatusNotFound
 	}
 

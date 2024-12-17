@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -33,7 +33,7 @@ type Tag struct {
 
 // AbstractClient is an interface for object storage client.
 type AbstractClient interface {
-	GetSecretShare(string) (SecretShare, error)
+	GetSecretShare(string, string) (SecretShare, error)
 	CreateSecretShare(*SecretShare) error
 }
 
@@ -56,12 +56,15 @@ type Client struct {
 const secretShareURI = "/intra-vcp/secret-shares"
 
 // GetSecretShare creates a new secret share by sending a POST request against Amphora.
-func (c *Client) GetSecretShare(id string) (SecretShare, error) {
+func (c *Client) GetSecretShare(id string, programIdentifier string) (SecretShare, error) {
 	var os SecretShare
 	req, err := http.NewRequest(http.MethodGet, c.URL.String()+fmt.Sprintf("%s/%s", secretShareURI, id), nil)
 	if err != nil {
 		return os, err
 	}
+	query := req.URL.Query()
+	query.Add("programId", programIdentifier)
+	req.URL.RawQuery = query.Encode()
 	body, err := c.doRequest(req, http.StatusOK)
 	if err != nil {
 		return os, err

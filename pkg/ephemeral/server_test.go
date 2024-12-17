@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -7,8 +7,10 @@ package ephemeral
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/carbynestack/ephemeral/pkg/discovery/fsm"
 	"time"
 
@@ -33,6 +35,7 @@ var _ = Describe("Server", func() {
 	)
 
 	const gameID = "71b2a100-f3f6-11e9-81b4-2a2ae2dbcce4"
+	authHeader := fmt.Sprintf("Bearer header.%s.signature", base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(`{"sub":"someID"}`)))
 	Context("when sending http requests", func() {
 		BeforeEach(func() {
 			act = &Activation{
@@ -49,7 +52,7 @@ var _ = Describe("Server", func() {
 				StateTimeout:            10 * time.Second,
 				NetworkEstablishTimeout: 10 * time.Second,
 			}
-			s = NewServer(func(*CtxConfig) error { return nil }, func(*CtxConfig) ([]byte, error) { return nil, nil }, l, config)
+			s = NewServer("sub", func(*CtxConfig) error { return nil }, func(*CtxConfig) ([]byte, error) { return nil, nil }, l, config)
 		})
 
 		Context("when going through body filter", func() {
@@ -63,14 +66,16 @@ var _ = Describe("Server", func() {
 				})
 				body, _ := json.Marshal(&act)
 				req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
-				s.BodyFilter(handler200).ServeHTTP(rr, req)
+				req.Header.Add("Authorization", authHeader)
+				s.RequestFilter(handler200).ServeHTTP(rr, req)
 			})
 			Context("when the game id is not a valid UUID", func() {
 				It("responds with 400 http code", func() {
 					act.GameID = "123"
 					body, _ := json.Marshal(act)
 					req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
-					s.BodyFilter(handler200).ServeHTTP(rr, req)
+					req.Header.Add("Authorization", authHeader)
+					s.RequestFilter(handler200).ServeHTTP(rr, req)
 					respCode := rr.Code
 					respBody := rr.Body.String()
 					Expect(respCode).To(Equal(http.StatusBadRequest))
@@ -82,7 +87,8 @@ var _ = Describe("Server", func() {
 					act.GameID = gameID
 					body, _ := json.Marshal(&act)
 					req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
-					s.BodyFilter(handler200).ServeHTTP(rr, req)
+					req.Header.Add("Authorization", authHeader)
+					s.RequestFilter(handler200).ServeHTTP(rr, req)
 					respCode := rr.Code
 					Expect(respCode).To(Equal(http.StatusOK))
 				})
@@ -90,7 +96,8 @@ var _ = Describe("Server", func() {
 			Context("when the body is empty", func() {
 				It("returns a 400 response code", func() {
 					req, _ := http.NewRequest("POST", "/", nil)
-					s.BodyFilter(handler200).ServeHTTP(rr, req)
+					req.Header.Add("Authorization", authHeader)
+					s.RequestFilter(handler200).ServeHTTP(rr, req)
 					respCode := rr.Code
 					respBody := rr.Body.String()
 					Expect(respCode).To(Equal(http.StatusBadRequest))
@@ -102,7 +109,8 @@ var _ = Describe("Server", func() {
 					body := []byte("a")
 					checker := http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {})
 					req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
-					s.BodyFilter(checker).ServeHTTP(rr, req)
+					req.Header.Add("Authorization", authHeader)
+					s.RequestFilter(checker).ServeHTTP(rr, req)
 					respCode := rr.Code
 					respBody := rr.Body.String()
 					Expect(respCode).To(Equal(http.StatusBadRequest))
@@ -115,6 +123,7 @@ var _ = Describe("Server", func() {
 			Context("when a get request is being sent", func() {
 				It("returns a 405 response code", func() {
 					req, _ := http.NewRequest("GET", "/", nil)
+					req.Header.Add("Authorization", authHeader)
 					s.MethodFilter(handler200).ServeHTTP(rr, req)
 					respCode := rr.Code
 					respBody := rr.Body.String()
@@ -424,6 +433,44 @@ var _ = Describe("Server", func() {
 				Expect(pl).NotTo(BeNil())
 			})
 		})
+	})
+
+	Context("when extracting authorization data form request", func() {
+		It("fails when bearer token is not provided", func() {
+			_, err := GetUserFromAuthHeader("", "sub")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("no token provided"))
+		})
+		It("fails when bearer token is not valid", func() {
+			_, err := GetUserFromAuthHeader("Bearer invalid.token", "sub")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("invalid JWT format"))
+		})
+		It("fails when jwt data field is invalid", func() {
+			_, err := GetUserFromAuthHeader(
+				fmt.Sprintf(
+					"Bearer header.%s.signature",
+					base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte("{"))), "sub")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(HavePrefix("error unmarshalling JWT claims"))
+		})
+		It("returns the user id when the token is valid", func() {
+			id, err := GetUserFromAuthHeader(
+				fmt.Sprintf(
+					"Bearer header.%s.signature",
+					base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(`{"sub":"someID"}`))), "sub")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(id).To(Equal("someID"))
+		})
+		It("returns the user id when field is nested", func() {
+			id, err := GetUserFromAuthHeader(
+				fmt.Sprintf(
+					"Bearer header.%s.signature",
+					base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(`{"traits": {"email": "someMail"}}`))), "traits.email")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(id).To(Equal("someMail"))
+		})
+
 	})
 })
 

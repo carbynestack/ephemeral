@@ -1,10 +1,11 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
 package network
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -15,7 +16,7 @@ import (
 
 // NetworkChecker verifies the network connectivity between the players before starting the computation.
 type NetworkChecker interface {
-	Verify(string, string) error
+	Verify(context.Context, string, string) error
 }
 
 // NoopChecker verifies the network for all MPC players is in place.
@@ -23,7 +24,7 @@ type NoopChecker struct {
 }
 
 // Verify checks network connectivity between the players and communicates its results to discovery and players FSM.
-func (t *NoopChecker) Verify(host, port string) error {
+func (t *NoopChecker) Verify(context.Context, string, string) error {
 	return nil
 }
 
@@ -48,10 +49,12 @@ type TCPChecker struct {
 }
 
 // Verify checks network connectivity between the players and communicates its results to discovery and players FSM.
-func (t *TCPChecker) Verify(host, port string) error {
+func (t *TCPChecker) Verify(ctx context.Context, host, port string) error {
 	done := time.After(t.conf.RetryTimeout)
 	for {
 		select {
+		case <-ctx.Done():
+			return fmt.Errorf("TCPCheck for '%s:%s' aborted after %d attempts", host, port, t.retries)
 		case <-done:
 			return fmt.Errorf("TCPCheck for '%s:%s' failed after %s and %d attempts", host, port, t.conf.RetryTimeout.String(), t.retries)
 		default:

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2023 - for information on the respective copyright owner
+# Copyright (c) 2021-2024 - for information on the respective copyright owner
 # see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -35,6 +35,11 @@ spec:
               containerPort: 8080
             - name: tcp
               containerPort: 5000
+          env:
+            - name: EPHEMERAL_PROGRAM_IDENTIFIER
+              value: {{ .Values.ephemeral.programIdentifier }}
+            - name: EPHEMERAL_OPA_POLICY_PACKAGE
+              value: {{ .Values.ephemeral.opa.policyPackage }}
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
@@ -72,6 +77,7 @@ metadata:
 data:
   config.json: |-
     {
+      "authUserIdField": "{{ .Values.ephemeral.authUserIdField }}",
       "retrySleep": "50ms",
       "networkEstablishTimeout": "{{ .Values.ephemeral.networkEstablishTimeout }}",
       "prime": "{{ .Values.ephemeral.spdz.prime }}",
@@ -81,6 +87,9 @@ data:
       "gf2nBitLength": {{ .Values.ephemeral.spdz.gf2nBitLength }},
       "gf2nStorageSize": {{ .Values.ephemeral.spdz.gf2nStorageSize }},
       "prepFolder": "{{ .Values.ephemeral.spdz.prepFolder }}",
+      "opaConfig": {
+        "endpoint": "{{ .Values.ephemeral.opa.endpoint }}"
+      },
       "amphoraConfig": {
         "host": "{{ .Values.ephemeral.amphora.host }}",
         "scheme": "{{ .Values.ephemeral.amphora.scheme }}",

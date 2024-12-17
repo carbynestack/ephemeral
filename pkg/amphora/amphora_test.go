@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2024 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -29,20 +29,25 @@ var _ = Describe("Amphora", func() {
 	})
 	Context("when retrieving a shared secret", func() {
 		It("returns a shared object when it exists in amphora", func() {
-			rt := MockedRoundTripper{ExpectedPath: "/intra-vcp/secret-shares/xyz", ReturnJSON: js, ExpectedResponseCode: http.StatusOK}
+			rt := MockedRoundTripper{ExpectedPath: "/intra-vcp/secret-shares/xyz",
+				ExpectedRawQuery:     "programId=ephemeral-generic",
+				ReturnJSON:           js,
+				ExpectedResponseCode: http.StatusOK}
 			HTTPClient := http.Client{Transport: &rt}
 			client := Client{HTTPClient: HTTPClient, URL: url.URL{Host: "test", Scheme: "http"}}
 
-			secret, err := client.GetSecretShare("xyz")
+			secret, err := client.GetSecretShare("xyz", "ephemeral-generic")
 			Expect(secret.SecretID).To(Equal("xyz"))
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("returns an error when shared secret does not exist", func() {
-			rt := MockedRoundTripper{ExpectedPath: "/intra-vcp/secret-shares/xxx", ReturnJSON: js, ExpectedResponseCode: http.StatusOK}
+			rt := MockedRoundTripper{ExpectedPath: "/intra-vcp/secret-shares/xxx",
+				ExpectedRawQuery: "programId=ephemeral-generic",
+				ReturnJSON:       js, ExpectedResponseCode: http.StatusOK}
 			HTTPClient := http.Client{Transport: &rt}
 			client := Client{HTTPClient: HTTPClient, URL: url.URL{Host: "test", Scheme: "http"}}
 
-			_, err := client.GetSecretShare("xyz")
+			_, err := client.GetSecretShare("xyz", "ephemeral-generic")
 			Expect(err).To(HaveOccurred())
 		})
 	})
