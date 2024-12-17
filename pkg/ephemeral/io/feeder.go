@@ -20,7 +20,7 @@ import (
 type Feeder interface {
 	// LoadFromSecretStoreAndFeed loads input parameters from Amphora.
 	LoadFromSecretStoreAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error)
-	// LoadFromRequestAndFeed oads input parameteters from the request body.
+	// LoadFromRequestAndFeed loads input parameters from the request body.
 	//
 	// Deprecated: providing secrets in the request body is not recommended and will be removed in the future.
 	LoadFromRequestAndFeed(act *Activation, feedPort string, ctx *CtxConfig) ([]byte, error)
@@ -62,7 +62,7 @@ func (f *AmphoraFeeder) LoadFromSecretStoreAndFeed(act *Activation, feedPort str
 		if err != nil {
 			return nil, err
 		}
-		policy := "_DEFAULT_POLICY_"
+		policy := DefaultPolicy
 		owner, _ := findValueForKeyInTags(osh.Tags, "owner")
 		policy, _ = findValueForKeyInTags(osh.Tags, "accessPolicy")
 		inputs = append(inputs, ActivationInput{
