@@ -5,6 +5,7 @@
 package network
 
 import (
+	"crypto/tls"
 	"context"
 	"fmt"
 	"io"
@@ -33,6 +34,8 @@ type TCPCheckerConf struct {
 	DialTimeout  time.Duration
 	RetryTimeout time.Duration
 	Logger       *zap.SugaredLogger
+	TlsEnabled   bool
+	TlsConfig    *tls.Config
 }
 
 // NewTCPChecker returns an instance of TCPChecker
@@ -79,10 +82,26 @@ func (t *TCPChecker) tryToConnect(host, port string) bool {
 			}
 		}
 	}()
-	conn, err = net.DialTimeout("tcp", host+":"+port, t.conf.DialTimeout)
-	if err != nil {
-		t.conf.Logger.Debugf("Error getting tcp connection %s", err.Error())
-		return false
+	if t.conf.TlsEnabled {
+		if t.conf.TlsConfig == nil {
+			t.conf.Logger.Errorf("TLS configuration is nil")
+			return false
+		}
+		dialer := &net.Dialer{Timeout: t.conf.DialTimeout}
+		t.conf.Logger.Debugf("Attempting to establish mTLS connection to %s:%s", host, port)
+		conn, err = tls.DialWithDialer(dialer, "tcp", host+":"+port, t.conf.TlsConfig)
+		if err != nil {
+			t.conf.Logger.Debugf("Error getting tcp connection using mTLS %s", err.Error())
+			conn = nil // Ensure conn is nil to avoid defer panic
+			return false
+		}
+	} else {
+		t.conf.Logger.Debugf("Attempting to establish TCP connection to %s:%s", host, port)
+		conn, err = net.DialTimeout("tcp", host+":"+port, t.conf.DialTimeout) // Here is TCP connection established
+		if err != nil {
+			t.conf.Logger.Debugf("Error getting tcp connection %s", err.Error())
+			return false
+		}
 	}
 	err = conn.SetReadDeadline(time.Now().Add(t.conf.DialTimeout))
 	if err != nil {
