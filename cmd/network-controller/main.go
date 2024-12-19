@@ -73,7 +73,7 @@ func main() {
 
 	networkControllerConfig, err := ParseConfig(defaultConfigLocation)
 	if err != nil {
-		panic(err)
+		log.Error(err, "Failed to parse config")
 		os.Exit(1)
 	}
 	log.Info(fmt.Sprintf("Starting with the config:\n%+v", networkControllerConfig))

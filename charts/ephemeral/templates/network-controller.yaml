@@ -58,6 +58,6 @@ metadata:
 data:
   config.json: |-
     {
-      "tlsEnabled": {{ .Values.networkController.tls.enabled }},
-      "tlsSecret": "{{ .Values.networkController.tls.secret }}"
+      "tlsEnabled": {{ .Values.tls.enabled }},
+      "tlsSecret": "{{ .Values.tls.secret }}"
     }

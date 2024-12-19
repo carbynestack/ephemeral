@@ -48,7 +48,7 @@ spec:
             name: discovery-config
         - name: tls-secret-volume
           secret:
-            secretName: {{ .Values.discovery.tls.secret }}
+            secretName: {{ .Values.tls.secret }}
       serviceAccountName: discovery
 ---
 kind: Service
@@ -80,7 +80,7 @@ data:
       "frontendURL": "{{ .Values.discovery.frontendUrl }}",
       "masterHost": "{{ .Values.discovery.master.host }}",
       "masterPort": "{{ .Values.discovery.master.port }}",
-      "tlsEnabled": {{ .Values.discovery.tls.enabled }},
+      "tlsEnabled": {{ .Values.tls.enabled }},
       "slave": {{ if .Values.discovery.isMaster }}false{{ else }}true{{ end }},
       "playerCount": {{ .Values.playerCount }},
       "stateTimeout": "{{ .Values.discovery.stateTimeout }}",
@@ -96,14 +96,14 @@ spec:
   selector:
     istio: ingressgateway # use istio default controller
   servers:
-{{- if .Values.discovery.tls.enabled }}
+{{- if .Values.tls.enabled }}
     - port:
         number: 31400
         name: cs-grpc
         protocol: HTTPS
       tls:
         mode: MUTUAL # enables mTLS on the Gateway
-        credentialName: {{ .Values.discovery.tls.secret }} # the name of the Secret that holds the TLS certs and CA certificate
+        credentialName: {{ .Values.tls.secret }} # the name of the Secret that holds the TLS certs and CA certificate
       hosts:
         - "*"
 {{- else }}

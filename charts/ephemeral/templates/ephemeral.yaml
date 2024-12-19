@@ -73,7 +73,7 @@ spec:
             name: {{ include "ephemeral.fullname" . }}-config1
         - name: tls-secret-volume
           secret:
-            secretName: {{ .Values.ephemeral.tls.secret }}
+            secretName: {{ .Values.tls.secret }}
       serviceAccountName: knative-serving
 ---
 apiVersion: v1
@@ -108,7 +108,7 @@ data:
         "tupleStock": {{ .Values.ephemeral.castor.tupleStock }}
       },
       "frontendURL": "{{ .Values.ephemeral.frontendUrl }}",
-      "tlsEnabled": {{ .Values.ephemeral.tls.enabled }},
+      "tlsEnabled": {{ .Values.tls.enabled }},
       "discoveryConfig": {
         "host": "{{ .Values.ephemeral.discovery.host }}",
         "port": "{{ .Values.ephemeral.discovery.port }}",
