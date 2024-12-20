@@ -8,7 +8,6 @@
 package io
 
 import (
-	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -273,15 +272,11 @@ func (ts *CastorTupleStreamer) bufferData(terminateCh chan struct{}, streamerErr
 func (ts *CastorTupleStreamer) getTupleData() ([]byte, error) {
 	requestID := uuid.NewMD5(ts.baseRequestID, []byte(strconv.Itoa(ts.requestCycle)))
 	ts.requestCycle++
-	tupleList, err := ts.castorClient.GetTuples(ts.stockSize, ts.tupleType, requestID)
+	tupleData, err := ts.castorClient.GetTuples(ts.stockSize, ts.tupleType, requestID)
 	if err != nil {
 		return nil, err
 	}
 	ts.logger.Debugw("Fetched new tuples from Castor", "RequestID", requestID)
-	tupleData, err := ts.tupleListToByteArray(tupleList)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing received tuple list: %v", err)
-	}
 	return tupleData, nil
 }
 
@@ -326,26 +321,6 @@ func (ts *CastorTupleStreamer) writeDataToPipe(terminateCh chan struct{}, doneCh
 			}
 		}
 	}
-}
-
-// tupleListToByteArray converts a given list of tuple to a byte array
-func (ts *CastorTupleStreamer) tupleListToByteArray(tl *castor.TupleList) ([]byte, error) {
-	var result []byte
-	for _, tuple := range tl.Tuples {
-		for _, share := range tuple.Shares {
-			decodeString, err := base64.StdEncoding.DecodeString(share.Value)
-			if err != nil {
-				return []byte{}, err
-			}
-			result = append(result, decodeString...)
-			decodeString, err = base64.StdEncoding.DecodeString(share.Mac)
-			if err != nil {
-				return []byte{}, err
-			}
-			result = append(result, decodeString...)
-		}
-	}
-	return result, nil
 }
 
 // generateHeader returns the file header for the given protocol and spdz runtime configuration

@@ -9,21 +9,21 @@
 package castor
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
+
+	"github.com/google/uuid"
 
 	"github.com/asaskevich/govalidator"
 )
 
 // AbstractClient is an interface for castor tuple client.
 type AbstractClient interface {
-	GetTuples(tupleCount int32, tupleType TupleType, requestID uuid.UUID) (*TupleList, error)
+	GetTuples(tupleCount int32, tupleType TupleType, requestID uuid.UUID) ([]byte, error)
 }
 
 // NewClient returns a new Castor client for the given endpoint
@@ -48,7 +48,7 @@ const countParam = "count"
 const reservationIDParam = "reservationId"
 
 // GetTuples retrieves a list of tuples matching the given criteria from Castor
-func (c *Client) GetTuples(count int32, tt TupleType, requestID uuid.UUID) (*TupleList, error) {
+func (c *Client) GetTuples(count int32, tt TupleType, requestID uuid.UUID) ([]byte, error) {
 	values := url.Values{}
 	values.Add(tupleTypeParam, tt.Name)
 	values.Add(countParam, strconv.Itoa(int(count)))
@@ -66,17 +66,16 @@ func (c *Client) GetTuples(count int32, tt TupleType, requestID uuid.UUID) (*Tup
 	if err != nil {
 		return nil, fmt.Errorf("communication with castor failed: %s", err)
 	}
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
+
 		if err != nil {
 			return nil, err
 		}
 		return nil, fmt.Errorf("getting tuples failed for \"%s\" with response code #%d: %s", req.URL, resp.StatusCode, string(bodyBytes))
 	}
-	tuples := &TupleList{}
-	err = json.NewDecoder(resp.Body).Decode(tuples)
 	if err != nil {
 		return nil, fmt.Errorf("castor has returned an invalid response body: %s", err)
 	}
-	return tuples, nil
+	return bodyBytes, nil
 }

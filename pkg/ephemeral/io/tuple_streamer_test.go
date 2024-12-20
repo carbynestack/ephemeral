@@ -105,49 +105,6 @@ var _ = Describe("Tuple Streamer", func() {
 					Expect(<-errCh).NotTo(BeNil())
 				})
 			})
-			Context("when castor client returns illegal data", func() {
-				Context("when share value is invalid", func() {
-					It("writes error to error channel and stops", func() {
-						invalidShareValue := "value"
-						share := castor.Share{Value: invalidShareValue}
-						shares := make([]castor.Share, 1)
-						shares[0] = share
-						tuples := make([]castor.Tuple, 1)
-						tuples[0] = castor.Tuple{Shares: shares}
-						cc.TupleList = &castor.TupleList{Tuples: tuples}
-						wg.Add(1)
-						ts.StartStreamTuples(terminate, errCh, wg)
-						wg.Wait()
-						close(terminate)
-						close(errCh)
-						Expect(fcpw.isClosed).To(BeTrue())
-						err := <-errCh
-						Expect(err).To(HaveOccurred())
-						Expect(err).To(Equal(errors.New("error parsing received tuple list: illegal base64 data at input byte 4")))
-					})
-				})
-				Context("when share value is invalid", func() {
-					It("writes error to error channel and stops", func() {
-						validShareValue := base64.StdEncoding.EncodeToString([]byte("value"))
-						invalidShareMac := "value"
-						share := castor.Share{Value: validShareValue, Mac: invalidShareMac}
-						shares := make([]castor.Share, 1)
-						shares[0] = share
-						tuples := make([]castor.Tuple, 1)
-						tuples[0] = castor.Tuple{Shares: shares}
-						cc.TupleList = &castor.TupleList{Tuples: tuples}
-						wg.Add(1)
-						ts.StartStreamTuples(terminate, errCh, wg)
-						wg.Wait()
-						close(terminate)
-						close(errCh)
-						Expect(fcpw.isClosed).To(BeTrue())
-						err := <-errCh
-						Expect(err).To(HaveOccurred())
-						Expect(err).To(Equal(errors.New("error parsing received tuple list: illegal base64 data at input byte 4")))
-					})
-				})
-			})
 			Context("when tuples fetched successfully", func() {
 				shareValue := "value"
 				shareMac := "value"
@@ -161,7 +118,7 @@ var _ = Describe("Tuple Streamer", func() {
 				tuples[0] = castor.Tuple{Shares: shares}
 				initialStreamData := []byte(shareValue + shareMac)
 				BeforeEach(func() {
-					cc.TupleList = &castor.TupleList{Tuples: tuples}
+					cc.TupleData = initialStreamData
 				})
 				Context("when writing data to pipe fails with broken pipe", func() {
 					var expectedError = syscall.EPIPE
@@ -551,19 +508,19 @@ func (fpcfpw *FakePartialConsumingFailSecondCallPipeWriter) Close() error {
 }
 
 type FakeCastorClient struct {
-	TupleList *castor.TupleList
+	TupleData []byte
 }
 
-func (fcc *FakeCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) (*castor.TupleList, error) {
-	tl := fcc.TupleList
+func (fcc *FakeCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) ([]byte, error) {
+	tl := fcc.TupleData
 	if tl == nil {
-		tl = &castor.TupleList{}
+		tl = []byte{}
 	}
 	return tl, nil
 }
 
 type BrokenDownloadCastorClient struct{}
 
-func (fcc *BrokenDownloadCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) (*castor.TupleList, error) {
-	return &castor.TupleList{}, errors.New("fetching tuples failed")
+func (fcc *BrokenDownloadCastorClient) GetTuples(int32, castor.TupleType, uuid.UUID) ([]byte, error) {
+	return []byte{}, errors.New("fetching tuples failed")
 }
