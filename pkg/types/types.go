@@ -6,11 +6,11 @@ package types
 
 import (
 	"context"
+	"crypto/tls"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
 	"github.com/carbynestack/ephemeral/pkg/opa"
-	"crypto/tls"
 	"math/big"
 	"time"
 
@@ -36,7 +36,6 @@ type DiscoveryConfig struct {
 	FrontendURL        string `json:"frontendURL"`
 	MasterHost         string `json:"masterHost"`
 	MasterPort         string `json:"masterPort"`
-	TlsEnabled         bool   `json:"tlsEnabled"`
 	Slave              bool   `json:"slave"`
 	StateTimeout       string `json:"stateTimeout"`
 	ComputationTimeout string `json:"computationTimeout"`
@@ -52,7 +51,6 @@ type DiscoveryTypedConfig struct {
 	FrontendURL        string
 	MasterHost         string
 	MasterPort         string
-	TlsEnabled         bool
 	Slave              bool
 	StateTimeout       time.Duration
 	ComputationTimeout time.Duration

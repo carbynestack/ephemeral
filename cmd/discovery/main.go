@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -6,12 +6,9 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
-
 	"github.com/carbynestack/ephemeral/pkg/discovery"
 	c "github.com/carbynestack/ephemeral/pkg/discovery/transport/client"
 	cl "github.com/carbynestack/ephemeral/pkg/discovery/transport/client"
@@ -24,6 +21,7 @@ import (
 	"github.com/carbynestack/ephemeral/pkg/utils"
 	mb "github.com/vardius/message-bus"
 	"go.uber.org/zap"
+	"time"
 )
 
 const (
@@ -34,7 +32,6 @@ const (
 	// DefaultPortRange is the range of ports used for MCP communication between the players.
 	DefaultPortRange      = "30000:30100"
 	defaultConfigLocation = "/etc/config/config.json"
-	defaultTlsConfig      = "/etc/tls"
 )
 
 func main() {
@@ -58,16 +55,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	var tlsConfig *tls.Config
-	if config.TlsEnabled {
-		var err error
-		tlsConfig, err = utils.CreateTLSConfig(defaultTlsConfig)
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	var upstreamConfig *DiscoveryClientTypedConfig
 	if config.Slave {
 		upstreamConfig = &DiscoveryClientTypedConfig{
@@ -76,7 +63,7 @@ func main() {
 			ConnectTimeout: config.ConnectTimeout,
 		}
 	}
-	client, mode, err := NewClient(upstreamConfig, tlsConfig, logger, errCh)
+	client, mode, err := NewClient(upstreamConfig, logger, errCh)
 	if err != nil {
 		panic(err)
 	}
@@ -99,7 +86,7 @@ func main() {
 // NewClient returns a new client with parameters specific to the server mode. If upstreamClient is defined, the client
 // will be configured to forward incoming events to an upstream master server. With upstreamClient set to nil, the
 // service is considered to be the master service.
-func NewClient(upstreamConfig *types.DiscoveryClientTypedConfig, tlsConfig *tls.Config, logger *zap.SugaredLogger, errCh chan error) (*cl.Client, string, error) {
+func NewClient(upstreamConfig *types.DiscoveryClientTypedConfig, logger *zap.SugaredLogger, errCh chan error) (*cl.Client, string, error) {
 	logger.Debug("Creating new discovery client")
 	mode := ModeMaster
 	client := &cl.Client{}
@@ -118,7 +105,6 @@ func NewClient(upstreamConfig *types.DiscoveryClientTypedConfig, tlsConfig *tls.
 			ConnectTimeout: upstreamConfig.ConnectTimeout,
 			Logger:         logger,
 			Context:        context.Background(),
-			TlsConfig:      tlsConfig,
 		}
 		client, err = c.NewClient(grpcClientConf)
 		if err != nil {
@@ -195,12 +181,10 @@ func ParseConfig(path string) (*DiscoveryTypedConfig, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("invalid connection timeout format: %v", err))
 	}
-
 	return &DiscoveryTypedConfig{
 		FrontendURL:        conf.FrontendURL,
 		MasterHost:         conf.MasterHost,
 		MasterPort:         conf.MasterPort,
-		TlsEnabled:         conf.TlsEnabled,
 		Slave:              conf.Slave,
 		StateTimeout:       stateTimeout,
 		ComputationTimeout: computationTimeout,

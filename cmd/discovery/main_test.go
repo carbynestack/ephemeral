@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2023 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -30,7 +30,7 @@ var _ = Describe("Main", func() {
 		}
 		logger := zap.NewNop().Sugar()
 		errCh := make(chan error)
-		cl, mode, err := NewClient(conf, nil, logger, errCh)
+		cl, mode, err := NewClient(conf, logger, errCh)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mode).To(Equal(ModeSlave))
 		Expect(cl).NotTo(BeNil())
