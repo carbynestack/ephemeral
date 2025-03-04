@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/carbynestack/ephemeral/compare/chart-v0.2.0...chart-v0.3.0) (2025-03-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* Secure Communication Channels via TLS ([#75](https://github.com/carbynestack/ephemeral/issues/75))
+
+### Features
+
+* Secure Communication Channels via TLS ([#75](https://github.com/carbynestack/ephemeral/issues/75)) ([4eb64f7](https://github.com/carbynestack/ephemeral/commit/4eb64f7a7f37e013079eb641660b4288bc5a7c3f))
+
 ## [0.2.0](https://github.com/carbynestack/ephemeral/compare/chart-v0.1.3...chart-v0.2.0) (2024-12-17)
 
 
