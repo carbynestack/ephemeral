@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2024 - for information on the respective copyright owner
+# Copyright (c) 2021-2025 - for information on the respective copyright owner
 # see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -43,6 +43,9 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
+            - name: tls-secret-volume
+              mountPath: /etc/tls
+              readOnly: true
           {{- if or .Values.ephemeral.resources.requests.memory .Values.ephemeral.resources.requests.cpu .Values.ephemeral.resources.limits.memory .Values.ephemeral.resources.limits.cpu }}
           resources:
             {{- if or .Values.ephemeral.resources.requests.memory .Values.ephemeral.resources.requests.cpu }}
@@ -68,6 +71,9 @@ spec:
         - name: config-volume
           configMap:
             name: {{ include "ephemeral.fullname" . }}-config1
+        - name: tls-secret-volume
+          secret:
+            secretName: {{ .Values.tls.secret }}
       serviceAccountName: knative-serving
 ---
 apiVersion: v1
@@ -102,6 +108,7 @@ data:
         "tupleStock": {{ .Values.ephemeral.castor.tupleStock }}
       },
       "frontendURL": "{{ .Values.ephemeral.frontendUrl }}",
+      "tlsEnabled": {{ .Values.tls.enabled }},
       "discoveryConfig": {
         "host": "{{ .Values.ephemeral.discovery.host }}",
         "port": "{{ .Values.ephemeral.discovery.port }}",

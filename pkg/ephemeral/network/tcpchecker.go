@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -6,6 +6,7 @@ package network
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net"
@@ -33,6 +34,7 @@ type TCPCheckerConf struct {
 	DialTimeout  time.Duration
 	RetryTimeout time.Duration
 	Logger       *zap.SugaredLogger
+	TlsConfig    *tls.Config
 }
 
 // NewTCPChecker returns an instance of TCPChecker
@@ -79,10 +81,22 @@ func (t *TCPChecker) tryToConnect(host, port string) bool {
 			}
 		}
 	}()
-	conn, err = net.DialTimeout("tcp", host+":"+port, t.conf.DialTimeout)
-	if err != nil {
-		t.conf.Logger.Debugf("Error getting tcp connection %s", err.Error())
-		return false
+	if t.conf.TlsConfig != nil {
+		dialer := &net.Dialer{Timeout: t.conf.DialTimeout}
+		t.conf.Logger.Debugf("Attempting to establish mTLS connection to %s:%s", host, port)
+		conn, err = tls.DialWithDialer(dialer, "tcp", host+":"+port, t.conf.TlsConfig)
+		if err != nil {
+			t.conf.Logger.Debugf("Error getting tcp connection using mTLS %s", err.Error())
+			conn = nil // Ensure conn is nil to avoid defer panic
+			return false
+		}
+	} else {
+		t.conf.Logger.Debugf("Attempting to establish TCP connection to %s:%s", host, port)
+		conn, err = net.DialTimeout("tcp", host+":"+port, t.conf.DialTimeout) // Here is TCP connection established
+		if err != nil {
+			t.conf.Logger.Debugf("Error getting tcp connection %s", err.Error())
+			return false
+		}
 	}
 	err = conn.SetReadDeadline(time.Now().Add(t.conf.DialTimeout))
 	if err != nil {

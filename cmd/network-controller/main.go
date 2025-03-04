@@ -1,4 +1,4 @@
-// Copyright (c) 2021 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -16,6 +17,8 @@ import (
 
 	"github.com/carbynestack/ephemeral/pkg/network-controller/apis"
 	"github.com/carbynestack/ephemeral/pkg/network-controller/controller"
+	. "github.com/carbynestack/ephemeral/pkg/types"
+	"github.com/carbynestack/ephemeral/pkg/utils"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -36,6 +39,8 @@ var (
 	metricsPort int32 = 8383
 )
 var log = logf.Log.WithName("cmd")
+
+const defaultConfigLocation = "/etc/config/config.json"
 
 func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
@@ -65,6 +70,16 @@ func main() {
 	logf.SetLogger(zap.Logger())
 
 	printVersion()
+
+	networkControllerConfig, err := ParseConfig(defaultConfigLocation)
+	if err != nil {
+		log.Error(err, "Failed to parse config")
+		os.Exit(1)
+	}
+	log.Info(fmt.Sprintf("Starting with the config:\n%+v", networkControllerConfig))
+	if err != nil {
+		panic(err)
+	}
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
@@ -107,7 +122,7 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := controller.AddToManager(mgr, networkControllerConfig); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
@@ -125,4 +140,18 @@ func main() {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
+}
+
+// ParseConfig parses the configuration file of the discovery service.
+func ParseConfig(path string) (*NetworkControllerConfig, error) {
+	bytes, err := utils.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	var conf NetworkControllerConfig
+	err = json.Unmarshal(bytes, &conf)
+	if err != nil {
+		return nil, err
+	}
+	return &conf, nil
 }

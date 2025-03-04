@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -8,14 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/carbynestack/ephemeral/pkg/castor"
-	d "github.com/carbynestack/ephemeral/pkg/discovery"
-	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
-	. "github.com/carbynestack/ephemeral/pkg/ephemeral/io"
-	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
-	. "github.com/carbynestack/ephemeral/pkg/types"
-	. "github.com/carbynestack/ephemeral/pkg/utils"
-	"github.com/google/uuid"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -24,6 +16,15 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/carbynestack/ephemeral/pkg/castor"
+	d "github.com/carbynestack/ephemeral/pkg/discovery"
+	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
+	. "github.com/carbynestack/ephemeral/pkg/ephemeral/io"
+	"github.com/carbynestack/ephemeral/pkg/ephemeral/network"
+	. "github.com/carbynestack/ephemeral/pkg/types"
+	. "github.com/carbynestack/ephemeral/pkg/utils"
+	"github.com/google/uuid"
 
 	"go.uber.org/zap"
 )
@@ -136,6 +137,7 @@ func NewSPDZEngine(logger *zap.SugaredLogger, cmder Executor, config *SPDZEngine
 		DialTimeout:  tcpCheckerTimeout,
 		RetryTimeout: config.NetworkEstablishTimeout,
 		Logger:       logger,
+		TlsConfig:    config.TlsConfig,
 	}
 	feeder := NewAmphoraFeeder(logger, config)
 	checker := network.NewTCPChecker(c)

@@ -1,12 +1,14 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
+
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	. "github.com/carbynestack/ephemeral/pkg/ephemeral"
@@ -15,18 +17,20 @@ import (
 	"github.com/carbynestack/ephemeral/pkg/utils"
 	"os"
 
-	. "github.com/carbynestack/ephemeral/pkg/types"
 	"math/big"
 	"net/http"
 	"net/url"
 	"time"
 
+	. "github.com/carbynestack/ephemeral/pkg/types"
+
 	"go.uber.org/zap"
 )
 
 const (
-	defaultConfig = "/etc/config/config.json"
-	defaultPort   = "8080"
+	defaultConfig    = "/etc/config/config.json"
+	defaultTlsConfig = "/etc/tls"
+	defaultPort      = "8080"
 )
 
 func main() {
@@ -159,6 +163,15 @@ func InitTypedConfig(conf *SPDZEngineConfig, logger *zap.SugaredLogger) (*SPDZEn
 		return nil, err
 	}
 
+	var tlsConfig *tls.Config
+	if conf.TlsEnabled {
+		var err error
+		tlsConfig, err = utils.CreateTLSConfig(defaultTlsConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &SPDZEngineTypedConfig{
 		ProgramIdentifier:       programIdentifier,
 		NetworkEstablishTimeout: networkEstablishTimeout,
@@ -185,5 +198,6 @@ func InitTypedConfig(conf *SPDZEngineConfig, logger *zap.SugaredLogger) (*SPDZEn
 		},
 		StateTimeout:       stateTimeout,
 		ComputationTimeout: computationTimeout,
+		TlsConfig:          tlsConfig,
 	}, nil
 }

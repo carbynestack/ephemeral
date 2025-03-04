@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -6,6 +6,7 @@ package types
 
 import (
 	"context"
+	"crypto/tls"
 	"github.com/carbynestack/ephemeral/pkg/amphora"
 	"github.com/carbynestack/ephemeral/pkg/castor"
 	pb "github.com/carbynestack/ephemeral/pkg/discovery/transport/proto"
@@ -60,6 +61,12 @@ type DiscoveryTypedConfig struct {
 	PlayerCount        int
 }
 
+// NetworkControllerConfig represents the config of the network-controller service.
+type NetworkControllerConfig struct {
+	TlsEnabled bool   `json:"tlsEnabled"`
+	TlsSecret  string `json:"tlsSecret"`
+}
+
 // Activation is an object that is received as an input from the Ephemeral client.
 type Activation struct {
 	AmphoraParams []string     `json:"amphoraParams"`
@@ -111,6 +118,7 @@ type SPDZEngineConfig struct {
 	AmphoraConfig      AmphoraConfig         `json:"amphoraConfig"`
 	CastorConfig       CastorConfig          `json:"castorConfig"`
 	FrontendURL        string                `json:"frontendURL"`
+	TlsEnabled         bool                  `json:"tlsEnabled"`
 	PlayerID           int32                 `json:"playerID"`
 	PlayerCount        int32                 `json:"playerCount"`
 	MaxBulkSize        int32                 `json:"maxBulkSize"`
@@ -183,4 +191,5 @@ type SPDZEngineTypedConfig struct {
 	DiscoveryConfig         DiscoveryClientTypedConfig
 	StateTimeout            time.Duration
 	ComputationTimeout      time.Duration
+	TlsConfig               *tls.Config
 }

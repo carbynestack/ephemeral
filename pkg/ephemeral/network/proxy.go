@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -6,6 +6,7 @@ package network
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -35,6 +36,7 @@ func NewProxy(lg *zap.SugaredLogger, conf *SPDZEngineTypedConfig, checker Networ
 		retrySleep:   conf.RetrySleep,
 		retryTimeout: conf.NetworkEstablishTimeout,
 		tcpChecker:   checker,
+		tlsConfig:    conf.TlsConfig,
 	}
 }
 
@@ -50,6 +52,7 @@ type Proxy struct {
 	// activeProxyIndicatorCh indicates that proxy was successfully started (see [tcpproxy.Proxy.Start]) if the channel
 	// is closed.
 	activeProxyIndicatorCh chan struct{}
+	tlsConfig              *tls.Config
 }
 
 // Run start the tcpproxy, makes sure it has started by means of a ping.
@@ -133,7 +136,28 @@ func (p *Proxy) addProxyEntry(config *ProxyConfig) *PingAwareTarget {
 	// Start the TCP proxy to forward the requests from the base partner address to the target one.
 	address := config.Host + ":" + config.Port
 	p.logger.Infow(fmt.Sprintf("Adding TCP Proxy Entry for 'localhost:%s' -> '%s'", config.LocalPort, address), GameID, p.ctx.Act.GameID)
-	dialProxy := tcpproxy.DialProxy{Addr: address, DialTimeout: timeout}
+
+	var dialProxy tcpproxy.DialProxy
+
+	if p.tlsConfig != nil {
+		dialProxy = tcpproxy.DialProxy{
+			Addr: address,
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				conn, err := tls.Dial(network, addr, p.tlsConfig)
+				if err != nil {
+					return nil, err
+				}
+				return conn, nil
+			},
+			DialTimeout: timeout,
+		}
+	} else {
+		dialProxy = tcpproxy.DialProxy{
+			Addr:        address,
+			DialTimeout: timeout,
+		}
+	}
+
 	pat := &PingAwareTarget{
 		Next:   &dialProxy,
 		Logger: p.logger,
