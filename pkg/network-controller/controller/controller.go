@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -13,10 +13,10 @@ import (
 )
 
 // AddToManagerFuncs is a list of functions to add all Controllers to the Manager
-var AddToManagerFuncs []func(manager.Manager, *types.NetworkControllerTypedConfig) error
+var AddToManagerFuncs []func(manager.Manager, *types.NetworkControllerConfig) error
 
 // AddToManager adds all Controllers to the Manager
-func AddToManager(m manager.Manager, config *types.NetworkControllerTypedConfig) error {
+func AddToManager(m manager.Manager, config *types.NetworkControllerConfig) error {
 	for _, f := range AddToManagerFuncs {
 		if err := f(m, config); err != nil {
 			return err

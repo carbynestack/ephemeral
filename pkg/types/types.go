@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -65,12 +65,6 @@ type DiscoveryTypedConfig struct {
 type NetworkControllerConfig struct {
 	TlsEnabled bool   `json:"tlsEnabled"`
 	TlsSecret  string `json:"tlsSecret"`
-}
-
-// NetworkControllerTypedConfig reflects NetworkControllerConfig, but it contains the real property types
-type NetworkControllerTypedConfig struct {
-	TlsEnabled bool
-	TlsSecret  string
 }
 
 // Activation is an object that is received as an input from the Ephemeral client.
@@ -197,6 +191,5 @@ type SPDZEngineTypedConfig struct {
 	DiscoveryConfig         DiscoveryClientTypedConfig
 	StateTimeout            time.Duration
 	ComputationTimeout      time.Duration
-	TlsEnabled              bool
 	TlsConfig               *tls.Config
 }

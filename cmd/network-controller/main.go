@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -143,7 +143,7 @@ func main() {
 }
 
 // ParseConfig parses the configuration file of the discovery service.
-func ParseConfig(path string) (*NetworkControllerTypedConfig, error) {
+func ParseConfig(path string) (*NetworkControllerConfig, error) {
 	bytes, err := utils.ReadFile(path)
 	if err != nil {
 		panic(err)
@@ -153,9 +153,5 @@ func ParseConfig(path string) (*NetworkControllerTypedConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return &NetworkControllerTypedConfig{
-		TlsEnabled: conf.TlsEnabled,
-		TlsSecret:  conf.TlsSecret,
-	}, nil
+	return &conf, nil
 }

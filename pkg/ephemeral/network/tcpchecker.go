@@ -1,12 +1,12 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
 package network
 
 import (
-	"crypto/tls"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net"
@@ -34,7 +34,6 @@ type TCPCheckerConf struct {
 	DialTimeout  time.Duration
 	RetryTimeout time.Duration
 	Logger       *zap.SugaredLogger
-	TlsEnabled   bool
 	TlsConfig    *tls.Config
 }
 
@@ -82,11 +81,7 @@ func (t *TCPChecker) tryToConnect(host, port string) bool {
 			}
 		}
 	}()
-	if t.conf.TlsEnabled {
-		if t.conf.TlsConfig == nil {
-			t.conf.Logger.Errorf("TLS configuration is nil")
-			return false
-		}
+	if t.conf.TlsConfig != nil {
 		dialer := &net.Dialer{Timeout: t.conf.DialTimeout}
 		t.conf.Logger.Debugf("Attempting to establish mTLS connection to %s:%s", host, port)
 		conn, err = tls.DialWithDialer(dialer, "tcp", host+":"+port, t.conf.TlsConfig)

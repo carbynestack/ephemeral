@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -40,12 +40,12 @@ var podLabel = "mpc.podName"
 
 // Add creates a new Network Controller and adds it to the PortsState. The PortsState will set fields on the Controller
 // and Start it when the PortsState is Started.
-func Add(mgr manager.Manager, config *configtypes.NetworkControllerTypedConfig) error {
+func Add(mgr manager.Manager, config *configtypes.NetworkControllerConfig) error {
 	return add(mgr, newReconciler(mgr, config))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, config *configtypes.NetworkControllerTypedConfig) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, config *configtypes.NetworkControllerConfig) reconcile.Reconciler {
 
 	c := mgr.GetConfig()
 	cs := clientset.NewForConfigOrDie(c)
@@ -102,7 +102,7 @@ type ReconcileNetwork struct {
 	client          client.Client
 	scheme          *runtime.Scheme
 	sharedClientSet *clientset.Clientset
-	config          *configtypes.NetworkControllerTypedConfig
+	config          *configtypes.NetworkControllerConfig
 }
 
 // Reconcile reads that state of the cluster for a Network object and makes changes based on the state read
@@ -295,7 +295,7 @@ func newVirtualService(cr *mpcv1alpha1.Network, port int32, gateway string) *v1a
 		}}
 }
 
-func newGateway(cr *mpcv1alpha1.Network, port int32, config *configtypes.NetworkControllerTypedConfig) *v1alpha3.Gateway {
+func newGateway(cr *mpcv1alpha1.Network, port int32, config *configtypes.NetworkControllerConfig) *v1alpha3.Gateway {
 	gwlb := cr.Labels
 	gwlb["mpc.gateway"] = "true"
 	selectors := map[string]string{}
