@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -160,7 +160,7 @@ func ParseConfig(path string) (*DiscoveryTypedConfig, error) {
 	if conf.MasterHost == "" && conf.Slave {
 		return nil, errors.New("missing config error, MasterHost must be defined")
 	}
-	if conf.MasterPort == "" {
+	if conf.MasterPort == "" && conf.Slave {
 		return nil, errors.New("missing config error, MasterPort must be defined")
 	}
 	if conf.PlayerCount == 0 {
