@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 - for information on the respective copyright owner
+// Copyright (c) 2021-2025 - for information on the respective copyright owner
 // see the NOTICE file and/or the repository https://github.com/carbynestack/ephemeral.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -159,11 +159,18 @@ var _ = Describe("Main", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(conf).NotTo(BeNil())
 
-				noMasterPortConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+				noMasterPortConfigSlave := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": true, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
 				err = ioutil.WriteFile(path, noMasterPortConfigSlave, 0644)
 				Expect(err).NotTo(HaveOccurred())
 				_, err = ParseConfig(path)
 				Expect(err).To(HaveOccurred())
+
+				noMasterPortConfigMaster := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "playerCount": 2, "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
+				err = ioutil.WriteFile(path, noMasterPortConfigMaster, 0644)
+				Expect(err).NotTo(HaveOccurred())
+				conf, err = ParseConfig(path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(conf).NotTo(BeNil())
 
 				noPlayerCountConfig := []byte(`{"frontendURL": "apollo.test.specs.cloud","masterHost": "apollo.test.specs.cloud","slave": false, "masterPort": "31400", "stateTimeout": "1s", "connectTimeout": "2s", "computationTimeout": "3s"}`)
 				err = ioutil.WriteFile(path, noPlayerCountConfig, 0644)
