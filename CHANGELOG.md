@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/carbynestack/ephemeral/compare/service-v0.3.0...service-v0.3.1) (2025-03-18)
+
+
+### Bug Fixes
+
+* **service:** make master port mandatory for slave only ([#86](https://github.com/carbynestack/ephemeral/issues/86)) ([d7ec225](https://github.com/carbynestack/ephemeral/commit/d7ec2255d11fbe2b319151243e150e0a819225d7))
+
 ## [0.3.0](https://github.com/carbynestack/ephemeral/compare/service-v0.2.0...service-v0.3.0) (2025-03-04)
 
 
